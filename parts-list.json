@@ -1,0 +1,39 @@
+[
+    {
+        "id": 1,
+        "name": "Pomme de terres",
+        "price": 60,
+        "category": "Légumes",
+        "image": "images/pomme-de-terre.jpg",
+        "description": "Pomme de terres",
+        "available": true
+    },
+    {
+        "id": 2,
+        "name": "Farine de blé",
+        "price": 40,
+        "category": "Farines",
+        "image": "images/farine-de-ble.jpg",
+        "description": "Farine de blé",
+        "available": true
+    },
+    {
+        "id": 3,
+        "name": "Oignon",
+        "price": 5.49,
+        "category": "Légumes",
+        "image": "images/oignon.jpg",
+        "description": "Oignon",
+        "available": false
+    },
+    
+    {
+        "id" : 4,
+        "name": "Crème Fraiche",
+        "price": 2.4,
+        "category": "Produits laitiers",
+        "image" : "images/creme-fraiche.jpg",
+        "description" : "Crème Fraiche",
+        "available": true
+    }
+]
