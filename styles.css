@@ -47,37 +47,39 @@ main {
     text-decoration: none; /* Supprime le soulignement par défaut */
 }
 
-.menu {
-    width: 250px;
-    border-right: 1px solid #ddd;
-    padding: 16px;
-    overflow-y: auto;
-}
+@media (max-width: 768px) {
+    .menu {
+        width: 250px;
+        border-right: 1px solid #ddd;
+        padding: 16px;
+        overflow-y: auto;
+    }
 
-.menu h2, .menu h3 {
-    margin-bottom: 8px;
-}
+    .menu h2, .menu h3 {
+        margin-bottom: 8px;
+    }
 
-.menu ul {
-    list-style: none;
-    padding: 0;
-}
+    .menu ul {
+        list-style: none;
+        padding: 0;
+    }
 
-.menu li {
-    margin-bottom: 8px;
-}
+    .menu li {
+        margin-bottom: 8px;
+    }
 
-.menu li button {
-    width: 100%;
-    background-color: #f0f0f0;
-    border: none;
-    padding: 8px;
-    text-align: left;
-    cursor: pointer;
-}
+    .menu li button {
+        width: 100%;
+        background-color: #f0f0f0;
+        border: none;
+        padding: 8px;
+        text-align: left;
+        cursor: pointer;
+    }
 
-.menu li button:hover {
-    background-color: #ddd;
+    .menu li button:hover {
+        background-color: #ddd;
+    }
 }
 
 .fridge-list li {
@@ -184,9 +186,9 @@ main {
     border: 2px solid #ccc;
   }
   
-  button {
+  .lingoguessr button {
     margin-top: 20px;
-    padding: 10px 20px;
+    /* padding: 10px 20px; */
     font-size: 16px;
   }
 
