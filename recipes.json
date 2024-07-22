@@ -5,10 +5,10 @@
     },
     {
         "name": "Pain maison",
-        "ingredients": ["Farine de blé", "Oignon"]
+        "ingredients": ["Farine de blé"]
     },
     {
         "name": "Purée de pommes de terre",
-        "ingredients": ["Pomme de terres", "Crème Fraiche"]
+        "ingredients": ["Pomme de terres"]
     }
 ]

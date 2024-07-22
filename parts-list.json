@@ -32,7 +32,7 @@
         "name": "Crème Fraiche",
         "price": 2.4,
         "category": "Produits laitiers",
-        "image" : "images/creme-fraiche.jpg",
+        "image" : "images/creme-fraiche.png",
         "description" : "Crème Fraiche",
         "available": true
     }
