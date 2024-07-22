@@ -1,10 +1,8 @@
 // Charger les pièces et les recettes depuis les fichiers JSON
 async function loadPartsAndRecipes() {
+    // Fetching the parts from the JSON file
     const response = await fetch('parts-list.json');
     const parts = await response.json();
-
-    // Vérification des données chargées
-    console.log("Parts loaded:", parts);
 
     const recipesResponse = await fetch('recipes.json');
     const recipes = await recipesResponse.json();
@@ -12,79 +10,114 @@ async function loadPartsAndRecipes() {
     return { parts, recipes };
 }
 
-let parts = [];
+// Déclarez recipes et selectedParts comme des variables globales
+let recipes = [];
+let selectedParts = [];
 
-// Fonction pour générer le menu des catégories
+// Générer le menu des catégories
 function generateCategoryMenu(parts) {
     const categoryList = document.querySelector('.category-list');
     const categories = new Set();
 
-    // Extraire les catégories uniques des pièces
+    // Extract unique categories from parts
     parts.forEach(part => {
-        if (part.category) {
-            categories.add(part.category);
-        }
+        categories.add(part.category);
     });
 
-    // Créer les éléments de liste pour chaque catégorie
+    // Create list items for each category
     categories.forEach(category => {
         const listItem = document.createElement('li');
         const button = document.createElement('button');
         button.innerText = category;
-        button.addEventListener('click', () => filterPartsByCategory(category, parts));
+        button.addEventListener('click', () => displayPartsByCategory(category, parts));
         listItem.appendChild(button);
         categoryList.appendChild(listItem);
     });
+
+    // Add an "All" category to show all parts
+    const allItem = document.createElement('li');
+    const allButton = document.createElement('button');
+    allButton.innerText = 'Tous';
+    allButton.addEventListener('click', () => displayParts(parts));
+    allItem.appendChild(allButton);
+    categoryList.insertBefore(allItem, categoryList.firstChild);
 }
 
-// Fonction pour afficher les cartes d'ingrédients
+// Afficher les pièces par catégorie
+function displayPartsByCategory(category, parts) {
+    const filteredParts = parts.filter(part => part.category === category);
+    displayParts(filteredParts);
+}
+
+// Afficher toutes les pièces (parts)
 function displayParts(parts) {
     const sectionCards = document.querySelector(".cards");
-    sectionCards.innerHTML = ""; // Effacer les cartes existantes
+    sectionCards.innerHTML = ""; // Clear existing cards
 
     parts.forEach(part => {
-        // Créer des éléments pour une carte d'ingrédient
+        // Create elements for a part card
         const partElement = document.createElement("article");
-
-        const nameElement = document.createElement("h2");
-        nameElement.innerText = part.name;
 
         const imageElement = document.createElement("img");
         imageElement.src = part.image;
 
-        const categoryElement = document.createElement("p");
-        categoryElement.innerText = `Catégorie: ${part.category}`;
+        const nameElement = document.createElement("h2");
+        nameElement.innerText = part.name;
+
+        const priceElement = document.createElement("p");
+        priceElement.innerText = `Price: ${part.price} €`;
 
         const stockElement = document.createElement("p");
-        stockElement.innerText = part.available ? "En stock" : "Rupture de stock";
+        stockElement.innerText = part.available ? "In stock" : "Out of stock";
 
-        // Attacher les éléments à la carte
-        partElement.appendChild(nameElement);
+        // Append elements to the card
         partElement.appendChild(imageElement);
-        partElement.appendChild(categoryElement);
+        partElement.appendChild(nameElement);
+        partElement.appendChild(priceElement);
         partElement.appendChild(stockElement);
 
-        // Attacher la carte à la section
+        // Append the card to the section
         sectionCards.appendChild(partElement);
 
-        // Ajouter un écouteur d'événement pour les clics sur les cartes
-        partElement.addEventListener('click', () => {
-            alert(`Vous avez sélectionné l'ingrédient: ${part.name}`);
-        });
+        // Add event listener for card click
+        partElement.addEventListener('click', () => togglePartSelection(part, partElement));
     });
 }
 
-// Fonction pour filtrer les pièces par catégorie
-function filterPartsByCategory(category, parts) {
-    const filteredParts = parts.filter(part => part.category === category);
-    console.log(`Parts in category "${category}":`, filteredParts); // Vérifiez les ingrédients filtrés
-    displayParts(filteredParts);
+// Gérer la sélection/désélection d'une pièce
+function togglePartSelection(part, partElement) {
+    const index = selectedParts.indexOf(part);
+    if (index === -1) {
+        selectedParts.push(part);
+        partElement.classList.add('selected');
+    } else {
+        selectedParts.splice(index, 1);
+        partElement.classList.remove('selected');
+    }
+    showAvailableRecipes();
+}
+
+// Afficher les recettes disponibles en fonction des ingrédients sélectionnés
+function showAvailableRecipes() {
+    const selectedNames = selectedParts.map(part => part.name);
+    const recipeSection = document.querySelector('.available-recipes');
+    recipeSection.innerHTML = ""; // Clear existing recipes
+
+    recipes.forEach(recipe => {
+        // Check if all ingredients of the recipe are selected
+        const canMakeRecipe = recipe.ingredients.every(ingredient => selectedNames.includes(ingredient));
+
+        if (canMakeRecipe) {
+            const recipeElement = document.createElement('p');
+            recipeElement.innerText = recipe.name;
+            recipeSection.appendChild(recipeElement);
+        }
+    });
 }
 
 // Charger les données et initialiser l'application
-loadPartsAndRecipes().then(({ parts: loadedParts }) => {
-    parts = loadedParts; // Affecter les pièces à la variable globale
-
+loadPartsAndRecipes().then(({ parts, recipes: loadedRecipes }) => {
+    recipes = loadedRecipes; // Assign recipes to the global variable
     generateCategoryMenu(parts);
-    // Ne pas afficher les pièces par défaut, attendre une sélection de catégorie
+    displayParts(parts); // Display all parts by default
 });
