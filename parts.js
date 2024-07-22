@@ -3,6 +3,9 @@ async function loadPartsAndRecipes() {
     const response = await fetch('parts-list.json');
     const parts = await response.json();
 
+    // Assurez-vous que les données sont chargées correctement
+    console.log("Parts loaded:", parts);
+
     const recipesResponse = await fetch('recipes.json');
     const recipes = await recipesResponse.json();
 
@@ -18,8 +21,8 @@ function generateCategoryMenu(parts) {
 
     // Extraire les catégories uniques des pièces
     parts.forEach(part => {
-        if (part.categories) {
-            part.categories.forEach(category => categories.add(category));
+        if (part.category) {
+            categories.add(part.category);
         }
     });
 
@@ -33,13 +36,13 @@ function generateCategoryMenu(parts) {
         categoryList.appendChild(listItem);
     });
 
-    // Ajouter un bouton pour afficher tous les ingrédients
-    const allItem = document.createElement('li');
-    const allButton = document.createElement('button');
-    allButton.innerText = 'Tous';
-    allButton.addEventListener('click', () => displayParts(parts));
-    allItem.appendChild(allButton);
-    categoryList.insertBefore(allItem, categoryList.firstChild);
+    // Ajouter un bouton pour afficher tous les ingrédients (optionnel)
+    // const allItem = document.createElement('li');
+    // const allButton = document.createElement('button');
+    // allButton.innerText = 'Tous';
+    // allButton.addEventListener('click', () => displayParts(parts));
+    // allItem.appendChild(allButton);
+    // categoryList.insertBefore(allItem, categoryList.firstChild);
 }
 
 // Fonction pour afficher les cartes d'ingrédients
@@ -58,7 +61,7 @@ function displayParts(parts) {
         imageElement.src = part.image;
 
         const categoryElement = document.createElement("p");
-        categoryElement.innerText = `Catégorie: ${part.categories.join(', ')}`;
+        categoryElement.innerText = `Catégorie: ${part.category}`;
 
         const stockElement = document.createElement("p");
         stockElement.innerText = part.available ? "En stock" : "Rupture de stock";
@@ -81,7 +84,8 @@ function displayParts(parts) {
 
 // Fonction pour filtrer les pièces par catégorie
 function filterPartsByCategory(category, parts) {
-    const filteredParts = parts.filter(part => part.categories && part.categories.includes(category));
+    const filteredParts = parts.filter(part => part.category === category);
+    console.log(`Parts in category "${category}":`, filteredParts); // Vérifiez les ingrédients filtrés
     displayParts(filteredParts);
 }
 
@@ -90,5 +94,5 @@ loadPartsAndRecipes().then(({ parts: loadedParts }) => {
     parts = loadedParts; // Affecter les pièces à la variable globale
 
     generateCategoryMenu(parts);
-    displayParts(parts); // Afficher toutes les pièces par défaut
+    // Ne pas afficher les pièces par défaut, attendre une sélection de catégorie
 });
