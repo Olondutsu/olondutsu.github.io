@@ -177,21 +177,19 @@ main {
     padding: 0;
   }
   
-  #map {
-    width: 80%;
-    height: 500px;
-    margin: 20px auto;
-    border: 2px solid #ccc;
-  }
-  
-  button {
+  /* button {
     margin-top: 20px;
     padding: 10px 20px;
     font-size: 16px;
+  } */
+/* Conteneur de la carte */
+#map {
+    width: 100%;
+    height: 100vh; /* Hauteur de la vue pour utiliser toute la hauteur disponible */
   }
-
+  
   /* Conteneur du score */
-#score-container {
+  #score-container {
     position: fixed;
     top: 10px;
     right: 10px;
@@ -216,5 +214,10 @@ main {
     #score-container {
       font-size: 16px;
       padding: 8px 16px;
+    }
+    
+    /* Ajuster la hauteur de la carte sur les petits écrans */
+    #map {
+      height: 50vh; /* Ajuster la hauteur selon vos besoins */
     }
   }

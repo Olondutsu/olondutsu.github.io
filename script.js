@@ -34,25 +34,49 @@ function startGame() {
     });
 }
 
+// function initializeMap() {
+//   map = L.map('map').setView([20, 0], 2); // Vue initiale de la carte
+
+//   // Ajouter une couche de tuiles OpenStreetMap
+//   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+//     maxZoom: 5,
+//     attribution: '© OpenStreetMap contributors'
+//   }).addTo(map);
+
+//   // Charger les frontières des pays depuis un fichier GeoJSON
+//   fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+//     .then(response => response.json())
+//     .then(data => {
+//       geoJsonLayer = L.geoJson(data, {
+//         style: style,
+//         onEachFeature: onEachFeature
+//       }).addTo(map);
+//     });
+// }
 function initializeMap() {
-  map = L.map('map').setView([20, 0], 2); // Vue initiale de la carte
-
-  // Ajouter une couche de tuiles OpenStreetMap
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 5,
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
-
-  // Charger les frontières des pays depuis un fichier GeoJSON
-  fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
-    .then(response => response.json())
-    .then(data => {
-      geoJsonLayer = L.geoJson(data, {
-        style: style,
-        onEachFeature: onEachFeature
-      }).addTo(map);
+    map = L.map('map').setView([20, 0], 2); // Vue initiale de la carte
+  
+    // Ajouter une couche de tuiles OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 5,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+  
+    // Charger les frontières des pays depuis un fichier GeoJSON
+    fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+      .then(response => response.json())
+      .then(data => {
+        geoJsonLayer = L.geoJson(data, {
+          style: style,
+          onEachFeature: onEachFeature
+        }).addTo(map);
+      });
+  
+    // Réajuster la carte lors du redimensionnement de la fenêtre
+    window.addEventListener('resize', () => {
+      map.invalidateSize();
     });
-}
+  }
 
 // Style des pays
 function style(feature) {
