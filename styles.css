@@ -165,3 +165,56 @@ main {
     border: 2px solid #00f;
     padding: 5px;
 }
+.logo {
+    margin: 20px;
+}
+
+/* Lingoguessr */
+.lingoguessr {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  
+  #map {
+    width: 80%;
+    height: 500px;
+    margin: 20px auto;
+    border: 2px solid #ccc;
+  }
+  
+  button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+
+  /* Conteneur du score */
+#score-container {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  /* Affichage du score */
+  #score {
+    color: #007bff; /* Couleur bleue pour le score */
+  }
+  
+  /* Améliorer la réactivité */
+  @media (max-width: 600px) {
+    #score-container {
+      font-size: 16px;
+      padding: 8px 16px;
+    }
+  }

@@ -1,0 +1,16 @@
+{
+  "countries": [
+    { "name": "Spain", "language": "espagnol" },
+    { "name": "Mexico", "language": "espagnol" },
+    { "name": "Colombia", "language": "espagnol" },
+    { "name": "Argentina", "language": "espagnol" },
+    { "name": "Chile", "language": "espagnol" },
+    { "name": "Poland", "language": "polonais" },
+    { "name": "France", "language": "français" }
+  ],
+  "phrases": [
+    { "langue": "espagnol", "phrase": "Hola, ¿cómo estás?" },
+    { "langue": "français", "phrase": "Bonjour, comment ça va ?" },
+    { "langue": "polonais", "phrase": "Cześć, jak się masz?" }
+  ]
+}

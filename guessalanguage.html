@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+    <meta charset="UTF-8">
+    <title>Jeu des Langues</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    </head>
+    
+    <body>
+        <header>
+            <div class="logo">
+                <a href="index.html">
+                    <img src="images/olondutsu.png" alt="LOGO">
+                </a>
+            </div>
+
+            <h1>Simon's page</h1>
+        </header>
+        
+        <div class="lingoguessr">
+            <button id="begin-button">Begin</button>
+            <div id="game-container" style="display: none;">
+                <p id="phrase"></p>
+                <div id="map"></div>
+            </div>
+        
+            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+            <script src="script.js"></script>
+        </div>
+        <div id="score-container">
+            Score: <span id="score">0</span> points
+        </div>
+    </body>
+</html>
