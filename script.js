@@ -99,7 +99,7 @@ function onEachFeature(feature, layer) {
 // Fonction qui gère le clic sur un pays
 function onCountryClick(e) {
   const countryName = e.target.feature.properties.name;
-  const selectedLangue = languageMapping[countryName];
+  const selectedLanguage = languageMapping[countryName];
 
   // Réinitialiser les styles des pays
   geoJsonLayer.eachLayer(layer => {
@@ -108,11 +108,11 @@ function onCountryClick(e) {
 
   let isCorrectAnswer = false;
 
-  if (selectedLangue) {
+  if (selectedLanguage) {
     // Mettre en surbrillance tous les pays avec la même langue
     geoJsonLayer.eachLayer(layer => {
       const country = layer.feature.properties.name;
-      if (languageMapping[country] === selectedLangue) {
+      if (languageMapping[country] === selectedLanguage) {
         layer.setStyle({
           fillColor: 'green',
           weight: 2,
@@ -120,7 +120,7 @@ function onCountryClick(e) {
           color: 'black',
           fillOpacity: 0.8
         });
-      } else if (languageMapping[country] === currentPhrase.langue) {
+      } else if (languageMapping[country] === currentPhrase.language) {
         // Si le pays parle la langue correcte mais n'est pas cliqué, le rendre rouge
         layer.setStyle({
           fillColor: 'red',
@@ -132,12 +132,13 @@ function onCountryClick(e) {
       }
     });
 
-    if (selectedLangue === currentPhrase.langue) {
+    if (selectedLanguage === currentPhrase.language) {
       alert(`Gagné ! Vous avez cliqué sur ${countryName}.`);
       score += 100; // Ajouter 100 points pour une réponse correcte
       isCorrectAnswer = true;
     } else {
-      alert(`Perdu ! Ce pays ne parle pas ${currentPhrase.langue}.`);
+        score -= 100;
+        alert(`Perdu ! Ce pays ne parle pas ${currentPhrase.langue}.`);
     }
 
     // Choisir une nouvelle phrase

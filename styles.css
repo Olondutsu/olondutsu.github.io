@@ -190,6 +190,15 @@ main {
     font-size: 16px;
   }
 
+  #phrase-container {
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-weight: bold;
+    color: #333;
+  }
+
   /* Conteneur du score */
 #score-container {
   position: fixed;

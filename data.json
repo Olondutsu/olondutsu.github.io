@@ -1,16 +1,57 @@
 {
-  "countries": [
-    { "name": "Spain", "language": "espagnol" },
-    { "name": "Mexico", "language": "espagnol" },
-    { "name": "Colombia", "language": "espagnol" },
-    { "name": "Argentina", "language": "espagnol" },
-    { "name": "Chile", "language": "espagnol" },
-    { "name": "Poland", "language": "polonais" },
-    { "name": "France", "language": "français" }
-  ],
+    "countries": [
+        
+        { "name": "Spain", "language": "spanish" },
+        { "name": "Mexico", "language": "spanish" },
+        { "name": "Colombia", "language": "spanish" },
+        { "name": "Argentina", "language": "spanish" },
+        { "name": "Bolivia", "language": "spanish" },
+        { "name": "Venezuela", "language": "spanish" },
+        { "name": "Honduras", "language": "spanish" },
+        { "name": "Chile", "language": "spanish" },
+        { "name": "Paraguay", "language": "spanish" },
+        { "name": "Cuba", "language": "spanish" },
+        { "name": "Ecuador", "language": "spanish" },
+        { "name": "Peru", "language": "spanish" },
+    
+        { "name": "Poland", "language": "polish" },
+        { "name": "Germany", "language": "german" },
+        { "name": "Italy", "language": "italian" },
+        { "name": "China", "language": "chinese" },
+        { "name": "Japan", "language": "japanese" },
+        { "name": "Russia", "language": "russian" },
+        { "name": "India", "language": "hindi" },
+        { "name": "Belarus", "language": "belarussian" },
+        { "name": "Portugal", "language": "portuguese" },
+        { "name": "Brazil", "language": "portuguese" },
+        { "name": "France", "language": "french" },
+    
+        { "name": "Saudi Arabia", "language": "arabic" },
+        { "name": "United Arab Emirates", "language": "arabic" },
+        { "name": "Qatar", "language": "arabic" },
+        { "name": "Kuwait", "language": "arabic" },
+        { "name": "Oman", "language": "arabic" },
+        { "name": "Bahrain", "language": "arabic" },
+        { "name": "Jordan", "language": "arabic" },
+        { "name": "Lebanon", "language": "arabic" },
+        { "name": "Syria", "language": "arabic" },
+        { "name": "Iraq", "language": "arabic" },
+        { "name": "Palestine", "language": "arabic" }
+    ],
+
   "phrases": [
-    { "langue": "espagnol", "phrase": "Hola, ¿cómo estás?" },
-    { "langue": "français", "phrase": "Bonjour, comment ça va ?" },
-    { "langue": "polonais", "phrase": "Cześć, jak się masz?" }
+    { "language": "spanish", "phrase": "Hola, ¿cómo estás?" },
+    { "language": "french", "phrase": "Bonjour, comment ça va ?" },
+    { "language": "polish", "phrase": "Cześć, jak się masz?" },
+    { "language": "french", "phrase": "La pluie tombe doucement sur les feuilles." },
+    { "language": "spanish", "phrase": "El cielo es muy azul hoy." },
+    { "language": "german", "phrase": "Der Hund läuft im Park." },
+    { "language": "italian", "phrase": "Mi piace mangiare la pizza." },
+    { "language": "chinese", "phrase": "我喜欢读书。" },
+    { "language": "japanese", "phrase": "私は日本語を勉強しています。" },
+    { "language": "arabic", "phrase": "السماء صافية اليوم." },
+    { "language": "russian", "phrase": "Я люблю путешествовать." },
+    { "language": "portuguese", "phrase": "O sol brilha intensamente." },
+    { "language": "hindi", "phrase": "मुझे किताबें पढ़ना पसंद है।" }
   ]
 }
