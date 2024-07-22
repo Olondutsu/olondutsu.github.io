@@ -34,6 +34,19 @@ main {
     flex: 1;
 }
 
+.navigation {
+    justify-content: center;
+    width: 250px;
+    border: 1px solid #757575;
+    padding: 16px;
+    overflow-y: auto;
+}
+.navigation a {
+    
+    color: black; /* Change la couleur du texte du lien */
+    text-decoration: none; /* Supprime le soulignement par défaut */
+}
+
 .menu {
     width: 250px;
     border-right: 1px solid #ddd;
