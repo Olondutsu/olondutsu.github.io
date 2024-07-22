@@ -1,78 +1,116 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
 
 body {
-	max-width: 1200px;
-	margin: auto;
-	padding: 16px;
-	font-family: 'Montserrat', sans-serif;
+    max-width: 1200px;
+    margin: auto;
+    padding: 16px;
+    font-family: 'Montserrat', sans-serif;
 }
 
 header {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	margin-bottom: 16px;
-	padding: 8px;
-	background-color: #7451eb;
-	text-align: center;
-	color: white;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 8px;
+    background-color: #7451eb;
+    text-align: center;
+    color: white;
 }
+
 header img {
-	height: 60px;
-	margin-left: 1rem;
+    height: 60px;
+    margin-left: 1rem;
 }
+
 header h1 {
-	flex-grow: 1;
+    flex-grow: 1;
 }
 
 main {
-	display: flex;
-	flex-direction: row;
+    display: flex;
+    flex-direction: row;
 }
 
-.filters {
-	border-radius: 4px;
-	box-shadow: 0px 0px 4px gray;
-	margin: 8px;
-	padding: 8px;
-	min-width: 300px;
-	min-height: 400px;
+/* Nouveau style pour le menu des catégories */
+.menu {
+    border-radius: 4px;
+    box-shadow: 0px 0px 4px gray;
+    margin: 8px;
+    padding: 8px;
+    min-width: 300px;
+    min-height: 400px;
+    background-color: #f9f9f9;
 }
-.filters h3 {
-	text-align: center;
+
+.menu h3 {
+    text-align: center;
+}
+
+.category-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.category-list li {
+    margin: 4px 0;
+    text-align: center;
+}
+
+.category-list button {
+    width: 100%;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.category-list button:hover {
+    background-color: #eee;
 }
 
 .cards {
-	flex: 1;
-	margin: 8px;
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 4px;
+    flex: 1;
+    margin: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Ajustement pour s'adapter aux tailles d'écran */
+    gap: 8px;
 }
+
 .cards article {
-	border: 1px solid black;
-	padding: 4px;
+    border: 1px solid black;
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0px 0px 4px gray;
+    background-color: #fff;
 }
+
 .cards article img {
-	display: block;
-	margin-left: auto;
-	margin-right: auto;
-	max-width: 200px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 200px;
 }
+
 .cards article p {
-	margin-top: 4px;
-	margin-bottom: 4px;
+    margin-top: 4px;
+    margin-bottom: 4px;
 }
+
 .cards article h2 {
-	text-align: center;
+    text-align: center;
 }
 
 .selected {
     border: 2px solid #00f; /* Ajoute une bordure bleue pour les éléments sélectionnés */
     padding: 5px; /* Ajoute un peu d'espace autour de la bordure */
 }
-.recipes{
-	border-radius: 4px;
-	box-shadow: 0px 0px 4px gray;
-	margin: 90px;
+
+.recipes {
+    border-radius: 4px;
+    box-shadow: 0px 0px 4px gray;
+    margin: 90px;
 }
