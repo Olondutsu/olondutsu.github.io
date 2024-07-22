@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Les Bonnes Pièces</title>
     <link rel="stylesheet" href="styles.css">
     <script type="module" src="parts.js"></script>
@@ -12,17 +13,25 @@
         <h1>What's in my fridge?</h1>
     </header>
     <main>
-        <!-- Menu de Catégories -->
-        <nav class="menu">
-            <h3>Catégories</h3>
-            <ul class="category-list">
-                <!-- Les catégories seront ajoutées ici dynamiquement -->
-            </ul>
-        </nav>
-
-        <!-- Cartes des Ingrédients -->
-        <section class="cards">
-            <!-- Les cartes d'ingrédients seront ajoutées ici dynamiquement -->
+        <aside class="menu">
+            <h2>Catégories</h2>
+            <ul class="category-list"></ul>
+            <h3>In my fridge</h3>
+            <ul class="fridge-list"></ul>
+        </aside>
+        <section class="content">
+            <div class="tabs">
+                <button id="tab-ingredients" class="active">Ingrédients</button>
+                <button id="tab-recipes">Recettes</button>
+            </div>
+            <div class="tab-content">
+                <div id="ingredients-content" class="tab-panel active">
+                    <div class="cards ingredients-cards"></div>
+                </div>
+                <div id="recipes-content" class="tab-panel">
+                    <div class="cards recipes-cards"></div>
+                </div>
+            </div>
         </section>
     </main>
 </body>
