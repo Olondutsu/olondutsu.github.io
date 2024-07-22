@@ -1,7 +1,5 @@
-
 // Charger les pièces et les recettes depuis les fichiers JSON
 async function loadPartsAndRecipes() {
-    // Fetching the parts from the JSON file
     const response = await fetch('parts-list.json');
     const parts = await response.json();
 
@@ -11,200 +9,86 @@ async function loadPartsAndRecipes() {
     return { parts, recipes };
 }
 
-// Déclarez recipes comme une variable globale pour être accessible dans toggleSelection
-let recipes = [];
+let parts = [];
 
-const selectedParts = [];
+// Fonction pour générer le menu des catégories
+function generateCategoryMenu(parts) {
+    const categoryList = document.querySelector('.category-list');
+    const categories = new Set();
 
-function toggleSelection(part, imageElement) {
-    // Cette fonction gère la sélection d'une pièce
-    const index = selectedParts.indexOf(part);
-    if (index === -1) {
-        selectedParts.push(part);
-        imageElement.style.border = '2px solid green'; // Highlight the selected part
-    } else {
-        selectedParts.splice(index, 1);
-        imageElement.style.border = ''; // Remove highlight
-    }
-    console.log('Selected parts:', selectedParts);
-    showAvailableRecipes(selectedParts, recipes);
+    // Extraire les catégories uniques des pièces
+    parts.forEach(part => {
+        if (part.categories) {
+            part.categories.forEach(category => categories.add(category));
+        }
+    });
+
+    // Créer les éléments de liste pour chaque catégorie
+    categories.forEach(category => {
+        const listItem = document.createElement('li');
+        const button = document.createElement('button');
+        button.innerText = category;
+        button.addEventListener('click', () => filterPartsByCategory(category, parts));
+        listItem.appendChild(button);
+        categoryList.appendChild(listItem);
+    });
+
+    // Ajouter un bouton pour afficher tous les ingrédients
+    const allItem = document.createElement('li');
+    const allButton = document.createElement('button');
+    allButton.innerText = 'Tous';
+    allButton.addEventListener('click', () => displayParts(parts));
+    allItem.appendChild(allButton);
+    categoryList.insertBefore(allItem, categoryList.firstChild);
 }
 
-// Générer les pièces avec la fonction et les paramètres des pièces
-function generateParts(parts) {
+// Fonction pour afficher les cartes d'ingrédients
+function displayParts(parts) {
     const sectionCards = document.querySelector(".cards");
     sectionCards.innerHTML = ""; // Effacer les cartes existantes
 
-    parts.forEach(item => {
-        // Créer un élément pour une pièce auto
+    parts.forEach(part => {
+        // Créer des éléments pour une carte d'ingrédient
         const partElement = document.createElement("article");
 
-        // Créer les éléments
-        const imageElement = document.createElement("img");
-        imageElement.src = item.image;
-
         const nameElement = document.createElement("h2");
-        nameElement.innerText = item.name;
+        nameElement.innerText = part.name;
 
-        const priceElement = document.createElement("p");
-        priceElement.innerText = `Price: ${item.price} € (${item.price < 35 ? "€" : "€€€"})`;
+        const imageElement = document.createElement("img");
+        imageElement.src = part.image;
 
         const categoryElement = document.createElement("p");
-        categoryElement.innerText = item.category ?? "(no category)";
-
-        const descriptionElement = document.createElement("p");
-        descriptionElement.innerText = item.description ?? "No description at the moment.";
+        categoryElement.innerText = `Catégorie: ${part.categories.join(', ')}`;
 
         const stockElement = document.createElement("p");
-        stockElement.innerText = item.available ? "In stock" : "Out of stock";
-        
-        // Attacher la balise article à la section des cartes
-        sectionCards.appendChild(partElement);
+        stockElement.innerText = part.available ? "En stock" : "Rupture de stock";
 
-        // Attacher l'image à partElement (la balise article)
-        partElement.appendChild(imageElement);
+        // Attacher les éléments à la carte
         partElement.appendChild(nameElement);
-        partElement.appendChild(priceElement);
+        partElement.appendChild(imageElement);
         partElement.appendChild(categoryElement);
-
-        // Ajouter des éléments au DOM pour l'exercice
-        partElement.appendChild(descriptionElement);
         partElement.appendChild(stockElement);
 
-        //Listener pour la selection + appel de la fonction 
-        // Ajouter un écouteur d'événement à l'image
-        imageElement.addEventListener('click', (event) => {
-            const rect = imageElement.getBoundingClientRect();
-            const x = event.clientX - rect.left; // x coordinate of the click within the image
-            const y = event.clientY - rect.top;  // y coordinate of the click within the image
+        // Attacher la carte à la section
+        sectionCards.appendChild(partElement);
 
-            console.log(`Clicked at X: ${x}, Y: ${y} on ${item.name}`);
-            toggleSelection(item, imageElement);
+        // Ajouter un écouteur d'événement pour les clics sur les cartes
+        partElement.addEventListener('click', () => {
+            alert(`Vous avez sélectionné l'ingrédient: ${part.name}`);
         });
     });
 }
 
-function showAvailableRecipes(selectedParts, recipes) {
-    const selectedNames = selectedParts.map(part => part.name);
-    const recipeSection = document.querySelector('.available-recipes');
-    recipeSection.innerHTML = ""; // Effacer les recettes existantes
-
-    recipes.forEach(recipe => {
-        // Vérifier si tous les ingrédients de la recette sont sélectionnés
-        const canMakeRecipe = recipe.ingredients.every(ingredient => selectedNames.includes(ingredient));
-        
-        if (canMakeRecipe) {
-            const recipeElement = document.createElement('p');
-            recipeElement.innerText = recipe.name;
-            recipeSection.appendChild(recipeElement);
-        }
-    });
+// Fonction pour filtrer les pièces par catégorie
+function filterPartsByCategory(category, parts) {
+    const filteredParts = parts.filter(part => part.categories && part.categories.includes(category));
+    displayParts(filteredParts);
 }
 
 // Charger les données et initialiser l'application
-loadPartsAndRecipes().then(({ parts, recipes: loadedRecipes }) => {
-    recipes = loadedRecipes; // Affecter recipes à la variable globale
-    generateParts(parts);
+loadPartsAndRecipes().then(({ parts: loadedParts }) => {
+    parts = loadedParts; // Affecter les pièces à la variable globale
 
-    // Gestion des boutons
-    const sortButton = document.querySelector(".btn-sort");
-
-    sortButton.addEventListener("click", function () {
-        const sortedParts = Array.from(parts);
-        sortedParts.sort(function (a, b) {
-            return a.price - b.price;
-        });
-        document.querySelector(".cards").innerHTML = "";
-        generateParts(sortedParts);
-    });
-
-    const filterButton = document.querySelector(".btn-filter");
-
-    filterButton.addEventListener("click", function () {
-        const filteredParts = parts.filter(function (part) {
-            return part.price <= 35;
-        });
-        document.querySelector(".cards").innerHTML = "";
-        generateParts(filteredParts);
-    });
-
-    // Correction Exercise
-    const descendingButton = document.querySelector(".btn-descending");
-
-    descendingButton.addEventListener("click", function () {
-        const sortedParts = Array.from(parts);
-        sortedParts.sort(function (a, b) {
-            return b.price - a.price;
-        });
-        document.querySelector(".cards").innerHTML = "";
-        generateParts(sortedParts);
-    });
-
-    const noDescriptionButton = document.querySelector(".btn-nodesc");
-
-    noDescriptionButton.addEventListener("click", function () {
-        const filteredParts = parts.filter(function (part) {
-            return part.description;
-        });
-        document.querySelector(".cards").innerHTML = "";
-        generateParts(filteredParts);
-    });
-
-    const names = parts.map(part => part.name);
-    for (let i = parts.length - 1; i >= 0; i--) {
-        if (parts[i].price > 35) {
-            names.splice(i, 1);
-        }
-    }
-    console.log(names);
-
-    // Créer l'en-tête
-    const pElement = document.createElement('p');
-    pElement.innerText = "Affordable parts";
-
-    // Créer la liste
-    const affordableElements = document.createElement('ul');
-
-    // Ajouter chaque nom à la liste
-    for (let i = 0; i < names.length; i++) {
-        const nameElement = document.createElement('li');
-        nameElement.innerText = names[i];
-        affordableElements.appendChild(nameElement);
-    }
-    // Ajouter l'en-tête, puis la liste au bloc des résultats abordables
-    document.querySelector('.affordable')
-        .appendChild(pElement)
-        .appendChild(affordableElements);
-
-    // Exercise Code 
-    const availableNames = parts.map(part => part.name);
-    const availablePrices = parts.map(part => part.price);
-
-    for (let i = parts.length - 1; i >= 0; i--) {
-        if (parts[i].available === false){
-            availableNames.splice(i, 1);
-            availablePrices.splice(i, 1);
-        }
-    }
-
-    const availableElements = document.createElement('ul');
-
-    for (let i = 0; i < availableNames.length; i++) {
-        const nameElement = document.createElement('li');
-        nameElement.innerText = `${availableNames[i]} - ${availablePrices[i]} €`;
-        availableElements.appendChild(nameElement);
-    }
-
-    const availablePElement = document.createElement('p');
-    availablePElement.innerText = "Available parts:";
-    document.querySelector('.available').appendChild(availablePElement).appendChild(availableElements);
-
-    const inputMaxPrice = document.querySelector('#prix-max');
-    inputMaxPrice.addEventListener('input', function () {
-        const filteredParts = parts.filter(function (part) {
-            return part.price <= inputMaxPrice.value;
-        });
-        document.querySelector(".cards").innerHTML = "";
-        generateParts(filteredParts);
-    });
+    generateCategoryMenu(parts);
+    displayParts(parts); // Afficher toutes les pièces par défaut
 });
