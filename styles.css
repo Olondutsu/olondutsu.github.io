@@ -226,4 +226,26 @@ main {
     font-size: 16px;
     padding: 8px 16px;
   }
+
+/* back home */
+#back-home {
+
+    bottom: 0; /* Positionne le bas du conteneur au bas de la fenêtre */
+    right: 0; /* Positionne le côté droit du conteneur au bord droit de la fenêtre */
+    background-color: #f8f9fa; /* Couleur de fond (optionnel, pour visibilité) */
+    padding: 10px; /* Espacement autour du contenu (optionnel) */
+    border-top-left-radius: 10px; /* Arrondir les coins supérieurs gauches (optionnel) */
+    border-top-right-radius: 10px; /* Arrondir les coins supérieurs droits (optionnel) */
+}
+
+/* Style pour le lien */
+#back-home a {
+    text-decoration: none; /* Enlève le soulignement du lien */
+    color: #030b13; /* Couleur du texte du lien */
+    font-size: 16px; /* Taille du texte (optionnel) */
+}
+
+#back-home a:hover {
+    text-decoration: underline; /* Ajoute un soulignement au survol (optionnel) */
+}
 }
