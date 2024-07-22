@@ -3,7 +3,7 @@ async function loadPartsAndRecipes() {
     const response = await fetch('parts-list.json');
     const parts = await response.json();
 
-    // Assurez-vous que les données sont chargées correctement
+    // Vérification des données chargées
     console.log("Parts loaded:", parts);
 
     const recipesResponse = await fetch('recipes.json');
@@ -35,14 +35,6 @@ function generateCategoryMenu(parts) {
         listItem.appendChild(button);
         categoryList.appendChild(listItem);
     });
-
-    // Ajouter un bouton pour afficher tous les ingrédients (optionnel)
-    // const allItem = document.createElement('li');
-    // const allButton = document.createElement('button');
-    // allButton.innerText = 'Tous';
-    // allButton.addEventListener('click', () => displayParts(parts));
-    // allItem.appendChild(allButton);
-    // categoryList.insertBefore(allItem, categoryList.firstChild);
 }
 
 // Fonction pour afficher les cartes d'ingrédients
