@@ -5,111 +5,150 @@ body {
     margin: auto;
     padding: 16px;
     font-family: 'Montserrat', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
 }
 
 header {
     display: flex;
     flex-direction: row;
     align-items: center;
-    margin-bottom: 16px;
     padding: 8px;
     background-color: #7451eb;
-    text-align: center;
     color: white;
 }
 
 header img {
     height: 60px;
-    margin-left: 1rem;
+    margin-right: 1rem;
 }
 
 header h1 {
     flex-grow: 1;
+    text-align: center;
 }
 
 main {
     display: flex;
-    flex-direction: row;
+    flex: 1;
 }
 
-/* Nouveau style pour le menu des catégories */
 .menu {
-    border-radius: 4px;
-    box-shadow: 0px 0px 4px gray;
-    margin: 8px;
-    padding: 8px;
-    min-width: 300px;
-    min-height: 400px;
-    background-color: #f9f9f9;
+    width: 250px;
+    border-right: 1px solid #ddd;
+    padding: 16px;
+    overflow-y: auto;
 }
 
-.menu h3 {
-    text-align: center;
+.menu h2, .menu h3 {
+    margin-bottom: 8px;
 }
 
-.category-list {
-    list-style-type: none;
+.menu ul {
+    list-style: none;
     padding: 0;
-    margin: 0;
 }
 
-.category-list li {
-    margin: 4px 0;
-    text-align: center;
+.menu li {
+    margin-bottom: 8px;
 }
 
-.category-list button {
+.menu li button {
     width: 100%;
-    padding: 10px;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    background-color: #f0f0f0;
+    border: none;
+    padding: 8px;
+    text-align: left;
     cursor: pointer;
-    transition: background-color 0.3s;
 }
 
-.category-list button:hover {
+.menu li button:hover {
+    background-color: #ddd;
+}
+
+.fridge-list li {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    background-color: #f9f9f9;
+    padding: 4px 8px;
+}
+
+.fridge-list li:hover {
     background-color: #eee;
 }
 
-.cards {
+.content {
     flex: 1;
-    margin: 8px;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.tabs {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.tabs button {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    text-align: center;
+}
+
+.tabs button.active {
+    background-color: #fff;
+    border-bottom: none;
+}
+
+.tab-content {
+    border: 1px solid #ddd;
+    border-top: none;
+    flex: 1;
+}
+
+.tab-panel {
+    display: none;
+    padding: 16px;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Ajustement pour s'adapter aux tailles d'écran */
-    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
 }
 
 .cards article {
-    border: 1px solid black;
-    padding: 8px;
-    border-radius: 4px;
-    box-shadow: 0px 0px 4px gray;
+    border: 1px solid #ccc;
+    padding: 16px;
     background-color: #fff;
 }
 
 .cards article img {
     display: block;
-    margin-left: auto;
-    margin-right: auto;
-    max-width: 200px;
-}
-
-.cards article p {
-    margin-top: 4px;
-    margin-bottom: 4px;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
 }
 
 .cards article h2 {
     text-align: center;
+    margin-bottom: 8px;
+}
+
+.cards article p {
+    margin: 4px 0;
 }
 
 .selected {
-    border: 2px solid #00f; /* Ajoute une bordure bleue pour les éléments sélectionnés */
-    padding: 5px; /* Ajoute un peu d'espace autour de la bordure */
-}
-.recipes {
-    border-radius: 4px;
-    box-shadow: 0px 0px 4px gray;
-    margin: 90px;
+    border: 2px solid #00f;
+    padding: 5px;
 }
