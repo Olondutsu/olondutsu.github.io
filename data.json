@@ -43,7 +43,14 @@
         { "name": "Czech Republic", "language": "czech" },
         { "name": "Slovakia", "language": "slovak" },
         { "name": "Croatia", "language": "croatian" },
-        { "name": "Bosnia and Herzegovina", "language": "bosnian" }
+        { "name": "Bosnia and Herzegovina", "language": "bosnian" },
+
+        { "name": "Pakistan", "language": "urdu" },
+        { "name": "Vietnam", "language": "vietnamese" },
+        { "name": "Thailand", "language": "thai" },
+        { "name": "Cambodia", "language": "khmer" },
+        { "name": "Laos", "language": "lao" },
+        { "name": "Romania", "language": "romanian" }
     ],
 
   "phrases": [
@@ -65,6 +72,13 @@
     { "language": "czech", "phrase": "Vzhledem k neustálým změnám v oblasti technologií je důležité neustále se vzdělávat a přizpůsobovat novým trendům." },
     { "language": "slovak", "phrase": "Súčasné výzvy v oblasti životného prostredia vyžadujú spoločné úsilie a inovácie na globálnej úrovni." },
     { "language": "croatian", "phrase": "Razumijevanje kulturnih razlika ključno je za uspješno poslovanje na međunarodnoj razini." },
-    { "language": "bosnian", "phrase": "Povećanje globalne konkurencije zahtijeva od preduzeća da razviju strategije za održavanje tržišne prednosti." }
+    { "language": "bosnian", "phrase": "Povećanje globalne konkurencije zahtijeva od preduzeća da razviju strategije za održavanje tržišne prednosti." },
+    { "language": "urdu", "phrase": "پاکستانی ثقافت میں خوش آمدید۔" },
+    { "language": "belarussian", "phrase": "Калі ласка, уважліва слухайце навіны." },
+    { "language": "vietnamese", "phrase": "Tìm hiểu văn hóa địa phương là rất quan trọng khi du lịch." },
+    { "language": "thai", "phrase": "การเรียนรู้วัฒนธรรมท้องถิ่นเป็นสิ่งสำคัญเมื่อเดินทางท่องเที่ยว." },
+    { "language": "khmer", "phrase": "ការស្វែងយល់ពីវប្បធម៌ជាតិគឺសំខាន់បំផុតនៅពេលធ្វើដំណើរទេសចរណ៍." },
+    { "language": "lao", "phrase": "ການຮຽນຮູ້ກ່ຽວກັບວັດທະນະທຳທ້ອງຖິ່ນແມ່ນສິ່ງສຳຄັນໃນການທ່ອງທ່ຽວ." },
+    { "language": "romanian", "phrase": "Explorarea culturii locale este esențială în timpul călătoriilor." }
   ]
 }
