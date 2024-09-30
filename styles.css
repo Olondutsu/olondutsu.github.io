@@ -64,6 +64,11 @@ main {
         left: 0; /* Le menu se déplace pour apparaître */
     }
 
+    
+.menu.closed {
+    transform: translateX(-100%); /* Cache le menu en le déplaçant hors de l'écran */
+}
+
     .menu h2, .menu h3 {
         margin-bottom: 8px;
     }
