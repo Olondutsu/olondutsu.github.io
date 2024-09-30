@@ -1,3 +1,7 @@
+document.getElementById('nav-toggle').addEventListener('click', () => {
+    const nav = document.querySelector('.navigation');
+    nav.classList.toggle('open');
+});
 // Charger les pièces et les recettes depuis les fichiers JSON
 async function loadPartsAndRecipes() {
     const response = await fetch('parts-list.json');
@@ -182,8 +186,4 @@ loadPartsAndRecipes().then(({ parts, recipes: loadedRecipes }) => {
 
     generateCategoryMenu(parts);
     setupTabs();
-});
-document.getElementById('menu-toggle').addEventListener('click', () => {
-    const menu = document.querySelector('.menu');
-    menu.classList.toggle('open');
 });
