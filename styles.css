@@ -55,6 +55,8 @@ main {
         border-right: 1px solid #ddd;
         padding: 16px;
         overflow-y: auto;
+        transition: left 0.3s ease-in-out;
+        zindex :100;
     }
 
     .menu h2, .menu h3 {
