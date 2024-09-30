@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
 
 body {
@@ -57,6 +58,9 @@ main {
         overflow-y: auto;
         transition: left 0.3s ease-in-out;
         z-index :1000;
+    }
+.menu.open {
+        left: 0; /* Le menu se déplace pour apparaître */
     }
 
     .menu h2, .menu h3 {
