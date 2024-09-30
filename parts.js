@@ -184,5 +184,6 @@ loadPartsAndRecipes().then(({ parts, recipes: loadedRecipes }) => {
     setupTabs();
 });
 document.getElementById('menu-toggle').addEventListener('click', () => {
-    document.querySelector('.menu').classList.toggle('open');
+    const menu = document.querySelector('.menu');
+    menu.classList.toggle('open');
 });
