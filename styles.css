@@ -50,6 +50,7 @@ main {
 @media (max-width: 768px) {
     .menu {
         position: sticky;
+        top: 0;
         width: 250px;
         border-right: 1px solid #ddd;
         padding: 16px;
