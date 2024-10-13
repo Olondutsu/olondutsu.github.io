@@ -1,3 +1,11 @@
+document.addEventListener('DOMContentLoaded', function() {
+    const menuToggle = document.getElementById('menu-toggle');
+    const menu = document.querySelector('.menu');
+
+    menuToggle.addEventListener('click', function() {
+        menu.classList.toggle('closed'); // Ajoute ou retire la classe 'closed'
+    });
+});
 // Charger les pièces et les recettes depuis les fichiers JSON
 async function loadPartsAndRecipes() {
     const response = await fetch('parts-list.json');

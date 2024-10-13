@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
 
 body {
@@ -49,11 +50,24 @@ main {
 
 @media (max-width: 768px) {
     .menu {
+        display: flex;
+        position: sticky;
+        top: 0;
         width: 250px;
         border-right: 1px solid #ddd;
         padding: 16px;
         overflow-y: auto;
+        transition: left 0.3s ease-in-out;
+        z-index :1000;
     }
+.menu.open {
+        left: 0; /* Le menu se déplace pour apparaître */
+    }
+
+    
+.menu.closed {
+    transform: translateX(-100%); /* Cache le menu en le déplaçant hors de l'écran */
+}
 
     .menu h2, .menu h3 {
         margin-bottom: 8px;
@@ -95,6 +109,7 @@ main {
 }
 
 .content {
+    width: 100%;
     flex: 1;
     padding: 16px;
     overflow-y: auto;
@@ -137,8 +152,8 @@ main {
 
 .cards {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
 
 .cards article {
