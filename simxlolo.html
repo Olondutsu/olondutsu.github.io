@@ -1,14 +1,141 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sim X Lolo</title>
-    <link rel="stylesheet" href="styles.css">
-    <script type="module" src="parts.js"></script>
+  <meta charset="UTF-8">
+  <title>Fruit Drop Game</title>
+  <style>
+    canvas {
+      background-color: #f0f0f0;
+      display: block;
+      margin: auto;
+      border: 2px solid #333;
+    }
+  </style>
 </head>
 <body>
-    <p> Voilà le site ololol </p>
-</body>
 
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const fruits = [];
+const fruitImages = ["apple.png", "banana.png", "pear.png"];
+const loadedImages = {};
+const backpack = { x: 650, y: 450, width: 120, height: 120 };
+let draggedFruit = null;
+
+// Chargement des images
+function loadImages(paths, callback) {
+  let loaded = 0;
+  paths.forEach(name => {
+    const img = new Image();
+    img.src = `images/${name}`;
+    img.onload = () => {
+      loadedImages[name] = img;
+      if (++loaded === paths.length) callback();
+    };
+  });
+}
+
+// Générer un fruit aléatoire
+function spawnFruit() {
+  const name = fruitImages[Math.floor(Math.random() * fruitImages.length)];
+  fruits.push({
+    name,
+    x: Math.random() * (canvas.width - 60),
+    y: -60,
+    width: 50,
+    height: 50,
+    dragging: false,
+    inBackpack: false,
+  });
+}
+
+// Animation
+function update() {
+  fruits.forEach(fruit => {
+    if (!fruit.dragging && !fruit.inBackpack) fruit.y += 2;
+  });
+}
+
+// Dessin
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Sac à dos
+  ctx.drawImage(loadedImages["backpack.png"], backpack.x, backpack.y, backpack.width, backpack.height);
+
+  // Fruits
+  fruits.forEach(fruit => {
+    if (!fruit.inBackpack) {
+      ctx.drawImage(loadedImages[fruit.name], fruit.x, fruit.y, fruit.width, fruit.height);
+    }
+  });
+
+  // Fruits dans le sac (optionnel)
+  fruits.forEach((fruit, i) => {
+    if (fruit.inBackpack) {
+      ctx.drawImage(loadedImages[fruit.name], backpack.x + 10 + (i % 3) * 30, backpack.y + 10 + Math.floor(i / 3) * 30, 25, 25);
+    }
+  });
+}
+
+// Boucle de jeu
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Gestion souris
+canvas.addEventListener("mousedown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  for (let fruit of fruits) {
+    if (!fruit.inBackpack &&
+        mx >= fruit.x && mx <= fruit.x + fruit.width &&
+        my >= fruit.y && my <= fruit.y + fruit.height) {
+      fruit.dragging = true;
+      draggedFruit = fruit;
+      break;
+    }
+  }
+});
+
+canvas.addEventListener("mousemove", e => {
+  if (draggedFruit) {
+    const rect = canvas.getBoundingClientRect();
+    draggedFruit.x = e.clientX - rect.left - draggedFruit.width / 2;
+    draggedFruit.y = e.clientY - rect.top - draggedFruit.height / 2;
+  }
+});
+
+canvas.addEventListener("mouseup", e => {
+  if (draggedFruit) {
+    // Test si dans sac
+    if (
+      draggedFruit.x + draggedFruit.width > backpack.x &&
+      draggedFruit.x < backpack.x + backpack.width &&
+      draggedFruit.y + draggedFruit.height > backpack.y &&
+      draggedFruit.y < backpack.y + backpack.height
+    ) {
+      draggedFruit.inBackpack = true;
+    }
+    draggedFruit.dragging = false;
+    draggedFruit = null;
+  }
+});
+
+// Initialisation
+loadImages([...fruitImages, "backpack.png"], () => {
+  setInterval(spawnFruit, 1500); // Un fruit toutes les 1.5s
+  gameLoop();
+});
+</script>
+
+</body>
 </html>
