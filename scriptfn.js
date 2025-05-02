@@ -167,18 +167,3 @@ canvas.addEventListener("mouseup", () => {
     draggedFruit = null;
   }
 });
-
-gameLoop();
-💅 Ajoute dans ton CSS
-css
-Copier
-Modifier
-@keyframes floatUp {
-  0% { transform: translateY(0); opacity: 1; }
-  100% { transform: translateY(-40px); opacity: 0; }
-}
-
-@keyframes fadeOut {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
-}
