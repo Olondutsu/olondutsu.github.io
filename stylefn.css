@@ -1,0 +1,43 @@
+/* Sim X Lolo */
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #f0f0f0;
+  }
+  
+  #gameCanvas {
+    display: block;
+    background: white;
+  }
+  
+  #scoreboard {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    font-size: 20px;
+    color: #333;
+    background: rgba(255,255,255,0.8);
+    padding: 8px;
+    border-radius: 8px;
+  }
+  
+  #messages {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 40px;
+    font-weight: bold;
+    pointer-events: none;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-40px); opacity: 0; }
+  }
+  
+  @keyframes fadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
