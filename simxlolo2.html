@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Jeu Grille</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="home-screen">
+    <h1>Bienvenue dans le Mini-Jeu</h1>
+    <button id="start-btn">Jouer</button>
+  </div>
+
+  <div id="game-screen" class="hidden">
+    <div id="score">Score : 0</div>
+    <div id="grid"></div>
+    <div id="controls">
+      <p>Choisis une colonne (0 à 3) et clique 1, 2 ou 3 fois pour la vitesse :</p>
+      <input type="number" id="column-input" min="0" max="3" />
+      <button id="click-speed">Valider</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
