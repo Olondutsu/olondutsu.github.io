@@ -1,264 +1,188 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Jeu Grille</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini-jeu 4x4</title>
   <style>
     body {
-      margin: 0;
-      background-color: #222;
-      font-family: sans-serif;
+      background: #f2f2f2;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
 
     .game-container {
-      background-color: #fff;
-      padding: 10px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
-      width: fit-content;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .game-grid {
+    .grid {
       display: grid;
-      grid-template-columns: 40px repeat(4, 80px);
-      grid-template-rows: 40px repeat(4, 80px);
+      grid-template-columns: 50px repeat(4, 60px);
+      grid-template-rows: 50px repeat(4, 60px);
       gap: 2px;
       position: relative;
     }
 
-    .cell, .selector {
-      width: 80px;
-      height: 80px;
-      background-color: #ddd;
-      border-radius: 6px;
+    .cell {
+      width: 60px;
+      height: 60px;
+      background: #fff;
+      border: 1px solid #ccc;
+      position: relative;
+    }
+
+    .top-btn, .left-btn {
+      background-color: #a00;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      margin: auto;
+      cursor: pointer;
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
-      position: relative;
-      font-weight: bold;
-    }
-
-    .selector {
-      background-color: #bbb;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      flex-direction: column;
-    }
-
-    .selector.active {
-      background-color: #4caf50 !important;
       color: white;
-    }
-
-    .sprite {
-      width: 60px;
-      height: 60px;
-      object-fit: contain;
-    }
-
-    .score-display {
-      margin-top: 10px;
-      text-align: center;
       font-weight: bold;
     }
 
-    #restartBtn {
-      margin-top: 10px;
-      padding: 5px 10px;
-      border: none;
+    .speed-indicator {
+      font-size: 12px;
+    }
+
+    .piece {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: gold;
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 1;
+    }
+
+    .player {
+      width: 40px;
+      height: 40px;
+      background: dodgerblue;
+      position: absolute;
       border-radius: 5px;
-      background-color: #4caf50;
-      color: white;
-      cursor: pointer;
-    }
-
-    .click-level {
-      font-size: 0.75em;
-      margin-top: 4px;
+      transition: top 0.3s linear, left 0.3s linear;
+      z-index: 2;
     }
   </style>
 </head>
 <body>
-
 <div class="game-container">
-  <div class="game-grid" id="grid"></div>
-  <div class="score-display">
-    Score : <span id="score">0</span>
-    <button id="restartBtn">Rejouer</button>
+  <h2>Mini-jeu 4x4</h2>
+  <div class="grid" id="gameGrid">
+    <!-- Top buttons -->
+    <div></div>
+    <div class="top-btn" data-type="col" data-index="0">↑</div>
+    <div class="top-btn" data-type="col" data-index="1">↑</div>
+    <div class="top-btn" data-type="col" data-index="2">↑</div>
+    <div class="top-btn" data-type="col" data-index="3">↑</div>
+
+    <!-- Rows -->
+    ${[...Array(4)].map((_, row) => {
+      return `
+        <div class="left-btn" data-type="row" data-index="${row}">→</div>
+        ${[...Array(4)].map((_, col) => `<div class="cell" data-row="${row}" data-col="${col}"></div>`).join('')}
+      `
+    }).join('')}
   </div>
 </div>
 
 <script>
-  const grid = document.getElementById('grid');
-  const scoreDisplay = document.getElementById('score');
-  const restartBtn = document.getElementById('restartBtn');
+const grid = document.getElementById('gameGrid');
+let player = null;
+let clickCounts = {};
+const maxClicks = 3;
 
-  const ROWS = 4;
-  const COLS = 4;
-  const MAX_COINS = 5;
+function spawnPlayer(startType, index) {
+  if (player) player.remove();
+  player = document.createElement('div');
+  player.classList.add('player');
+  grid.appendChild(player);
 
-  const SPRITES = {
-    player: "https://upload.wikimedia.org/wikipedia/commons/3/3c/Red_puffbird_icon.png",
-    coin1: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Coin_icon_1.png/64px-Coin_icon_1.png",
-    coin3: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Coin_icon_2.png/64px-Coin_icon_2.png",
-    coin10: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Coin_icon_3.png/64px-Coin_icon_3.png"
-  };
+  const cellSize = 62;
+  let row = index;
+  let col = index;
+  let delay = 500;
 
-  // Prévu pour futures animations :
-  const PLAYER_ANIM = {
-    left: "player-walk-left",
-    top: "player-walk-up",
-    right: "player-walk-right",
-    bottom: "player-walk-down"
-  };
-
-  const PROBABILITIES = [
-    { value: 1, prob: 0.6, duration: 5000 },
-    { value: 3, prob: 0.3, duration: 3000 },
-    { value: 10, prob: 0.1, duration: 1500 }
-  ];
-
-  const board = [];
-  let direction = null;
-  let index = null;
-  let clickCount = 0;
-  let score = 0;
-
-  function createGrid() {
-    grid.innerHTML = '';
-    board.length = 0;
-    for (let r = 0; r <= ROWS; r++) {
-      for (let c = 0; c <= COLS; c++) {
-        const cell = document.createElement('div');
-        if (r === 0 && c === 0) {
-          cell.style.visibility = 'hidden';
-        } else if (r === 0 || c === 0) {
-          cell.classList.add('selector');
-          if (r === 0) {
-            cell.dataset.col = c - 1;
-            cell.dataset.dir = 'col';
-          } else {
-            cell.dataset.row = r - 1;
-            cell.dataset.dir = 'row';
-          }
-          const label = document.createElement('div');
-          label.textContent = r === 0 ? `Col ${c}` : `Lig ${r}`;
-          const counter = document.createElement('div');
-          counter.classList.add('click-level');
-          counter.textContent = '0';
-          cell.append(label, counter);
-          cell.addEventListener('click', handleSelectorClick);
-        } else {
-          cell.classList.add('cell');
-          board.push({ row: r - 1, col: c - 1, element: cell, value: 0 });
-        }
-        grid.appendChild(cell);
-      }
-    }
+  // TODO: adapter direction et vitesse
+  if (startType === 'col') {
+    row = -1;
+    let targetRow = 0;
+    let int = setInterval(() => {
+      if (targetRow > 3) return clearInterval(int);
+      player.style.top = `${(targetRow + 1) * cellSize}px`;
+      player.style.left = `${(col + 1) * cellSize}px`;
+      collectPiece(targetRow, col);
+      targetRow++;
+    }, delay);
+  } else {
+    col = -1;
+    let targetCol = 0;
+    let int = setInterval(() => {
+      if (targetCol > 3) return clearInterval(int);
+      player.style.top = `${(row + 1) * cellSize}px`;
+      player.style.left = `${(targetCol + 1) * cellSize}px`;
+      collectPiece(row, targetCol);
+      targetCol++;
+    }, delay);
   }
+}
 
-  function handleSelectorClick(e) {
-    const dir = e.currentTarget.dataset.dir;
-    index = dir === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
-    direction = dir;
-    clickCount = (clickCount % 3) + 1;
-
-    // Highlight & update click level
-    document.querySelectorAll('.selector').forEach(s => {
-      s.classList.remove('active');
-      s.querySelector('.click-level').textContent = '0';
-    });
-    e.currentTarget.classList.add('active');
-    e.currentTarget.querySelector('.click-level').textContent = clickCount;
-
-    startRun(direction, index, clickCount);
+function collectPiece(row, col) {
+  const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+  const piece = cell.querySelector('.piece');
+  if (piece) {
+    piece.remove();
+    // TODO: augmenter score
   }
+}
 
-  function startRun(dir, idx, speed) {
-    clearSprites();
-    let steps = dir === 'col' ? ROWS : COLS;
-    let i = 0;
-
-    const interval = setInterval(() => {
-      if (i >= steps) return clearInterval(interval);
-
-      let targetCell = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
-      if (!targetCell) return;
-
-      updatePlayerPosition(targetCell);
-
-      if (targetCell.value > 0) {
-        score += targetCell.value;
-        scoreDisplay.textContent = score;
-        targetCell.value = 0;
-        targetCell.element.innerHTML = '';
-      }
-
-      i++;
-    }, 1000 / speed);
-  }
-
-  function getCell(r, c) {
-    return board.find(cell => cell.row === r && cell.col === c);
-  }
-
-  function updatePlayerPosition(cell) {
-    clearSprites();
-    const img = document.createElement('img');
-    img.src = SPRITES.player;
-    img.classList.add('sprite');
-    cell.element.appendChild(img);
-  }
-
-  function clearSprites() {
-    board.forEach(cell => {
-      if (cell.value === 0) cell.element.innerHTML = '';
-    });
-  }
-
-  function spawnCoinAuto() {
-    if (document.hidden) return; // Pause si l’onglet est inactif
-    const currentCoins = board.filter(c => c.value > 0).length;
-    if (currentCoins >= MAX_COINS) return;
-
-    const emptyCells = board.filter(c => c.value === 0);
-    if (emptyCells.length === 0) return;
-
-    const target = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-    let rand = Math.random();
-    let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0);
-    if (!chosen) chosen = PROBABILITIES[0];
-
-    target.value = chosen.value;
-    const img = document.createElement('img');
-    img.src = SPRITES[`coin${chosen.value}`];
-    img.classList.add('sprite');
-    target.element.appendChild(img);
-
+function spawnPiece(type = 'common') {
+  if (document.querySelectorAll('.piece').length >= 5) return;
+  const r = Math.floor(Math.random() * 4);
+  const c = Math.floor(Math.random() * 4);
+  const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+  if (!cell.querySelector('.piece')) {
+    const piece = document.createElement('div');
+    piece.classList.add('piece');
+    if (type === 'rare') piece.style.background = 'red';
+    cell.appendChild(piece);
     setTimeout(() => {
-      if (target.value === chosen.value) {
-        target.value = 0;
-        target.element.innerHTML = '';
-      }
-    }, chosen.duration);
+      piece.remove();
+    }, type === 'rare' ? 2000 : 5000);
   }
+}
 
-  restartBtn.addEventListener('click', () => {
-    createGrid();
-    score = 0;
-    clickCount = 0;
-    scoreDisplay.textContent = '0';
+setInterval(() => spawnPiece('common'), 1500);
+
+// Boutons
+[...document.querySelectorAll('.top-btn, .left-btn')].forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.type;
+    const index = btn.dataset.index;
+    const key = `${type}-${index}`;
+    clickCounts[key] = (clickCounts[key] || 0) + 1;
+    if (clickCounts[key] > maxClicks) clickCounts[key] = 1;
+    btn.innerHTML = `${type === 'col' ? '↑' : '→'}<br><span class='speed-indicator'>x${clickCounts[key]}</span>`;
+    spawnPlayer(type, parseInt(index));
+    setTimeout(() => spawnPiece('rare'), 300);
   });
+});
 
-  createGrid();
-  setInterval(spawnCoinAuto, 1000); // Essaie de poser une pièce toutes les secondes
 </script>
-
 </body>
 </html>
