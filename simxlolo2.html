@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Jeu avec jauge combo et timer</title>
+  <title>Jeu avec jauge combo, timer et vitesse</title>
   <style>
     body {
       margin: 0;
@@ -26,7 +26,8 @@
       background-color: #111;
       padding: 10px;
       border-radius: 12px;
-      box-shadow: 0 0 20px #f0f;
+      box-shadow: 0 0 30px #f0f;
+      user-select: none;
     }
 
     .game-grid {
@@ -47,17 +48,35 @@
       position: relative;
       font-weight: bold;
       color: #fff;
+      transition: background-color 0.3s ease;
     }
 
     .selector {
       background-color: #f0f;
       cursor: pointer;
       flex-direction: column;
-      transition: background-color 0.2s;
+      transition: background-color 0.3s;
+      box-shadow: 0 0 8px #f0f;
+      font-size: 24px;
+      user-select: none;
+      text-shadow: 1px 1px 3px black;
+      animation: pulse 2s infinite;
     }
 
     .selector.active {
       background-color: #0f0;
+      box-shadow: 0 0 20px #0f0, 0 0 40px #0f0;
+      animation: pulseGreen 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.5); }
+    }
+
+    @keyframes pulseGreen {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(2); }
     }
 
     .sprite {
@@ -65,6 +84,16 @@
       height: 60px;
       object-fit: contain;
       pointer-events: none;
+      animation: spriteGlow 1s infinite alternate;
+    }
+
+    @keyframes spriteGlow {
+      0% {
+        filter: drop-shadow(0 0 5px #0f0);
+      }
+      100% {
+        filter: drop-shadow(0 0 15px #0f0);
+      }
     }
 
     .right-side {
@@ -72,8 +101,9 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      min-width: 160px;
+      min-width: 200px;
       gap: 20px;
+      user-select: none;
     }
 
     .jauge {
@@ -85,6 +115,9 @@
       overflow: hidden;
       box-shadow: 0 0 8px #0f0 inset;
       position: relative;
+      font-family: 'Courier New', monospace;
+      color: #0f0;
+      text-shadow: 1px 1px 3px black;
     }
 
     .jauge-fill {
@@ -92,6 +125,16 @@
       width: 0%;
       background: linear-gradient(90deg, #0f0 0%, #0c0 50%, #060 100%);
       transition: width 0.1s linear;
+      animation: fillGlow 1.5s infinite alternate;
+    }
+
+    @keyframes fillGlow {
+      0% {
+        filter: drop-shadow(0 0 5px #0f0);
+      }
+      100% {
+        filter: drop-shadow(0 0 15px #0f0);
+      }
     }
 
     .label-jauge {
@@ -102,11 +145,8 @@
       left: 0;
       font-weight: bold;
       line-height: 25px;
-      color: #0f0;
       user-select: none;
-      text-shadow: 1px 1px 3px black;
       pointer-events: none;
-      font-family: 'Courier New', monospace;
     }
 
     .score {
@@ -114,7 +154,66 @@
       color: lime;
       text-align: center;
       margin-top: 10px;
+      text-shadow: 0 0 10px lime;
     }
+
+    /* Jauge combo en violet */
+    #comboJauge {
+      border-color: #b715f2;
+      box-shadow: 0 0 10px #b715f2 inset;
+      color: #d2a6f5;
+    }
+    #comboFill {
+      background: linear-gradient(90deg, #b715f2 0%, #7a0fa1 50%, #430661 100%);
+      animation: fillGlowPurple 1.5s infinite alternate;
+    }
+    @keyframes fillGlowPurple {
+      0% {
+        filter: drop-shadow(0 0 5px #b715f2);
+      }
+      100% {
+        filter: drop-shadow(0 0 15px #b715f2);
+      }
+    }
+
+    /* Jauge timer en cyan */
+    #timerJauge {
+      border-color: #0ff;
+      box-shadow: 0 0 10px #0ff inset;
+      color: #0ff;
+    }
+    #timerFill {
+      background: linear-gradient(90deg, #0ff 0%, #0cc 50%, #099 100%);
+      animation: fillGlowCyan 1.5s infinite alternate;
+    }
+    @keyframes fillGlowCyan {
+      0% {
+        filter: drop-shadow(0 0 5px #0ff);
+      }
+      100% {
+        filter: drop-shadow(0 0 15px #0ff);
+      }
+    }
+
+    /* Jauge vitesse en orange */
+    #speedJauge {
+      border-color: #f90;
+      box-shadow: 0 0 12px #f90 inset;
+      color: #fa0;
+    }
+    #speedFill {
+      background: linear-gradient(90deg, #fa0 0%, #f70 50%, #c50 100%);
+      animation: fillGlowOrange 1.5s infinite alternate;
+    }
+    @keyframes fillGlowOrange {
+      0% {
+        filter: drop-shadow(0 0 5px #fa0);
+      }
+      100% {
+        filter: drop-shadow(0 0 15px #fa0);
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -134,6 +233,12 @@
       <div class="jauge-fill" id="comboFill"></div>
       <div class="label-jauge" id="comboLabel">Combo x0</div>
     </div>
+
+    <!-- Nouvelle jauge vitesse -->
+    <div class="jauge" id="speedJauge">
+      <div class="jauge-fill" id="speedFill"></div>
+      <div class="label-jauge" id="speedLabel">Vitesse x1</div>
+    </div>
   </div>
 </div>
 
@@ -147,6 +252,8 @@
   const timerLabel = document.getElementById('timerLabel');
   const comboFill = document.getElementById('comboFill');
   const comboLabel = document.getElementById('comboLabel');
+  const speedFill = document.getElementById('speedFill');
+  const speedLabel = document.getElementById('speedLabel');
   const pickupSound = document.getElementById('pickupSound');
   const bgm = document.getElementById('bgm');
 
@@ -155,212 +262,226 @@
   const MAX_COINS = 5;
 
   const SPRITES = {
-    player: "images/player_default.png",
-    coin1: "images/coin1.png",
-    coin3: "images/coin3.png"
+    player: "images/player_default.png", // remplace tes images coin par des URLs génériques (à remplacer)
+    coin1: "images/coin1.png", // exemple coin commun
+    coin3: "images/coin3.png"  // exemple coin rare
   };
 
+  // Durées modifiées (en ms) pour les coins : 1s pour commun, 0.5s pour rare
   const PROBABILITIES = [
-    { value: 1, prob: 0.7, duration: 4000 },
-    { value: 3, prob: 0.3, duration: 2500 }
+    { value: 1, prob: 0.7, duration: 1000 },   // commun (70%)
+    { value: 3, prob: 0.3, duration: 500 },    // rare (30%)
   ];
 
-  const board = [];
-  let direction = null;
-  let index = null;
-  let clickCount = 0;
+  // Liste des cases (x,y) du terrain (sans la 1ère colonne ni 1ère ligne)
+  let cells = [];
+  for(let r=1; r<=ROWS; r++){
+    for(let c=1; c<=COLS; c++){
+      cells.push({r, c});
+    }
+  }
+
+  // Crée la grille avec un coin spécial en 0,0 (point de départ)
+  function createGrid(){
+    grid.innerHTML = "";
+    for(let r=0; r<=ROWS; r++){
+      for(let c=0; c<=COLS; c++){
+        let div = document.createElement('div');
+        if(r === 0 && c === 0){
+          div.classList.add("selector");
+          div.textContent = "▶";
+          div.title = "Cliquez plusieurs fois pour accélérer la vitesse (x1, x2, x3)";
+          div.addEventListener("click", onStartClick);
+          div.style.gridRow = r + 1;
+          div.style.gridColumn = c + 1;
+          grid.appendChild(div);
+        } else if(r === 0 || c === 0){
+          div.classList.add("cell");
+          div.style.backgroundColor = "#222";
+          div.style.gridRow = r + 1;
+          div.style.gridColumn = c + 1;
+          grid.appendChild(div);
+        } else {
+          div.classList.add("cell");
+          div.style.gridRow = r + 1;
+          div.style.gridColumn = c + 1;
+          grid.appendChild(div);
+        }
+      }
+    }
+  }
+
+  let currentSprite = null;
+  let currentCellIndex = -1;
   let score = 0;
   let combo = 0;
-  let isRunning = false;
-  let lastComboTime = 0;
+  let timerInterval = null;
+  let comboTimeout = null;
+  let speedMultiplier = 1; // Vitesse par défaut x1
+  let speedClicks = 0;
 
-  bgm.volume = 0.4;
-  bgm.play().catch(() => {});
+  // Fonction appelée quand on clique sur le point de départ pour lancer ou accélérer la vitesse
+  function onStartClick(){
+    speedClicks++;
+    if(speedClicks > 3) speedClicks = 1;
+    speedMultiplier = speedClicks;
+    speedLabel.textContent = `Vitesse x${speedMultiplier}`;
+    speedFill.style.width = (speedMultiplier * 33) + "%";
 
-  function createGrid() {
-    grid.innerHTML = '';
-    board.length = 0;
-    for (let r = 0; r <= ROWS; r++) {
-      for (let c = 0; c <= COLS; c++) {
-        const cell = document.createElement('div');
-        if (r === 0 && c === 0) {
-          cell.style.visibility = 'hidden';
-        } else if (r === 0 || c === 0) {
-          cell.classList.add('selector');
-          if (r === 0) {
-            cell.dataset.col = c - 1;
-            cell.dataset.dir = 'col';
-          } else {
-            cell.dataset.row = r - 1;
-            cell.dataset.dir = 'row';
-          }
-          const label = document.createElement('div');
-          label.textContent = r === 0 ? '→' : '↓';
-          cell.appendChild(label);
-          cell.addEventListener('click', handleSelectorClick);
-        } else {
-          cell.classList.add('cell');
-          board.push({ row: r - 1, col: c - 1, element: cell, value: 0 });
-        }
-        grid.appendChild(cell);
-      }
+    if(!timerInterval) {
+      startGame();
     }
   }
 
-  function handleSelectorClick(e) {
-    if (isRunning) return;
-
-    direction = e.currentTarget.dataset.dir;
-    index = direction === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
-    clickCount = (clickCount % 3) + 1;
-
-    document.querySelectorAll('.selector').forEach(sel => sel.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-
-    startRun(direction, index, clickCount);
-  }
-
-  function startRun(dir, idx, speedLevel) {
-    isRunning = true;
-    let speed = 5 + (speedLevel * 3); // base 8, 11, 14
-    let delay = 1000 / speed;
-    let steps = dir === 'col' ? ROWS : COLS;
-    let i = 0;
-    let gained = 0;
-
-    const timerDuration = steps * delay + 500;
-    startCountdown(timerDuration);
-
-    const interval = setInterval(() => {
-      if (i >= steps) {
-        clearInterval(interval);
-        isRunning = false;
-        updateCombo(gained);
-        resetTimer();
-        return;
-      }
-
-      let target = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
-      if (!target) return;
-
-      if (target.value > 0) {
-        score += target.value;
-        gained += target.value;
-        pickupSound.currentTime = 0;
-        pickupSound.play();
-        target.value = 0;
-      }
-
-      clearSprites();
-      const img = document.createElement('img');
-      img.src = SPRITES.player;
-      img.classList.add('sprite');
-      target.element.innerHTML = '';
-      target.element.appendChild(img);
-
-      i++;
-    }, delay);
-  }
-
-  function updateCombo(gained) {
-    if (gained > 0) {
-      const now = Date.now();
-      if (now - lastComboTime < 2000) {
-        combo = Math.min(combo + 1, 9999);
-      } else {
-        combo = 1;
-      }
-      lastComboTime = now;
-    } else {
-      combo = 0;
-    }
-    updateComboJauge();
-    scoreDisplay.textContent = score;
-  }
-
-  function updateComboJauge() {
-    // Combo max arbitraire, ex: 20 combos max pour jauge pleine
-    const maxCombo = 20;
-    let ratio = Math.min(combo / maxCombo, 1);
-    comboFill.style.width = (ratio * 100) + '%';
-    comboLabel.textContent = `Combo x${combo}`;
-  }
-
-  let countdownInterval = null;
-  function startCountdown(duration) {
-    clearInterval(countdownInterval);
-    let start = Date.now();
-
-    countdownInterval = setInterval(() => {
-      let elapsed = Date.now() - start;
-      let remaining = Math.max(duration - elapsed, 0);
-
-      // Affichage texte
-      let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
-      let msPart = String(remaining % 1000).padStart(3, '0');
-      timerLabel.textContent = `${s}:${msPart}`;
-
-      // Affichage jauge
-      let ratio = remaining / duration;
-      timerFill.style.width = (ratio * 100) + '%';
-
-      if (remaining <= 0) {
-        clearInterval(countdownInterval);
-        timerFill.style.width = '0%';
-        timerLabel.textContent = "00:000";
-      }
-    }, 33);
-  }
-
-  function resetTimer() {
-    clearInterval(countdownInterval);
-    timerFill.style.width = '0%';
-    timerLabel.textContent = "00:000";
-  }
-
-  function getCell(r, c) {
-    return board.find(cell => cell.row === r && cell.col === c);
-  }
-
-  function clearSprites() {
-    board.forEach(cell => {
-      if (cell.value === 0) cell.element.innerHTML = '';
-    });
-  }
-
-  function spawnCoinAuto() {
-    if (document.hidden) return;
-    const current = board.filter(c => c.value > 0).length;
-    if (current >= MAX_COINS) return;
-
-    const empty = board.filter(c => c.value === 0);
-    if (empty.length === 0) return;
-
-    const target = empty[Math.floor(Math.random() * empty.length)];
+  // Choisit un coin avec poids selon la probabilité
+  function chooseCoin(){
     let rand = Math.random();
-    let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0);
-    if (!chosen) chosen = PROBABILITIES[0];
-
-    target.value = chosen.value;
-    const img = document.createElement('img');
-    img.src = SPRITES[`coin${chosen.value}`];
-    img.classList.add('sprite');
-    target.element.innerHTML = '';
-    target.element.appendChild(img);
-
-    // Disparition automatique après durée
-    setTimeout(() => {
-      if (target.value === chosen.value) {
-        target.value = 0;
-        target.element.innerHTML = '';
-      }
-    }, chosen.duration);
+    let acc = 0;
+    for(let i=0; i<PROBABILITIES.length; i++){
+      acc += PROBABILITIES[i].prob;
+      if(rand <= acc) return PROBABILITIES[i];
+    }
+    return PROBABILITIES[0];
   }
 
-  setInterval(spawnCoinAuto, 1500);
+  // Place le sprite à la case demandée
+  function placeSpriteAt(cell){
+    if(currentSprite){
+      currentSprite.remove();
+      currentSprite = null;
+    }
+    let index = (cell.r - 1) * COLS + (cell.c - 1);
+    let gridIndex = (cell.r) * (COLS+1) + (cell.c); // car la grille a la 1ère ligne/colonne en plus
+    let gridCells = grid.children;
+    let targetCell = gridCells[gridIndex];
+    if(!targetCell) return;
+    let img = document.createElement("img");
+    img.src = SPRITES.player;
+    img.classList.add("sprite");
+    targetCell.appendChild(img);
+    currentSprite = img;
+  }
+
+  // Affiche le coin à la case donnée, en fonction de sa valeur
+  function placeCoinAt(cell, coinValue){
+    let index = (cell.r - 1) * COLS + (cell.c - 1);
+    let gridIndex = (cell.r) * (COLS+1) + (cell.c);
+    let gridCells = grid.children;
+    let targetCell = gridCells[gridIndex];
+    if(!targetCell) return;
+    targetCell.style.backgroundColor = (coinValue === 3) ? "#f90" : "#0f0";
+    targetCell.textContent = coinValue;
+    targetCell.style.fontSize = "36px";
+    targetCell.style.fontWeight = "bold";
+    targetCell.style.color = "#000";
+    targetCell.style.textShadow = "0 0 5px white";
+  }
+
+  // Nettoie la grille (retire coins, couleurs, textes sauf le point départ)
+  function clearGrid(){
+    for(let i=0; i<grid.children.length; i++){
+      let c = grid.children[i];
+      if(!c.classList.contains("selector")){
+        c.style.backgroundColor = "#444";
+        c.textContent = "";
+      }
+    }
+  }
+
+  // Met à jour la jauge timer
+  function updateTimer(remainingMs, totalMs){
+    let pct = Math.max(0, Math.min(1, remainingMs / totalMs));
+    timerFill.style.width = (pct * 100) + "%";
+    let sec = Math.floor(remainingMs / 1000);
+    let ms = remainingMs % 1000;
+    timerLabel.textContent = `${sec.toString().padStart(2,"0")}:${ms.toString().padStart(3,"0")}`;
+  }
+
+  // Met à jour la jauge combo
+  function updateCombo(value){
+    comboFill.style.width = Math.min(100, value*20) + "%";
+    comboLabel.textContent = `Combo x${value}`;
+  }
+
+  // Démarre une partie
+  function startGame(){
+    clearGrid();
+    score = 0;
+    combo = 0;
+    currentCellIndex = -1;
+    updateCombo(combo);
+    scoreDisplay.textContent = score;
+    speedClicks = speedMultiplier; // commence à la vitesse choisie
+
+    bgm.volume = 0.2;
+    bgm.play();
+
+    nextMove();
+  }
+
+  // Move to next coin cell
+  function nextMove(){
+    clearGrid();
+
+    // Avance de 1 ou plus, selon la vitesse
+    currentCellIndex += speedMultiplier;
+
+    if(currentCellIndex >= cells.length){
+      // Fin du parcours, sprite reste sur dernière case
+      let lastCell = cells[cells.length - 1];
+      placeSpriteAt(lastCell);
+      setTimeout(() => {
+        if(currentSprite){
+          currentSprite.remove();
+          currentSprite = null;
+        }
+        alert(`Partie terminée ! Score final: ${score}`);
+        bgm.pause();
+        bgm.currentTime = 0;
+      }, 3000);
+      return;
+    }
+
+    let cell = cells[currentCellIndex];
+    let coinData = chooseCoin();
+
+    placeCoinAt(cell, coinData.value);
+    placeSpriteAt(cell);
+
+    // Joue un son de pickup
+    pickupSound.currentTime = 0;
+    pickupSound.play();
+
+    // Durée à attendre selon la valeur du coin et la vitesse
+    let baseDuration = coinData.duration; // en ms
+    let duration = baseDuration / speedMultiplier;
+
+    // Timer affiché
+    let startTime = Date.now();
+    function update(){
+      let elapsed = Date.now() - startTime;
+      let remain = duration - elapsed;
+      if(remain <= 0){
+        updateTimer(0, duration);
+        clearInterval(timerInterval);
+        timerInterval = null;
+        // Score et combo
+        score += coinData.value * speedMultiplier;
+        combo++;
+        updateCombo(combo);
+        scoreDisplay.textContent = score;
+        nextMove();
+      } else {
+        updateTimer(remain, duration);
+      }
+    }
+    if(timerInterval) clearInterval(timerInterval);
+    update(); // update immédiat
+    timerInterval = setInterval(update, 50);
+  }
 
   createGrid();
-  updateComboJauge();
 </script>
+
 </body>
 </html>
