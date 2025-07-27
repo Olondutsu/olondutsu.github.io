@@ -21,6 +21,7 @@
       border-radius: 12px;
       box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
       width: fit-content;
+      text-align: center;
     }
 
     .game-grid {
@@ -29,6 +30,7 @@
       grid-template-rows: 40px repeat(4, 80px);
       gap: 2px;
       position: relative;
+      margin-bottom: 10px;
     }
 
     .cell, .selector {
@@ -68,8 +70,7 @@
     }
 
     .score-display {
-      margin-top: 10px;
-      text-align: center;
+      margin-top: 5px;
       font-weight: bold;
     }
 
@@ -87,11 +88,19 @@
       font-size: 0.75em;
       margin-top: 4px;
     }
+
+    #cooldownDisplay {
+      font-size: 0.85em;
+      color: #e53935;
+      height: 1em;
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
 
 <div class="game-container">
+  <div id="cooldownDisplay"></div>
   <div class="game-grid" id="grid"></div>
   <div class="score-display">
     Score : <span id="score">0</span>
@@ -103,6 +112,7 @@
   const grid = document.getElementById('grid');
   const scoreDisplay = document.getElementById('score');
   const restartBtn = document.getElementById('restartBtn');
+  const cooldownDisplay = document.getElementById('cooldownDisplay');
 
   const ROWS = 4;
   const COLS = 4;
@@ -127,6 +137,7 @@
   let clickCount = 0;
   let score = 0;
   let isRunning = false;
+  let cooldownInterval = null;
 
   function createGrid() {
     grid.innerHTML = '';
@@ -190,13 +201,7 @@
     const interval = setInterval(() => {
       if (i >= steps) {
         clearInterval(interval);
-        isRunning = false;
-
-        document.querySelectorAll('.selector').forEach(s => {
-          s.classList.remove('active', 'disabled');
-          s.querySelector('.click-level').textContent = '0';
-        });
-
+        endRun(steps, speed);
         return;
       }
 
@@ -214,6 +219,28 @@
 
       i++;
     }, 1000 / speed);
+  }
+
+  function endRun(steps, speed) {
+    const minCooldown = 1000;
+    const duration = Math.max(steps * (1000 / speed), minCooldown);
+    let secondsLeft = Math.ceil(duration / 1000);
+
+    cooldownDisplay.textContent = `Attends ${secondsLeft}s...`;
+    cooldownInterval = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(cooldownInterval);
+        isRunning = false;
+        cooldownDisplay.textContent = "";
+        document.querySelectorAll('.selector').forEach(s => {
+          s.classList.remove('active', 'disabled');
+          s.querySelector('.click-level').textContent = '0';
+        });
+      } else {
+        cooldownDisplay.textContent = `Attends ${secondsLeft}s...`;
+      }
+    }, 1000);
   }
 
   function getCell(r, c) {
@@ -265,6 +292,8 @@
     createGrid();
     score = 0;
     clickCount = 0;
+    isRunning = false;
+    cooldownDisplay.textContent = "";
     scoreDisplay.textContent = '0';
   });
 
