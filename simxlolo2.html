@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jeu Épileptique</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jeu avec jauge combo et timer</title>
   <style>
     body {
       margin: 0;
@@ -73,20 +73,40 @@
       justify-content: center;
       align-items: center;
       min-width: 160px;
+      gap: 20px;
     }
 
-    .countdown {
-      font-size: 3em;
-      margin-bottom: 20px;
-      color: yellow;
-      text-shadow: 2px 2px red;
-      font-family: 'Courier New', monospace;
+    .jauge {
+      width: 160px;
+      height: 25px;
+      background: #222;
+      border: 2px solid #555;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 8px #0f0 inset;
+      position: relative;
     }
 
-    .combo-display {
-      font-size: 1.5em;
-      color: #0ff;
+    .jauge-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0f0 0%, #0c0 50%, #060 100%);
+      transition: width 0.1s linear;
+    }
+
+    .label-jauge {
+      position: absolute;
+      width: 100%;
       text-align: center;
+      top: 0;
+      left: 0;
+      font-weight: bold;
+      line-height: 25px;
+      color: #0f0;
+      user-select: none;
+      text-shadow: 1px 1px 3px black;
+      pointer-events: none;
+      font-family: 'Courier New', monospace;
     }
 
     .score {
@@ -105,8 +125,15 @@
     <div class="score">Score: <span id="score">0</span></div>
   </div>
   <div class="right-side">
-    <div class="countdown" id="countdown">00:000</div>
-    <div class="combo-display" id="comboDisplay">Combo x0</div>
+    <div class="jauge" id="timerJauge">
+      <div class="jauge-fill" id="timerFill"></div>
+      <div class="label-jauge" id="timerLabel">00:000</div>
+    </div>
+
+    <div class="jauge" id="comboJauge">
+      <div class="jauge-fill" id="comboFill"></div>
+      <div class="label-jauge" id="comboLabel">Combo x0</div>
+    </div>
   </div>
 </div>
 
@@ -116,8 +143,10 @@
 <script>
   const grid = document.getElementById('grid');
   const scoreDisplay = document.getElementById('score');
-  const countdownEl = document.getElementById('countdown');
-  const comboDisplay = document.getElementById('comboDisplay');
+  const timerFill = document.getElementById('timerFill');
+  const timerLabel = document.getElementById('timerLabel');
+  const comboFill = document.getElementById('comboFill');
+  const comboLabel = document.getElementById('comboLabel');
   const pickupSound = document.getElementById('pickupSound');
   const bgm = document.getElementById('bgm');
 
@@ -146,7 +175,7 @@
   let lastComboTime = 0;
 
   bgm.volume = 0.4;
-  bgm.play().catch(() => {}); // auto play issue workaround
+  bgm.play().catch(() => {});
 
   function createGrid() {
     grid.innerHTML = '';
@@ -207,6 +236,7 @@
         clearInterval(interval);
         isRunning = false;
         updateCombo(gained);
+        resetTimer();
         return;
       }
 
@@ -236,17 +266,56 @@
     if (gained > 0) {
       const now = Date.now();
       if (now - lastComboTime < 2000) {
-        combo = Math.min(combo + 1, 9999); // limite max combo si besoin
+        combo = Math.min(combo + 1, 9999);
       } else {
         combo = 1;
       }
       lastComboTime = now;
-      comboDisplay.textContent = `Combo x${combo}`;
     } else {
       combo = 0;
-      comboDisplay.textContent = "Combo x0";
     }
+    updateComboJauge();
     scoreDisplay.textContent = score;
+  }
+
+  function updateComboJauge() {
+    // Combo max arbitraire, ex: 20 combos max pour jauge pleine
+    const maxCombo = 20;
+    let ratio = Math.min(combo / maxCombo, 1);
+    comboFill.style.width = (ratio * 100) + '%';
+    comboLabel.textContent = `Combo x${combo}`;
+  }
+
+  let countdownInterval = null;
+  function startCountdown(duration) {
+    clearInterval(countdownInterval);
+    let start = Date.now();
+
+    countdownInterval = setInterval(() => {
+      let elapsed = Date.now() - start;
+      let remaining = Math.max(duration - elapsed, 0);
+
+      // Affichage texte
+      let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
+      let msPart = String(remaining % 1000).padStart(3, '0');
+      timerLabel.textContent = `${s}:${msPart}`;
+
+      // Affichage jauge
+      let ratio = remaining / duration;
+      timerFill.style.width = (ratio * 100) + '%';
+
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        timerFill.style.width = '0%';
+        timerLabel.textContent = "00:000";
+      }
+    }, 33);
+  }
+
+  function resetTimer() {
+    clearInterval(countdownInterval);
+    timerFill.style.width = '0%';
+    timerLabel.textContent = "00:000";
   }
 
   function getCell(r, c) {
@@ -279,6 +348,7 @@
     target.element.innerHTML = '';
     target.element.appendChild(img);
 
+    // Disparition automatique après durée
     setTimeout(() => {
       if (target.value === chosen.value) {
         target.value = 0;
@@ -287,24 +357,10 @@
     }, chosen.duration);
   }
 
-  function startCountdown(ms) {
-    let start = Date.now();
-    const interval = setInterval(() => {
-      let elapsed = Date.now() - start;
-      let remaining = Math.max(ms - elapsed, 0);
-      let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
-      let msPart = String(remaining % 1000).padStart(3, '0');
-      countdownEl.textContent = `${s}:${msPart}`;
-      if (remaining <= 0) {
-        clearInterval(interval);
-        countdownEl.textContent = "00:000";
-      }
-    }, 33);
-  }
+  setInterval(spawnCoinAuto, 1500);
 
   createGrid();
-  setInterval(spawnCoinAuto, 800);
+  updateComboJauge();
 </script>
-
 </body>
 </html>
