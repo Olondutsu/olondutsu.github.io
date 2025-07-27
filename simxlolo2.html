@@ -3,25 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Jeu Grille</title>
+  <title>Jeu Épileptique</title>
   <style>
     body {
       margin: 0;
-      background-color: #222;
-      font-family: sans-serif;
+      background: radial-gradient(#ff00aa, #000);
+      font-family: 'Arial Black', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      overflow: hidden;
+      color: #fff;
     }
 
     .game-container {
-      background-color: #fff;
-      padding: 10px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
-      width: fit-content;
-      text-align: center;
+      background-color: #111;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px #ff00aa;
+      position: relative;
+      display: flex;
+      gap: 20px;
     }
 
     .game-grid {
@@ -30,81 +33,116 @@
       grid-template-rows: 40px repeat(4, 80px);
       gap: 2px;
       position: relative;
-      margin-bottom: 10px;
     }
 
     .cell, .selector {
       width: 80px;
       height: 80px;
-      background-color: #ddd;
-      border-radius: 6px;
+      border-radius: 10px;
       display: flex;
       justify-content: center;
       align-items: center;
       overflow: hidden;
-      position: relative;
       font-weight: bold;
+      background: #222;
+      color: white;
+      text-shadow: 0 0 4px #f0f;
     }
 
     .selector {
-      background-color: #bbb;
+      background-color: #444;
       cursor: pointer;
-      transition: background-color 0.2s;
+      transition: 0.1s;
       flex-direction: column;
     }
 
     .selector.active {
-      background-color: #4caf50 !important;
-      color: white;
-    }
-
-    .selector.disabled {
-      pointer-events: none;
-      opacity: 0.5;
+      background-color: #ff00aa !important;
+      transform: scale(1.1);
     }
 
     .sprite {
       width: 60px;
       height: 60px;
-      object-fit: contain;
     }
 
-    .score-display {
-      margin-top: 5px;
-      font-weight: bold;
-    }
-
-    #restartBtn {
+    .score-panel {
+      text-align: center;
       margin-top: 10px;
-      padding: 5px 10px;
+      font-size: 1.2em;
+    }
+
+    .score-panel button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 1em;
       border: none;
-      border-radius: 5px;
-      background-color: #4caf50;
+      border-radius: 8px;
+      background-color: #ff00aa;
       color: white;
       cursor: pointer;
     }
 
     .click-level {
-      font-size: 0.75em;
-      margin-top: 4px;
+      font-size: 0.6em;
+      margin-top: 2px;
     }
 
-    #cooldownDisplay {
-      font-size: 0.85em;
-      color: #e53935;
-      height: 1em;
-      margin-bottom: 5px;
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .speed-bar {
+      width: 150px;
+      height: 20px;
+      background: #555;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .speed-bar-inner {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(to right, #00f, #0ff, #0f0, #ff0, #f00);
+      transition: width 0.2s ease-out;
+    }
+
+    .countdown {
+      font-size: 64px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 0 0 10px #fff, 0 0 20px #ff00aa;
+      animation: blink 0.5s infinite alternate;
+    }
+
+    @keyframes blink {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.3); }
     }
   </style>
 </head>
 <body>
 
+<audio id="bgm" loop autoplay src="images/bgm.mp3"></audio>
+<audio id="coinSound" src="images/coin.mp3"></audio>
+
 <div class="game-container">
-  <div id="cooldownDisplay"></div>
-  <div class="game-grid" id="grid"></div>
-  <div class="score-display">
-    Score : <span id="score">0</span>
-    <button id="restartBtn">Rejouer</button>
+  <div>
+    <div class="game-grid" id="grid"></div>
+    <div class="score-panel">
+      Score : <span id="score">0</span><br/>
+      <button id="restartBtn">Rejouer</button>
+    </div>
+  </div>
+  <div class="right-panel">
+    <div class="speed-bar">
+      <div class="speed-bar-inner" id="speedBar"></div>
+    </div>
+    <div class="countdown" id="cooldownText"></div>
   </div>
 </div>
 
@@ -112,23 +150,24 @@
   const grid = document.getElementById('grid');
   const scoreDisplay = document.getElementById('score');
   const restartBtn = document.getElementById('restartBtn');
-  const cooldownDisplay = document.getElementById('cooldownDisplay');
+  const speedBar = document.getElementById('speedBar');
+  const cooldownText = document.getElementById('cooldownText');
+  const coinSound = document.getElementById('coinSound');
 
   const ROWS = 4;
   const COLS = 4;
   const MAX_COINS = 5;
+  const COOLDOWN_TIME = 1000;
 
   const SPRITES = {
     player: "images/player_default.png",
     coin1: "images/coin1.png",
-    coin3: "images/coin3.png",
-    coin10: "images/coin10.png"
+    coin3: "images/coin3.png"
   };
 
   const PROBABILITIES = [
-    { value: 1, prob: 0.6, duration: 5000 },
-    { value: 3, prob: 0.3, duration: 3000 },
-    { value: 10, prob: 0.1, duration: 1500 }
+    { value: 1, prob: 0.7, duration: 3000 },
+    { value: 3, prob: 0.3, duration: 2000 }
   ];
 
   const board = [];
@@ -136,8 +175,7 @@
   let index = null;
   let clickCount = 0;
   let score = 0;
-  let isRunning = false;
-  let cooldownInterval = null;
+  let canClick = true;
 
   function createGrid() {
     grid.innerHTML = '';
@@ -152,16 +190,12 @@
           if (r === 0) {
             cell.dataset.col = c - 1;
             cell.dataset.dir = 'col';
+            cell.innerHTML = `<div>Col ${c}</div><div class="click-level">0</div>`;
           } else {
             cell.dataset.row = r - 1;
             cell.dataset.dir = 'row';
+            cell.innerHTML = `<div>Lig ${r}</div><div class="click-level">0</div>`;
           }
-          const label = document.createElement('div');
-          label.textContent = r === 0 ? `Col ${c}` : `Lig ${r}`;
-          const counter = document.createElement('div');
-          counter.classList.add('click-level');
-          counter.textContent = '0';
-          cell.append(label, counter);
           cell.addEventListener('click', handleSelectorClick);
         } else {
           cell.classList.add('cell');
@@ -173,7 +207,7 @@
   }
 
   function handleSelectorClick(e) {
-    if (isRunning) return;
+    if (!canClick) return;
 
     const dir = e.currentTarget.dataset.dir;
     index = dir === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
@@ -187,23 +221,30 @@
     e.currentTarget.classList.add('active');
     e.currentTarget.querySelector('.click-level').textContent = clickCount;
 
-    startRun(direction, index, clickCount);
+    const speed = clickCount * 4;
+    speedBar.style.width = `${(speed / 12) * 100}%`;
+    startRun(direction, index, speed);
+
+    canClick = false;
+    let cooldown = COOLDOWN_TIME;
+    const interval = setInterval(() => {
+      cooldownText.textContent = Math.ceil(cooldown / 1000);
+      cooldown -= 100;
+      if (cooldown <= 0) {
+        clearInterval(interval);
+        cooldownText.textContent = '';
+        canClick = true;
+      }
+    }, 100);
   }
 
   function startRun(dir, idx, speed) {
-    isRunning = true;
-    document.querySelectorAll('.selector').forEach(s => s.classList.add('disabled'));
-
     clearSprites();
     let steps = dir === 'col' ? ROWS : COLS;
     let i = 0;
 
     const interval = setInterval(() => {
-      if (i >= steps) {
-        clearInterval(interval);
-        endRun(steps, speed);
-        return;
-      }
+      if (i >= steps) return clearInterval(interval);
 
       let targetCell = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
       if (!targetCell) return;
@@ -215,32 +256,12 @@
         scoreDisplay.textContent = score;
         targetCell.value = 0;
         targetCell.element.innerHTML = '';
+        coinSound.currentTime = 0;
+        coinSound.play();
       }
 
       i++;
     }, 1000 / speed);
-  }
-
-  function endRun(steps, speed) {
-    const minCooldown = 1000;
-    const duration = Math.max(steps * (1000 / speed), minCooldown);
-    let secondsLeft = Math.ceil(duration / 1000);
-
-    cooldownDisplay.textContent = `Attends ${secondsLeft}s...`;
-    cooldownInterval = setInterval(() => {
-      secondsLeft--;
-      if (secondsLeft <= 0) {
-        clearInterval(cooldownInterval);
-        isRunning = false;
-        cooldownDisplay.textContent = "";
-        document.querySelectorAll('.selector').forEach(s => {
-          s.classList.remove('active', 'disabled');
-          s.querySelector('.click-level').textContent = '0';
-        });
-      } else {
-        cooldownDisplay.textContent = `Attends ${secondsLeft}s...`;
-      }
-    }, 1000);
   }
 
   function getCell(r, c) {
@@ -292,14 +313,11 @@
     createGrid();
     score = 0;
     clickCount = 0;
-    isRunning = false;
-    cooldownDisplay.textContent = "";
     scoreDisplay.textContent = '0';
   });
 
   createGrid();
-  setInterval(spawnCoinAuto, 1000);
+  setInterval(spawnCoinAuto, 800); // Vitesse plus rapide
 </script>
-
 </body>
 </html>
