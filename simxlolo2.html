@@ -104,18 +104,10 @@
   const MAX_COINS = 5;
 
   const SPRITES = {
-    player: "https://upload.wikimedia.org/wikipedia/commons/3/3c/Red_puffbird_icon.png",
-    coin1: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Coin_icon_1.png/64px-Coin_icon_1.png",
-    coin3: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Coin_icon_2.png/64px-Coin_icon_2.png",
-    coin10: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Coin_icon_3.png/64px-Coin_icon_3.png"
-  };
-
-  // Prévu pour futures animations :
-  const PLAYER_ANIM = {
-    left: "player-walk-left",
-    top: "player-walk-up",
-    right: "player-walk-right",
-    bottom: "player-walk-down"
+    player: "images/player_default.png",
+    coin1: "images/coin1.png",
+    coin3: "images/coin3.png",
+    coin10: "images/coin10.png" // Tu peux l’omettre si inutilisé
   };
 
   const PROBABILITIES = [
@@ -169,7 +161,6 @@
     direction = dir;
     clickCount = (clickCount % 3) + 1;
 
-    // Highlight & update click level
     document.querySelectorAll('.selector').forEach(s => {
       s.classList.remove('active');
       s.querySelector('.click-level').textContent = '0';
@@ -223,7 +214,7 @@
   }
 
   function spawnCoinAuto() {
-    if (document.hidden) return; // Pause si l’onglet est inactif
+    if (document.hidden) return;
     const currentCoins = board.filter(c => c.value > 0).length;
     if (currentCoins >= MAX_COINS) return;
 
@@ -257,7 +248,7 @@
   });
 
   createGrid();
-  setInterval(spawnCoinAuto, 1000); // Essaie de poser une pièce toutes les secondes
+  setInterval(spawnCoinAuto, 1000);
 </script>
 
 </body>
