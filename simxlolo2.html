@@ -56,6 +56,11 @@
       color: white;
     }
 
+    .selector.disabled {
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
     .sprite {
       width: 60px;
       height: 60px;
@@ -107,7 +112,7 @@
     player: "images/player_default.png",
     coin1: "images/coin1.png",
     coin3: "images/coin3.png",
-    coin10: "images/coin10.png" // Tu peux l’omettre si inutilisé
+    coin10: "images/coin10.png"
   };
 
   const PROBABILITIES = [
@@ -121,6 +126,7 @@
   let index = null;
   let clickCount = 0;
   let score = 0;
+  let isRunning = false;
 
   function createGrid() {
     grid.innerHTML = '';
@@ -156,6 +162,8 @@
   }
 
   function handleSelectorClick(e) {
+    if (isRunning) return;
+
     const dir = e.currentTarget.dataset.dir;
     index = dir === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
     direction = dir;
@@ -172,12 +180,25 @@
   }
 
   function startRun(dir, idx, speed) {
+    isRunning = true;
+    document.querySelectorAll('.selector').forEach(s => s.classList.add('disabled'));
+
     clearSprites();
     let steps = dir === 'col' ? ROWS : COLS;
     let i = 0;
 
     const interval = setInterval(() => {
-      if (i >= steps) return clearInterval(interval);
+      if (i >= steps) {
+        clearInterval(interval);
+        isRunning = false;
+
+        document.querySelectorAll('.selector').forEach(s => {
+          s.classList.remove('active', 'disabled');
+          s.querySelector('.click-level').textContent = '0';
+        });
+
+        return;
+      }
 
       let targetCell = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
       if (!targetCell) return;
