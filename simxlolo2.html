@@ -283,7 +283,7 @@
     const maxCombo = 20;
     let ratio = Math.min(combo / maxCombo, 1);
     comboFill.style.width = (ratio * 100) + '%';
-    comboLabel.textContent = Combo x${combo};
+    comboLabel.textContent = `Combo x${combo}`;
   }
 
   let countdownInterval = null;
@@ -298,7 +298,7 @@
       // Affichage texte
       let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
       let msPart = String(remaining % 1000).padStart(3, '0');
-      timerLabel.textContent = ${s}:${msPart};
+      timerLabel.textContent = `${s}:${msPart}`;
 
       // Affichage jauge
       let ratio = remaining / duration;
@@ -343,7 +343,7 @@
 
     target.value = chosen.value;
     const img = document.createElement('img');
-    img.src = SPRITES[coin${chosen.value}];
+    img.src = SPRITES[`coin${chosen.value}`];
     img.classList.add('sprite');
     target.element.innerHTML = '';
     target.element.appendChild(img);
