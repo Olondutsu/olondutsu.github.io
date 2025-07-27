@@ -47,6 +47,8 @@
       position: relative;
       font-weight: bold;
       color: #fff;
+      user-select: none;
+      cursor: default;
     }
 
     .selector {
@@ -58,6 +60,13 @@
 
     .selector.active {
       background-color: #0f0;
+    }
+
+    .selector > div {
+      pointer-events: none; /* éviter que le label bloque le clic */
+      font-size: 2em;
+      line-height: 1;
+      user-select: none;
     }
 
     .sprite {
@@ -161,13 +170,18 @@
           if (r === 0) {
             cell.dataset.col = c - 1;
             cell.dataset.dir = 'col';
+            // flèche inversée pour colonne (← au lieu de →)
+            const label = document.createElement('div');
+            label.textContent = '←';
+            cell.appendChild(label);
           } else {
             cell.dataset.row = r - 1;
             cell.dataset.dir = 'row';
+            // flèche inversée pour ligne (↑ au lieu de ↓)
+            const label = document.createElement('div');
+            label.textContent = '↑';
+            cell.appendChild(label);
           }
-          const label = document.createElement('div');
-          label.textContent = r === 0 ? → : ↓;
-          cell.appendChild(label);
           cell.addEventListener('click', handleSelectorClick);
         } else {
           cell.classList.add('cell');
@@ -235,10 +249,10 @@
         if (Date.now() - lastComboTime < 2000) combo++;
         else combo = 1;
         lastComboTime = Date.now();
-        comboDisplay.textContent = Combo x${combo};
+        comboDisplay.textContent = `Combo x${combo}`;
       } else {
         combo = 0;
-        comboDisplay.textContent = Combo x0;
+        comboDisplay.textContent = "Combo x0";
       }
 
       scoreDisplay.textContent = score;
@@ -270,7 +284,7 @@
 
     target.value = chosen.value;
     const img = document.createElement('img');
-    img.src = SPRITES[coin${chosen.value}];
+    img.src = SPRITES[`coin${chosen.value}`];
     img.classList.add('sprite');
     target.element.innerHTML = '';
     target.element.appendChild(img);
@@ -290,10 +304,10 @@
       let remaining = Math.max(ms - elapsed, 0);
       let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
       let msPart = String(remaining % 1000).padStart(3, '0');
-      countdownEl.textContent = ${s}:${msPart};
+      countdownEl.textContent = `${s}:${msPart}`;
       if (remaining <= 0) {
         clearInterval(interval);
-        countdownEl.textContent = 00:000;
+        countdownEl.textContent = "00:000";
       }
     }, 33);
   }
