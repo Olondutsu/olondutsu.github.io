@@ -3,304 +3,193 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jeu Épileptique</title>
+  <title>Jeu Arcade</title>
   <style>
     body {
       margin: 0;
       background-color: black;
-      font-family: 'Arial Black', sans-serif;
-      color: white;
       display: flex;
+      height: 100vh;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: white;
       overflow: hidden;
     }
-
     .game-container {
       display: flex;
-      gap: 20px;
+      gap: 30px;
+      align-items: center;
     }
-
-    .left-side {
-      background-color: #111;
-      padding: 10px;
+    .grid-container {
+      background: #111;
+      padding: 20px;
       border-radius: 12px;
       box-shadow: 0 0 20px #f0f;
     }
-
     .game-grid {
       display: grid;
-      grid-template-columns: 40px repeat(4, 80px);
-      grid-template-rows: 40px repeat(4, 80px);
-      gap: 2px;
+      grid-template-columns: repeat(4,80px);
+      grid-template-rows: repeat(4,80px);
+      gap: 4px;
     }
-
-    .cell, .selector {
-      width: 80px;
-      height: 80px;
-      background-color: #444;
+    .cell {
+      width: 80px; height: 80px;
+      background: #222;
       border-radius: 6px;
       display: flex;
       justify-content: center;
       align-items: center;
       position: relative;
-      font-weight: bold;
-      color: #fff;
     }
-
-    .selector {
-      background-color: #f0f;
-      cursor: pointer;
-      flex-direction: column;
-      transition: background-color 0.2s;
-    }
-
-    .selector.active {
-      background-color: #0f0;
-    }
-
     .sprite {
-      width: 60px;
-      height: 60px;
+      width: 60px; height: 60px;
       object-fit: contain;
       pointer-events: none;
     }
-
-    .right-side {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-width: 160px;
+    .right-panel {
+      text-align: center;
     }
-
     .countdown {
-      font-size: 3em;
-      margin-bottom: 20px;
+      font-size: 4em;
       color: yellow;
       text-shadow: 2px 2px red;
-      font-family: 'Courier New', monospace;
     }
-
-    .combo-display {
-      font-size: 1.5em;
-      color: #0ff;
-      text-align: center;
-    }
-
     .score {
       font-size: 1.5em;
-      color: lime;
-      text-align: center;
-      margin-top: 10px;
+      color: #0f0;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-
-<div class="game-container">
-  <div class="left-side">
-    <div class="game-grid" id="grid"></div>
-    <div class="score">Score: <span id="score">0</span></div>
+  <div class="game-container">
+    <div class="grid-container">
+      <div class="game-grid" id="grid"></div>
+      <div class="score">Score: <span id="score">0</span></div>
+    </div>
+    <div class="right-panel">
+      <div class="countdown" id="countdown">00:000</div>
+    </div>
   </div>
-  <div class="right-side">
-    <div class="countdown" id="countdown">00:000</div>
-    <div class="combo-display" id="comboDisplay">Combo x0</div>
-  </div>
-</div>
 
-<audio id="pickupSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c08e731e3e.mp3"></audio>
-<audio id="bgm" src="https://cdn.pixabay.com/audio/2023/02/21/audio_d9c75e6dfb.mp3" loop></audio>
+  <audio id="pickupSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c08e731e3e.mp3"></audio>
+  <audio id="bgm" src="https://cdn.pixabay.com/audio/2023/02/21/audio_d9c75e6dfb.mp3" loop></audio>
 
 <script>
-  const grid = document.getElementById('grid');
-  const scoreDisplay = document.getElementById('score');
-  const countdownEl = document.getElementById('countdown');
-  const comboDisplay = document.getElementById('comboDisplay');
-  const pickupSound = document.getElementById('pickupSound');
-  const bgm = document.getElementById('bgm');
+const ROWS=4, COLS=4, MAX_COINS=5;
+const SPRITES={player:"images/player_default.png",coin1:"images/coin1.png",coin3:"images/coin3.png"};
+const PROBABILITIES=[{value:1,prob:0.7,duration:4000},{value:3,prob:0.3,duration:2500}];
 
-  const ROWS = 4;
-  const COLS = 4;
-  const MAX_COINS = 5;
+const gridEl=document.getElementById('grid');
+const scoreEl=document.getElementById('score');
+const countdownEl=document.getElementById('countdown');
+const pickup = document.getElementById('pickupSound');
+const bgm = document.getElementById('bgm');
+bgm.volume = 0.4;
+bgm.play().catch(()=>{});
 
-  const SPRITES = {
-    player: "images/player_default.png",
-    coin1: "images/coin1.png",
-    coin3: "images/coin3.png"
-  };
+let board=[],score=0,isRunning=false;
 
-  const PROBABILITIES = [
-    { value: 1, prob: 0.7, duration: 4000 },
-    { value: 3, prob: 0.3, duration: 2500 }
-  ];
-
-  const board = [];
-  let direction = null;
-  let index = null;
-  let clickCount = 0;
-  let score = 0;
-  let combo = 0;
-  let isRunning = false;
-  let lastComboTime = 0;
-
-  bgm.volume = 0.4;
-  bgm.play().catch(() => {}); // auto play issue workaround
-
-  function createGrid() {
-    grid.innerHTML = '';
-    board.length = 0;
-    for (let r = 0; r <= ROWS; r++) {
-      for (let c = 0; c <= COLS; c++) {
-        const cell = document.createElement('div');
-        if (r === 0 && c === 0) {
-          cell.style.visibility = 'hidden';
-        } else if (r === 0 || c === 0) {
-          cell.classList.add('selector');
-          if (r === 0) {
-            cell.dataset.col = c - 1;
-            cell.dataset.dir = 'col';
-          } else {
-            cell.dataset.row = r - 1;
-            cell.dataset.dir = 'row';
-          }
-          const label = document.createElement('div');
-          label.textContent = r === 0 ? `→` : `↓`;
-          cell.appendChild(label);
-          cell.addEventListener('click', handleSelectorClick);
-        } else {
-          cell.classList.add('cell');
-          board.push({ row: r - 1, col: c - 1, element: cell, value: 0 });
-        }
-        grid.appendChild(cell);
-      }
+function createGrid(){
+  board=[];
+  gridEl.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      board.push({r,c,el:cell,value:0});
+      gridEl.appendChild(cell);
     }
   }
+}
 
-  function handleSelectorClick(e) {
-    if (isRunning) return;
+function startCountdown(ms){
+  const start=Date.now();
+  const iv=setInterval(()=>{
+    const rem = Math.max(ms - (Date.now()-start),0);
+    const s = String(Math.floor(rem/1000)).padStart(2,'0');
+    const m = String(rem%1000).padStart(3,'0');
+    countdownEl.textContent = `${s}:${m}`;
+    if(rem<=0){ clearInterval(iv); countdownEl.textContent='00:000'; }
+  },33);
+}
 
-    direction = e.currentTarget.dataset.dir;
-    index = direction === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
-    clickCount = (clickCount % 3) + 1;
+function spawnCoin(){
+  if(document.hidden) return;
+  const cnt = board.filter(b=>b.value>0).length;
+  if(cnt>=MAX_COINS) return;
+  const empties = board.filter(b=>b.value===0);
+  if(!empties.length) return;
+  const t=empties[Math.floor(Math.random()*empties.length)];
+  let rand=Math.random(),ch=PROBABILITIES.find(p=> (rand-=p.prob)<0 );
+  if(!ch) ch=PROBABILITIES[0];
+  t.value=ch.value;
+  const img=new Image();
+  img.src=SPRITES[`coin${ch.value}`];
+  img.className='sprite';
+  t.el.innerHTML=''; t.el.appendChild(img);
+  setTimeout(()=>{
+    if(t.value===ch.value){ t.value=0; t.el.innerHTML=''; }
+  },ch.duration);
+}
 
-    document.querySelectorAll('.selector').forEach(sel => sel.classList.remove('active'));
-    e.currentTarget.classList.add('active');
+function run(dir,idx,speedLev){
+  if(isRunning) return;
+  isRunning=true;
+  const speed=6+speedLev*2;
+  const delay=1000/speed;
+  const steps=(dir==='row'?COLS:ROWS);
+  let i=0,gained=0;
+  startCountdown(steps*delay+200);
+  const iv=setInterval(()=>{
+    if(i>=steps){ clearInterval(iv); isRunning=false; return; }
+    const br=dir==='row'? board[idx*COLS + i] : board[i*COLS + idx];
+    if(br.value>0){
+      score+=br.value; gained+=br.value;
+      pickup.currentTime=0; pickup.play();
+      br.value=0;
+    }
+    board.forEach(b=>{if(b.value===0){b.el.innerHTML='';}});
+    const img=new Image(); img.src=SPRITES.player; img.className='sprite';
+    br.el.innerHTML=''; br.el.appendChild(img);
+    i++;
+  },delay);
+  setTimeout(()=>{
+    scoreEl.textContent=score;
+  }, steps*delay);
+}
 
-    startRun(direction, index, clickCount);
-  }
-
-  function startRun(dir, idx, speedLevel) {
-    isRunning = true;
-    let speed = 5 + (speedLevel * 3); // base 8, 11, 14
-    let delay = 1000 / speed;
-    let steps = dir === 'col' ? ROWS : COLS;
-    let i = 0;
-    let gained = 0;
-
-    const timerDuration = steps * delay + 500;
-    startCountdown(timerDuration);
-
-    const interval = setInterval(() => {
-      if (i >= steps) {
-        clearInterval(interval);
-        isRunning = false;
-        return;
-      }
-
-      let target = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
-      if (!target) return;
-
-      if (target.value > 0) {
-        score += target.value;
-        gained += target.value;
-        pickupSound.currentTime = 0;
-        pickupSound.play();
-        target.value = 0;
-      }
-
-      clearSprites();
-      const img = document.createElement('img');
-      img.src = SPRITES.player;
-      img.classList.add('sprite');
-      target.element.innerHTML = '';
-      target.element.appendChild(img);
-
-      i++;
-    }, delay);
-
-    setTimeout(() => {
-      if (gained > 0) {
-        if (Date.now() - lastComboTime < 2000) combo++;
-        else combo = 1;
-        lastComboTime = Date.now();
-        comboDisplay.textContent = `Combo x${combo}`;
-      } else {
-        combo = 0;
-        comboDisplay.textContent = `Combo x0`;
-      }
-
-      scoreDisplay.textContent = score;
-    }, steps * delay);
-  }
-
-  function getCell(r, c) {
-    return board.find(cell => cell.row === r && cell.col === c);
-  }
-
-  function clearSprites() {
-    board.forEach(cell => {
-      if (cell.value === 0) cell.element.innerHTML = '';
+createGrid();
+gridEl.parentElement.addEventListener('click', e=>{
+  if(isRunning) return;
+  const cells = [...document.querySelectorAll('.cell')];
+  if(cells.includes(e.target.closest('.cell'))) return;
+});
+for(const idx of board.keys()){ /* noop to define */
+}
+createGrid();
+document.querySelector('.grid-container').addEventListener('click', e=>{
+  if(isRunning) return;
+  // detect selector virtual: top row or left column click => rare in new layout
+});
+gridEl.parentElement.addEventListener('keydown',()=>{}); // placeholder
+document.body.addEventListener('click',e=>{
+  if(isRunning) return;
+});
+gridEl.addEventListener('click',e=>{
+  if(isRunning) return;
+});
+for(let r=0;r<ROWS;r++){
+  for(let c=0;c<COLS;c++){
+    const pos=r*COLS+c;
+    board[pos].el.addEventListener('click',()=>{
+      run('row', r, (c%3)+1 );
     });
   }
+}
+setInterval(spawnCoin, 800);
 
-  function spawnCoinAuto() {
-    if (document.hidden) return;
-    const current = board.filter(c => c.value > 0).length;
-    if (current >= MAX_COINS) return;
-
-    const empty = board.filter(c => c.value === 0);
-    if (empty.length === 0) return;
-
-    const target = empty[Math.floor(Math.random() * empty.length)];
-    let rand = Math.random();
-    let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0);
-    if (!chosen) chosen = PROBABILITIES[0];
-
-    target.value = chosen.value;
-    const img = document.createElement('img');
-    img.src = SPRITES[`coin${chosen.value}`];
-    img.classList.add('sprite');
-    target.element.innerHTML = '';
-    target.element.appendChild(img);
-
-    setTimeout(() => {
-      if (target.value === chosen.value) {
-        target.value = 0;
-        target.element.innerHTML = '';
-      }
-    }, chosen.duration);
-  }
-
-  function startCountdown(ms) {
-    let start = Date.now();
-    const interval = setInterval(() => {
-      let elapsed = Date.now() - start;
-      let remaining = Math.max(ms - elapsed, 0);
-      let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
-      let msPart = String(remaining % 1000).padStart(3, '0');
-      countdownEl.textContent = `${s}:${msPart}`;
-      if (remaining <= 0) {
-        clearInterval(interval);
-        countdownEl.textContent = `00:000`;
-      }
-    }, 33);
-  }
-
-  createGrid();
-  setInterval(spawnCoinAuto, 800);
 </script>
-
 </body>
 </html>
