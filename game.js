@@ -14,7 +14,7 @@ let speed = 1;
 // Sprite paths
 const SPRITES = {
   player: 'img/player_default.png',
-  coin1: 'img/coin1.png',
+  coin1: 'img/banana.png',
   coin3: 'img/coin3.png',
   coin10: 'img/coin10.png',
 };
