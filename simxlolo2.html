@@ -62,7 +62,7 @@
       width: 30px;
       height: 30px;
       border-radius: 50%;
-      background: transparent;
+      background: gold;
       position: absolute;
       top: 15px;
       left: 15px;
@@ -72,7 +72,7 @@
     .player {
       width: 40px;
       height: 40px;
-      background: transparent;
+      background: dodgerblue;
       position: absolute;
       border-radius: 5px;
       transition: top 0.3s linear, left 0.3s linear;
@@ -102,13 +102,6 @@
 </div>
 
 <script>
-  // === SPRITES ===
-const SPRITES = {
-  player: "images/player.png",          // <- sprite de ton joueur
-  coinCommon: "images/coin1.png", // <- pièce commune
-  coinRare: "images/coin3.png"      // <- pièce rare
-};
-  
 const grid = document.getElementById('gameGrid');
 let player = null;
 let clickCounts = {};
@@ -118,7 +111,6 @@ function spawnPlayer(startType, index) {
   if (player) player.remove();
   player = document.createElement('div');
   player.classList.add('player');
-  player.style.background = `url(${SPRITES.player}) center/contain no-repeat`;
   grid.appendChild(player);
 
   const cellSize = 62;
@@ -167,7 +159,7 @@ function spawnPiece(type = 'common') {
   if (!cell.querySelector('.piece')) {
     const piece = document.createElement('div');
     piece.classList.add('piece');
-    piece.style.background = `url(${type === 'rare' ? SPRITES.coinRare : SPRITES.coinCommon}) center/contain no-repeat`;
+    if (type === 'rare') piece.style.background = 'red';
     cell.appendChild(piece);
     setTimeout(() => {
       piece.remove();
