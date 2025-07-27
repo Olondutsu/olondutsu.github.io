@@ -13,10 +13,10 @@ let speed = 1;
 
 // Sprite paths
 const SPRITES = {
-  player: 'img/player_default.png',
-  coin1: 'img/banana.png',
-  coin3: 'img/coin3.png',
-  coin10: 'img/coin10.png',
+  player: 'images/player_default.png',
+  coin1: 'images/banana.png',
+  coin3: 'images/apple.png',
+  coin10: 'images/pear.png',
 };
 
 const PIECE_VALUES = [1, 3, 10];
