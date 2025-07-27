@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Jeu Épileptique</title>
   <style>
-    @keyframes epileptic-flash {
-      0%, 100% { color: lime; text-shadow: 0 0 8px lime; }
-      20% { color: magenta; text-shadow: 0 0 15px magenta; }
-      40% { color: cyan; text-shadow: 0 0 20px cyan; }
-      60% { color: yellow; text-shadow: 0 0 25px yellow; }
-      80% { color: red; text-shadow: 0 0 30px red; }
-    }
     body {
       margin: 0;
       background-color: black;
@@ -22,7 +15,6 @@
       align-items: center;
       height: 100vh;
       overflow: hidden;
-      user-select: none;
     }
 
     .game-container {
@@ -47,6 +39,7 @@
     .cell, .selector {
       width: 80px;
       height: 80px;
+      background-color: #444;
       border-radius: 6px;
       display: flex;
       justify-content: center;
@@ -54,25 +47,17 @@
       position: relative;
       font-weight: bold;
       color: #fff;
-      user-select: none;
-      box-sizing: border-box;
     }
 
-    /* Correction des bords des cases roses (selectors) */
     .selector {
-      background-color: #d100d1; /* violet plus saturé */
+      background-color: #f0f;
       cursor: pointer;
       flex-direction: column;
-      transition: background-color 0.2s, box-shadow 0.2s;
-      border: 2px solid #f0f;
-      border-radius: 12px; /* plus arrondi, bien coupé */
-      box-shadow: 0 0 10px #f0f;
+      transition: background-color 0.2s;
     }
 
     .selector.active {
-      background-color: #00ff00;
-      border-color: #0f0;
-      box-shadow: 0 0 30px #0f0, 0 0 10px #0f0 inset;
+      background-color: #0f0;
     }
 
     .sprite {
@@ -80,7 +65,6 @@
       height: 60px;
       object-fit: contain;
       pointer-events: none;
-      user-select: none;
     }
 
     .right-side {
@@ -89,7 +73,6 @@
       justify-content: center;
       align-items: center;
       min-width: 160px;
-      user-select: none;
     }
 
     .countdown {
@@ -98,16 +81,12 @@
       color: yellow;
       text-shadow: 2px 2px red;
       font-family: 'Courier New', monospace;
-      user-select: none;
     }
 
     .combo-display {
       font-size: 1.5em;
       color: #0ff;
       text-align: center;
-      min-height: 1.6em;
-      user-select: none;
-      margin-bottom: 10px;
     }
 
     .score {
@@ -115,14 +94,7 @@
       color: lime;
       text-align: center;
       margin-top: 10px;
-      user-select: none;
-      transition: color 0.1s, text-shadow 0.1s;
     }
-
-    .score.flash {
-      animation: epileptic-flash 0.5s linear;
-    }
-
   </style>
 </head>
 <body>
@@ -134,8 +106,7 @@
   </div>
   <div class="right-side">
     <div class="countdown" id="countdown">00:000</div>
-    <div class="combo-display" id="comboDisplay"></div>
-    <div class="score" id="scoreFlash"></div>
+    <div class="combo-display" id="comboDisplay">Combo x0</div>
   </div>
 </div>
 
@@ -147,7 +118,6 @@
   const scoreDisplay = document.getElementById('score');
   const countdownEl = document.getElementById('countdown');
   const comboDisplay = document.getElementById('comboDisplay');
-  const scoreFlash = document.getElementById('scoreFlash');
   const pickupSound = document.getElementById('pickupSound');
   const bgm = document.getElementById('bgm');
 
@@ -156,9 +126,9 @@
   const MAX_COINS = 5;
 
   const SPRITES = {
-    player: "https://i.imgur.com/1Q9Z1ZL.png", // Exemple perso, tu peux remplacer
-    coin1: "https://i.imgur.com/v5QZdpS.png", // Exemple coin 1
-    coin3: "https://i.imgur.com/MztAYoN.png"  // Exemple coin 3
+    player: "images/player_default.png",
+    coin1: "images/coin1.png",
+    coin3: "images/coin3.png"
   };
 
   const PROBABILITIES = [
@@ -176,7 +146,7 @@
   let lastComboTime = 0;
 
   bgm.volume = 0.4;
-  bgm.play().catch(() => {}); // auto play workaround
+  bgm.play().catch(() => {}); // auto play issue workaround
 
   function createGrid() {
     grid.innerHTML = '';
@@ -196,7 +166,7 @@
             cell.dataset.dir = 'row';
           }
           const label = document.createElement('div');
-          label.textContent = r === 0 ? `→` : `↓`;
+          label.textContent = r === 0 ? → : ↓;
           cell.appendChild(label);
           cell.addEventListener('click', handleSelectorClick);
         } else {
@@ -233,36 +203,9 @@
     startCountdown(timerDuration);
 
     const interval = setInterval(() => {
-      if (i > steps) {
+      if (i >= steps) {
         clearInterval(interval);
         isRunning = false;
-        clearSprites();
-        return;
-      }
-
-      if (i === steps) {
-        // Fin du parcours : on enlève le sprite du personnage
-        clearSprites();
-        clearInterval(interval);
-        isRunning = false;
-
-        if (gained > 0) {
-          if (Date.now() - lastComboTime < 2000) combo++;
-          else combo = 1;
-          lastComboTime = Date.now();
-          comboDisplay.textContent = `Combo x${combo}`;
-          // Affiche score flash
-          scoreFlash.textContent = `+${gained * combo}`;
-          scoreFlash.classList.add('flash');
-          setTimeout(() => scoreFlash.classList.remove('flash'), 500);
-
-          // Ajout du score multiplié par combo
-          score += gained * combo;
-          scoreDisplay.textContent = score;
-        } else {
-          combo = 0;
-          comboDisplay.textContent = '';
-        }
         return;
       }
 
@@ -270,6 +213,7 @@
       if (!target) return;
 
       if (target.value > 0) {
+        score += target.value;
         gained += target.value;
         pickupSound.currentTime = 0;
         pickupSound.play();
@@ -285,6 +229,20 @@
 
       i++;
     }, delay);
+
+    setTimeout(() => {
+      if (gained > 0) {
+        if (Date.now() - lastComboTime < 2000) combo++;
+        else combo = 1;
+        lastComboTime = Date.now();
+        comboDisplay.textContent = Combo x${combo};
+      } else {
+        combo = 0;
+        comboDisplay.textContent = Combo x0;
+      }
+
+      scoreDisplay.textContent = score;
+    }, steps * delay);
   }
 
   function getCell(r, c) {
@@ -312,7 +270,7 @@
 
     target.value = chosen.value;
     const img = document.createElement('img');
-    img.src = SPRITES[`coin${chosen.value}`];
+    img.src = SPRITES[coin${chosen.value}];
     img.classList.add('sprite');
     target.element.innerHTML = '';
     target.element.appendChild(img);
@@ -331,18 +289,17 @@
       let elapsed = Date.now() - start;
       let remaining = Math.max(ms - elapsed, 0);
       let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
-      let msPartRaw = remaining % 1000;
-      // Limite à 3 chiffres max (millisecondes)
-      let msPart = msPartRaw.toString().padStart(3, '0');
-      countdownEl.textContent = `${s}:${msPart}`;
-
-      if (remaining <= 0) clearInterval(interval);
-    }, 30);
+      let msPart = String(remaining % 1000).padStart(3, '0');
+      countdownEl.textContent = ${s}:${msPart};
+      if (remaining <= 0) {
+        clearInterval(interval);
+        countdownEl.textContent = 00:000;
+      }
+    }, 33);
   }
 
   createGrid();
-  setInterval(spawnCoinAuto, 1500);
-
+  setInterval(spawnCoinAuto, 800);
 </script>
 
 </body>
