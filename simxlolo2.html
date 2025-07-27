@@ -47,8 +47,6 @@
       position: relative;
       font-weight: bold;
       color: #fff;
-      user-select: none;
-      cursor: default;
     }
 
     .selector {
@@ -60,13 +58,6 @@
 
     .selector.active {
       background-color: #0f0;
-    }
-
-    .selector > div {
-      pointer-events: none; /* éviter que le label bloque le clic */
-      font-size: 2em;
-      line-height: 1;
-      user-select: none;
     }
 
     .sprite {
@@ -170,18 +161,13 @@
           if (r === 0) {
             cell.dataset.col = c - 1;
             cell.dataset.dir = 'col';
-            // flèche inversée pour colonne (← au lieu de →)
-            const label = document.createElement('div');
-            label.textContent = '←';
-            cell.appendChild(label);
           } else {
             cell.dataset.row = r - 1;
             cell.dataset.dir = 'row';
-            // flèche inversée pour ligne (↑ au lieu de ↓)
-            const label = document.createElement('div');
-            label.textContent = '↑';
-            cell.appendChild(label);
           }
+          const label = document.createElement('div');
+          label.textContent = r === 0 ? '→' : '↓';
+          cell.appendChild(label);
           cell.addEventListener('click', handleSelectorClick);
         } else {
           cell.classList.add('cell');
@@ -220,6 +206,7 @@
       if (i >= steps) {
         clearInterval(interval);
         isRunning = false;
+        updateCombo(gained);
         return;
       }
 
@@ -243,20 +230,23 @@
 
       i++;
     }, delay);
+  }
 
-    setTimeout(() => {
-      if (gained > 0) {
-        if (Date.now() - lastComboTime < 2000) combo++;
-        else combo = 1;
-        lastComboTime = Date.now();
-        comboDisplay.textContent = `Combo x${combo}`;
+  function updateCombo(gained) {
+    if (gained > 0) {
+      const now = Date.now();
+      if (now - lastComboTime < 2000) {
+        combo = Math.min(combo + 1, 9999); // limite max combo si besoin
       } else {
-        combo = 0;
-        comboDisplay.textContent = "Combo x0";
+        combo = 1;
       }
-
-      scoreDisplay.textContent = score;
-    }, steps * delay);
+      lastComboTime = now;
+      comboDisplay.textContent = `Combo x${combo}`;
+    } else {
+      combo = 0;
+      comboDisplay.textContent = "Combo x0";
+    }
+    scoreDisplay.textContent = score;
   }
 
   function getCell(r, c) {
