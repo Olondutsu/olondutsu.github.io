@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Jeu Grille</title>
+  <meta charset="UTF-8">
+  <title>Mini-jeu</title>
   <style>
     body {
       margin: 0;
-      background-color: #222;
       font-family: sans-serif;
+      background: #ddd;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -16,222 +15,190 @@
     }
 
     .game-container {
-      background-color: #fff;
-      padding: 10px;
+      background: white;
+      padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
       width: fit-content;
     }
 
-    .game-grid {
+    .grid-wrapper {
       display: grid;
-      grid-template-columns: 40px repeat(4, 80px);
-      grid-template-rows: 40px repeat(4, 80px);
-      gap: 2px;
+      grid-template-columns: 60px repeat(4, 80px);
+      grid-template-rows: 60px repeat(4, 80px);
+      gap: 0;
       position: relative;
     }
 
-    .cell, .selector {
+    .btn-top, .btn-left {
+      background: darkred;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      margin: auto;
+      cursor: pointer;
+      transition: transform 0.2s;
+      border: 2px solid black;
+    }
+
+    .btn-top:hover, .btn-left:hover {
+      transform: scale(1.1);
+    }
+
+    .cell {
       width: 80px;
       height: 80px;
-      background-color: #ddd;
-      border-radius: 6px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
+      border: 1px solid #333;
       position: relative;
     }
 
-    .selector {
-      background-color: #bbb;
-      cursor: pointer;
-      transition: background-color 0.2s;
+    .cell img {
+      max-width: 60px;
+      max-height: 60px;
+      position: absolute;
+      top: 10px;
+      left: 10px;
     }
 
-    .selector.active {
-      background-color: #4caf50 !important;
+    .highlight-col {
+      background: rgba(255, 0, 0, 0.2);
+    }
+
+    .highlight-row {
+      background: rgba(0, 0, 255, 0.2);
     }
 
     .sprite {
       width: 60px;
       height: 60px;
-      object-fit: contain;
+      position: absolute;
+      z-index: 10;
+      transition: all 0.2s linear;
     }
 
-    .score-display {
-      margin-top: 10px;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    #restartBtn {
-      margin-top: 10px;
-      padding: 5px 10px;
-      border: none;
-      border-radius: 5px;
-      background-color: #4caf50;
-      color: white;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
 
 <div class="game-container">
-  <div class="game-grid" id="grid"></div>
-  <div class="score-display">
-    Score : <span id="score">0</span>
-    <button id="restartBtn">Rejouer</button>
+  <div class="grid-wrapper" id="grid">
+    <!-- Top buttons -->
+    <div></div>
+    <div class="btn-top" data-type="col" data-index="0"></div>
+    <div class="btn-top" data-type="col" data-index="1"></div>
+    <div class="btn-top" data-type="col" data-index="2"></div>
+    <div class="btn-top" data-type="col" data-index="3"></div>
+
+    <!-- Rows -->
+    <!-- For each row, left button + 4 cells -->
+    ${[0,1,2,3].map(row => `
+      <div class="btn-left" data-type="row" data-index="${row}"></div>
+      ${[0,1,2,3].map(col => `
+        <div class="cell" data-row="${row}" data-col="${col}">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Emoji_u1f4b0.svg/1024px-Emoji_u1f4b0.svg.png" style="display:none;">
+        </div>
+      `).join('')}
+    `).join('')}
   </div>
 </div>
 
 <script>
   const grid = document.getElementById('grid');
-  const scoreDisplay = document.getElementById('score');
-  const restartBtn = document.getElementById('restartBtn');
+  const cells = document.querySelectorAll('.cell');
+  let clickCounts = {};
 
-  const ROWS = 4;
-  const COLS = 4;
-  const SPRITES = {
-    player: "images/player_default.png",
-    coin1: "images/Pear.png",
-    coin3: "images/Onions.png",
-    coin10: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Coin_icon_3.png/64px-Coin_icon_3.png"
-  };
-  const PROBABILITIES = [0.6, 0.3, 0.1];
-  const board = [];
-  let direction = null;
-  let index = null;
-  let clickCount = 0;
-  let score = 0;
-
-  function createGrid() {
-    grid.innerHTML = '';
-    for (let r = 0; r <= ROWS; r++) {
-      for (let c = 0; c <= COLS; c++) {
-        const cell = document.createElement('div');
-        if (r === 0 && c === 0) {
-          cell.style.visibility = 'hidden';
-        } else if (r === 0) {
-          cell.classList.add('selector');
-          cell.dataset.col = c - 1;
-          cell.dataset.dir = 'col';
-          cell.addEventListener('click', handleSelectorClick);
-        } else if (c === 0) {
-          cell.classList.add('selector');
-          cell.dataset.row = r - 1;
-          cell.dataset.dir = 'row';
-          cell.addEventListener('click', handleSelectorClick);
-        } else {
-          cell.classList.add('cell');
-          board.push({ row: r - 1, col: c - 1, element: cell, value: 0 });
-        }
-        grid.appendChild(cell);
-      }
-    }
-  }
-
-  function handleSelectorClick(e) {
-    const dir = e.currentTarget.dataset.dir;
-    index = dir === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
-    direction = dir;
-    clickCount = (clickCount % 3) + 1;
-
-    // Highlight
-    document.querySelectorAll('.selector').forEach(s => s.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-
-    startRun(direction, index, clickCount);
-  }
-
-  function startRun(dir, idx, speed) {
-    score = 0;
-    scoreDisplay.textContent = '0';
-    clearBoard();
-
-    // Spawn coins for this run only
-    spawnCoins();
-
-    let steps = dir === 'col' ? ROWS : COLS;
-    let i = 0;
-
-    const interval = setInterval(() => {
-      if (i >= steps) return clearInterval(interval);
-
-      let targetCell;
-      if (dir === 'col') {
-        targetCell = getCell(i, idx);
-      } else {
-        targetCell = getCell(idx, i);
-      }
-
-      if (!targetCell) return;
-      updatePlayerPosition(targetCell);
-
-      if (targetCell.value > 0) {
-        score += targetCell.value;
-        scoreDisplay.textContent = score;
-        targetCell.value = 0;
-      }
-
-      i++;
-    }, 1000 / speed);
-  }
-
-  function getCell(r, c) {
-    return board.find(cell => cell.row === r && cell.col === c);
-  }
-
-  function updatePlayerPosition(cell) {
-    clearSprites();
-    const img = document.createElement('img');
-    img.src = SPRITES.player;
-    img.classList.add('sprite');
-    cell.element.appendChild(img);
-  }
-
-  function clearSprites() {
-    board.forEach(cell => cell.element.innerHTML = '');
-  }
-
-  function clearBoard() {
-    board.forEach(cell => {
-      cell.element.innerHTML = '';
-      cell.value = 0;
+  // Highlight function
+  function clearHighlights() {
+    document.querySelectorAll('.cell').forEach(cell => {
+      cell.classList.remove('highlight-col', 'highlight-row');
     });
   }
 
-  function spawnCoins() {
-    for (let i = 0; i < 6; i++) {
-      const r = Math.floor(Math.random() * ROWS);
-      const c = Math.floor(Math.random() * COLS);
-      const rand = Math.random();
-      let value = 1;
-      if (rand < PROBABILITIES[0]) value = 1;
-      else if (rand < PROBABILITIES[0] + PROBABILITIES[1]) value = 3;
-      else value = 10;
-
-      const sprite = SPRITES[`coin${value}`];
-      const cell = getCell(r, c);
-      if (cell.value === 0) {
-        cell.value = value;
-        const img = document.createElement('img');
-        img.src = sprite;
-        img.classList.add('sprite');
-        cell.element.appendChild(img);
+  function highlight(index, type) {
+    clearHighlights();
+    document.querySelectorAll('.cell').forEach(cell => {
+      if (type === 'col' && cell.dataset.col == index) {
+        cell.classList.add('highlight-col');
       }
-    }
+      if (type === 'row' && cell.dataset.row == index) {
+        cell.classList.add('highlight-row');
+      }
+    });
   }
 
-  restartBtn.addEventListener('click', () => {
-    createGrid();
-    score = 0;
-    clickCount = 0;
-    scoreDisplay.textContent = '0';
+  function createSprite() {
+    const sprite = document.createElement('img');
+    sprite.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Emoji_u1f426.svg/1024px-Emoji_u1f426.svg.png';
+    sprite.className = 'sprite';
+    return sprite;
+  }
+
+  function launchMovement(index, type, speed) {
+    const sprite = createSprite();
+    const path = [];
+
+    if (type === 'col') {
+      for (let r = 0; r < 4; r++) {
+        const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${index}"]`);
+        path.push(cell);
+      }
+    } else {
+      for (let c = 0; c < 4; c++) {
+        const cell = document.querySelector(`.cell[data-row="${index}"][data-col="${c}"]`);
+        path.push(cell);
+      }
+    }
+
+    document.body.appendChild(sprite);
+
+    let i = 0;
+    function move() {
+      if (i >= path.length) {
+        sprite.remove();
+        return;
+      }
+      const rect = path[i].getBoundingClientRect();
+      sprite.style.left = rect.left + 10 + 'px';
+      sprite.style.top = rect.top + 10 + 'px';
+
+      // simulate piece collection
+      const img = path[i].querySelector('img');
+      if (img && img.style.display !== 'none') {
+        img.style.display = 'none'; // "collect"
+      }
+
+      i++;
+      setTimeout(move, 400 / speed); // faster speed = shorter delay
+    }
+
+    move();
+  }
+
+  // Button logic
+  document.querySelectorAll('.btn-top, .btn-left').forEach(btn => {
+    const index = btn.dataset.index;
+    const type = btn.dataset.type;
+    const key = type + index;
+
+    clickCounts[key] = 0;
+
+    btn.addEventListener('click', () => {
+      clickCounts[key] = (clickCounts[key] + 1) % 4;
+      if (clickCounts[key] === 0) return; // reset, no move
+
+      const speed = clickCounts[key];
+      highlight(index, type);
+      spawnCoins(); // reset coins randomly
+      launchMovement(index, type, speed);
+    });
   });
 
-  createGrid();
+  function spawnCoins() {
+    cells.forEach(cell => {
+      const img = cell.querySelector('img');
+      img.style.display = Math.random() < 0.5 ? 'block' : 'none';
+    });
+  }
 </script>
 
 </body>
