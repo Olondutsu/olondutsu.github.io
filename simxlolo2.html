@@ -1,215 +1,349 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Arcade Mode</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jeu Épileptique</title>
   <style>
-    html, body {
+    @keyframes epileptic-flash {
+      0%, 100% { color: lime; text-shadow: 0 0 8px lime; }
+      20% { color: magenta; text-shadow: 0 0 15px magenta; }
+      40% { color: cyan; text-shadow: 0 0 20px cyan; }
+      60% { color: yellow; text-shadow: 0 0 25px yellow; }
+      80% { color: red; text-shadow: 0 0 30px red; }
+    }
+    body {
       margin: 0;
-      height: 100%;
-      background: black;
+      background-color: black;
+      font-family: 'Arial Black', sans-serif;
       color: white;
-      font-family: monospace;
       display: flex;
-      align-items: center;
       justify-content: center;
-      overflow: hidden;
-    }
-    .container {
-      display: flex;
-      gap: 40px;
       align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
     }
-    .game {
-      display: grid;
-      grid-template-columns: repeat(4, 80px);
-      grid-template-rows: repeat(4, 80px);
-      gap: 4px;
-      background: #111;
-      padding: 20px;
+
+    .game-container {
+      display: flex;
+      gap: 20px;
+    }
+
+    .left-side {
+      background-color: #111;
+      padding: 10px;
       border-radius: 12px;
       box-shadow: 0 0 20px #f0f;
     }
-    .cell {
+
+    .game-grid {
+      display: grid;
+      grid-template-columns: 40px repeat(4, 80px);
+      grid-template-rows: 40px repeat(4, 80px);
+      gap: 2px;
+    }
+
+    .cell, .selector {
       width: 80px;
       height: 80px;
-      background: #222;
+      border-radius: 6px;
       display: flex;
-      align-items: center;
       justify-content: center;
-      border-radius: 8px;
+      align-items: center;
       position: relative;
+      font-weight: bold;
+      color: #fff;
+      user-select: none;
+      box-sizing: border-box;
     }
+
+    /* Correction des bords des cases roses (selectors) */
+    .selector {
+      background-color: #d100d1; /* violet plus saturé */
+      cursor: pointer;
+      flex-direction: column;
+      transition: background-color 0.2s, box-shadow 0.2s;
+      border: 2px solid #f0f;
+      border-radius: 12px; /* plus arrondi, bien coupé */
+      box-shadow: 0 0 10px #f0f;
+    }
+
+    .selector.active {
+      background-color: #00ff00;
+      border-color: #0f0;
+      box-shadow: 0 0 30px #0f0, 0 0 10px #0f0 inset;
+    }
+
     .sprite {
       width: 60px;
       height: 60px;
       object-fit: contain;
       pointer-events: none;
+      user-select: none;
     }
-    .side-panel {
+
+    .right-side {
       display: flex;
       flex-direction: column;
+      justify-content: center;
       align-items: center;
+      min-width: 160px;
+      user-select: none;
     }
+
     .countdown {
-      font-size: 4em;
-      text-shadow: 2px 2px red;
+      font-size: 3em;
+      margin-bottom: 20px;
       color: yellow;
+      text-shadow: 2px 2px red;
+      font-family: 'Courier New', monospace;
+      user-select: none;
     }
+
+    .combo-display {
+      font-size: 1.5em;
+      color: #0ff;
+      text-align: center;
+      min-height: 1.6em;
+      user-select: none;
+      margin-bottom: 10px;
+    }
+
     .score {
-      margin-top: 20px;
       font-size: 1.5em;
       color: lime;
+      text-align: center;
+      margin-top: 10px;
+      user-select: none;
+      transition: color 0.1s, text-shadow 0.1s;
     }
+
+    .score.flash {
+      animation: epileptic-flash 0.5s linear;
+    }
+
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="game" id="grid"></div>
-    <div class="side-panel">
-      <div class="countdown" id="countdown">00:000</div>
-      <div class="score">Score: <span id="score">0</span></div>
-    </div>
+
+<div class="game-container">
+  <div class="left-side">
+    <div class="game-grid" id="grid"></div>
+    <div class="score">Score: <span id="score">0</span></div>
   </div>
+  <div class="right-side">
+    <div class="countdown" id="countdown">00:000</div>
+    <div class="combo-display" id="comboDisplay"></div>
+    <div class="score" id="scoreFlash"></div>
+  </div>
+</div>
 
-  <audio id="pickupSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c08e731e3e.mp3"></audio>
-  <audio id="bgm" src="https://cdn.pixabay.com/audio/2023/02/21/audio_d9c75e6dfb.mp3" loop></audio>
+<audio id="pickupSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c08e731e3e.mp3"></audio>
+<audio id="bgm" src="https://cdn.pixabay.com/audio/2023/02/21/audio_d9c75e6dfb.mp3" loop></audio>
 
-  <script>
-    const ROWS = 4, COLS = 4, MAX_COINS = 5;
-    const SPRITES = {
-      player: "images/player_default.png",
-      coin1: "images/coin1.png",
-      coin3: "images/coin3.png"
-    };
-    const COINS = [
-      { value: 1, prob: 0.7, duration: 3000 },
-      { value: 3, prob: 0.3, duration: 1800 }
-    ];
+<script>
+  const grid = document.getElementById('grid');
+  const scoreDisplay = document.getElementById('score');
+  const countdownEl = document.getElementById('countdown');
+  const comboDisplay = document.getElementById('comboDisplay');
+  const scoreFlash = document.getElementById('scoreFlash');
+  const pickupSound = document.getElementById('pickupSound');
+  const bgm = document.getElementById('bgm');
 
-    const gridEl = document.getElementById('grid');
-    const scoreEl = document.getElementById('score');
-    const countdownEl = document.getElementById('countdown');
-    const pickupSound = document.getElementById('pickupSound');
-    const bgm = document.getElementById('bgm');
-    bgm.volume = 0.3;
-    bgm.play().catch(() => {});
+  const ROWS = 4;
+  const COLS = 4;
+  const MAX_COINS = 5;
 
-    let grid = [], score = 0, isRunning = false;
+  const SPRITES = {
+    player: "https://i.imgur.com/1Q9Z1ZL.png", // Exemple perso, tu peux remplacer
+    coin1: "https://i.imgur.com/v5QZdpS.png", // Exemple coin 1
+    coin3: "https://i.imgur.com/MztAYoN.png"  // Exemple coin 3
+  };
 
-    function createGrid() {
-      grid = [];
-      gridEl.innerHTML = "";
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const cell = document.createElement('div');
-          cell.className = 'cell';
-          grid.push({ r, c, el: cell, value: 0 });
-          gridEl.appendChild(cell);
+  const PROBABILITIES = [
+    { value: 1, prob: 0.7, duration: 4000 },
+    { value: 3, prob: 0.3, duration: 2500 }
+  ];
+
+  const board = [];
+  let direction = null;
+  let index = null;
+  let clickCount = 0;
+  let score = 0;
+  let combo = 0;
+  let isRunning = false;
+  let lastComboTime = 0;
+
+  bgm.volume = 0.4;
+  bgm.play().catch(() => {}); // auto play workaround
+
+  function createGrid() {
+    grid.innerHTML = '';
+    board.length = 0;
+    for (let r = 0; r <= ROWS; r++) {
+      for (let c = 0; c <= COLS; c++) {
+        const cell = document.createElement('div');
+        if (r === 0 && c === 0) {
+          cell.style.visibility = 'hidden';
+        } else if (r === 0 || c === 0) {
+          cell.classList.add('selector');
+          if (r === 0) {
+            cell.dataset.col = c - 1;
+            cell.dataset.dir = 'col';
+          } else {
+            cell.dataset.row = r - 1;
+            cell.dataset.dir = 'row';
+          }
+          const label = document.createElement('div');
+          label.textContent = r === 0 ? `→` : `↓`;
+          cell.appendChild(label);
+          cell.addEventListener('click', handleSelectorClick);
+        } else {
+          cell.classList.add('cell');
+          board.push({ row: r - 1, col: c - 1, element: cell, value: 0 });
         }
+        grid.appendChild(cell);
       }
     }
+  }
 
-    function formatTime(ms) {
-      const s = String(Math.floor(ms / 1000)).padStart(2, '0');
-      const m = String(ms % 1000).padStart(3, '0').slice(0, 3);
-      return `${s}:${m}`;
-    }
+  function handleSelectorClick(e) {
+    if (isRunning) return;
 
-    function startCountdown(ms) {
-      const start = Date.now();
-      const interval = setInterval(() => {
-        const rem = Math.max(ms - (Date.now() - start), 0);
-        countdownEl.textContent = formatTime(rem);
-        if (rem <= 0) {
-          clearInterval(interval);
-          countdownEl.textContent = "00:000";
+    direction = e.currentTarget.dataset.dir;
+    index = direction === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
+    clickCount = (clickCount % 3) + 1;
+
+    document.querySelectorAll('.selector').forEach(sel => sel.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+
+    startRun(direction, index, clickCount);
+  }
+
+  function startRun(dir, idx, speedLevel) {
+    isRunning = true;
+    let speed = 5 + (speedLevel * 3); // base 8, 11, 14
+    let delay = 1000 / speed;
+    let steps = dir === 'col' ? ROWS : COLS;
+    let i = 0;
+    let gained = 0;
+
+    const timerDuration = steps * delay + 500;
+    startCountdown(timerDuration);
+
+    const interval = setInterval(() => {
+      if (i > steps) {
+        clearInterval(interval);
+        isRunning = false;
+        clearSprites();
+        return;
+      }
+
+      if (i === steps) {
+        // Fin du parcours : on enlève le sprite du personnage
+        clearSprites();
+        clearInterval(interval);
+        isRunning = false;
+
+        if (gained > 0) {
+          if (Date.now() - lastComboTime < 2000) combo++;
+          else combo = 1;
+          lastComboTime = Date.now();
+          comboDisplay.textContent = `Combo x${combo}`;
+          // Affiche score flash
+          scoreFlash.textContent = `+${gained * combo}`;
+          scoreFlash.classList.add('flash');
+          setTimeout(() => scoreFlash.classList.remove('flash'), 500);
+
+          // Ajout du score multiplié par combo
+          score += gained * combo;
+          scoreDisplay.textContent = score;
+        } else {
+          combo = 0;
+          comboDisplay.textContent = '';
         }
-      }, 33);
-    }
+        return;
+      }
 
-    function spawnCoin() {
-      if (document.hidden) return;
-      if (grid.filter(g => g.value > 0).length >= MAX_COINS) return;
+      let target = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
+      if (!target) return;
 
-      const empty = grid.filter(g => g.value === 0);
-      if (empty.length === 0) return;
+      if (target.value > 0) {
+        gained += target.value;
+        pickupSound.currentTime = 0;
+        pickupSound.play();
+        target.value = 0;
+      }
 
-      const spot = empty[Math.floor(Math.random() * empty.length)];
-      let rand = Math.random();
-      let choice = COINS.find(c => (rand -= c.prob) < 0) || COINS[0];
+      clearSprites();
+      const img = document.createElement('img');
+      img.src = SPRITES.player;
+      img.classList.add('sprite');
+      target.element.innerHTML = '';
+      target.element.appendChild(img);
 
-      spot.value = choice.value;
-      const img = new Image();
-      img.src = SPRITES[`coin${choice.value}`];
-      img.className = "sprite";
-      spot.el.innerHTML = '';
-      spot.el.appendChild(img);
+      i++;
+    }, delay);
+  }
 
-      setTimeout(() => {
-        if (spot.value === choice.value) {
-          spot.value = 0;
-          spot.el.innerHTML = '';
-        }
-      }, choice.duration);
-    }
+  function getCell(r, c) {
+    return board.find(cell => cell.row === r && cell.col === c);
+  }
 
-    function run(type, index) {
-      if (isRunning) return;
-      isRunning = true;
+  function clearSprites() {
+    board.forEach(cell => {
+      if (cell.value === 0) cell.element.innerHTML = '';
+    });
+  }
 
-      const speed = 8;
-      const delay = 1000 / speed;
-      const steps = (type === "row") ? COLS : ROWS;
-      let i = 0;
+  function spawnCoinAuto() {
+    if (document.hidden) return;
+    const current = board.filter(c => c.value > 0).length;
+    if (current >= MAX_COINS) return;
 
-      let gain = 0;
-      startCountdown(steps * delay + 200);
+    const empty = board.filter(c => c.value === 0);
+    if (empty.length === 0) return;
 
-      const interval = setInterval(() => {
-        if (i >= steps) {
-          clearInterval(interval);
-          score += gain;
-          scoreEl.textContent = score.toFixed(0);
-          isRunning = false;
-          return;
-        }
+    const target = empty[Math.floor(Math.random() * empty.length)];
+    let rand = Math.random();
+    let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0);
+    if (!chosen) chosen = PROBABILITIES[0];
 
-        const cell = (type === "row") ?
-          grid[index * COLS + i] :
-          grid[i * COLS + index];
+    target.value = chosen.value;
+    const img = document.createElement('img');
+    img.src = SPRITES[`coin${chosen.value}`];
+    img.classList.add('sprite');
+    target.element.innerHTML = '';
+    target.element.appendChild(img);
 
-        if (cell.value > 0) {
-          gain += cell.value;
-          pickupSound.currentTime = 0;
-          pickupSound.play();
-        }
+    setTimeout(() => {
+      if (target.value === chosen.value) {
+        target.value = 0;
+        target.element.innerHTML = '';
+      }
+    }, chosen.duration);
+  }
 
-        cell.value = 0;
-        cell.el.innerHTML = '';
-        const img = new Image();
-        img.src = SPRITES.player;
-        img.className = "sprite";
-        cell.el.appendChild(img);
+  function startCountdown(ms) {
+    let start = Date.now();
+    const interval = setInterval(() => {
+      let elapsed = Date.now() - start;
+      let remaining = Math.max(ms - elapsed, 0);
+      let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
+      let msPartRaw = remaining % 1000;
+      // Limite à 3 chiffres max (millisecondes)
+      let msPart = msPartRaw.toString().padStart(3, '0');
+      countdownEl.textContent = `${s}:${msPart}`;
 
-        i++;
-      }, delay);
-    }
+      if (remaining <= 0) clearInterval(interval);
+    }, 30);
+  }
 
-    function setupClicks() {
-      grid.forEach((cell, i) => {
-        const { r, c } = cell;
-        if (r === 0) {
-          cell.el.addEventListener('click', () => run("col", c));
-        } else if (c === 0) {
-          cell.el.addEventListener('click', () => run("row", r));
-        }
-      });
-    }
+  createGrid();
+  setInterval(spawnCoinAuto, 1500);
 
-    createGrid();
-    setupClicks();
-    setInterval(spawnCoin, 700);
-  </script>
+</script>
+
 </body>
 </html>
