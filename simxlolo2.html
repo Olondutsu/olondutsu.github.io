@@ -35,35 +35,45 @@
       grid-template-columns: 40px repeat(4, 80px);
       grid-template-rows: 40px repeat(4, 80px);
       gap: 2px;
+      place-items: center;
     }
 
     .cell, .selector {
-      width: 80px;
-      height: 80px;
       background-color: #444;
       border-radius: 6px;
       display: flex;
       align-items: center;
+      justify-content: center;
       position: relative;
       font-weight: bold;
       color: #fff;
     }
 
     .cell {
+      width: 80px;
+      height: 80px;
       box-shadow: 0 0 20px #f0f;
-      justify-content: center;
+    }
+
+    .cell.glow {
+      box-shadow: 0 0 15px 5px gold;
     }
 
     .selector {
+      width: 60px;
+      height: 60px;
       background-color: #f0f;
       cursor: pointer;
-      flex-direction: column;
-      transition: background-color 0.2s;
-      gap: 150px;
+      font-size: 1.4em;
+      transition: background-color 0.2s, box-shadow 0.2s;
     }
 
     .selector.active {
       background-color: #0f0;
+    }
+
+    .selector-flash {
+      box-shadow: 0 0 10px 4px #0f0;
     }
 
     .sprite {
@@ -133,14 +143,8 @@
     }
 
     @keyframes floatUp {
-      0% {
-        opacity: 1;
-        transform: translateY(0px);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-40px);
-      }
+      0% { opacity: 1; transform: translateY(0px); }
+      100% { opacity: 0; transform: translateY(-40px); }
     }
   </style>
 </head>
@@ -254,7 +258,6 @@ function startRun(dir, idx, speedLevel) {
       gained++;
       gainedPoints += totalGain;
 
-      // Floating +X points
       const float = document.createElement('div');
       float.className = 'float-text';
       float.textContent = `+${totalGain}`;
@@ -352,6 +355,7 @@ function spawnCoinAuto() {
   target.element.innerHTML = '';
   target.element.appendChild(img);
   target.element.classList.add('glow');
+  highlightSelector(target.row, target.col);
   setTimeout(() => {
     if (target.value === chosen.value) {
       target.value = 0;
@@ -359,6 +363,17 @@ function spawnCoinAuto() {
       target.element.classList.remove('glow');
     }
   }, chosen.duration);
+}
+
+function highlightSelector(row, col) {
+  const rowSel = document.querySelector(`.selector[data-row="${row}"]`);
+  const colSel = document.querySelector(`.selector[data-col="${col}"]`);
+  [rowSel, colSel].forEach(sel => {
+    if (sel) {
+      sel.classList.add('selector-flash');
+      setTimeout(() => sel.classList.remove('selector-flash'), 300);
+    }
+  });
 }
 
 createGrid();
