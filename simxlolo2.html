@@ -131,12 +131,15 @@
   <div class="right-side">
     <div class="jauge" id="timerJauge">
       <div class="jauge-fill" id="timerFill"></div>
-      <div class="label-jauge" id="timerLabel">60:000</div>
+      <div class="label-jauge">Time remaining</div>
     </div>
-
     <div class="jauge" id="comboJauge">
       <div class="jauge-fill" id="comboFill"></div>
       <div class="label-jauge" id="comboLabel">Combo x0</div>
+    </div>
+    <div class="jauge" id="comboTimeoutJauge">
+      <div class="jauge-fill" id="comboTimeoutFill"></div>
+      <div class="label-jauge">Combo time</div>
     </div>
   </div>
 </div>
@@ -145,16 +148,15 @@
 <audio id="bgm" src="https://cdn.pixabay.com/audio/2023/02/21/audio_d9c75e6dfb.mp3" loop></audio>
 
 <script>
-// Variables
 const grid = document.getElementById('grid');
 const scoreDisplay = document.getElementById('score');
 const timerFill = document.getElementById('timerFill');
-const timerLabel = document.getElementById('timerLabel');
 const comboFill = document.getElementById('comboFill');
 const comboLabel = document.getElementById('comboLabel');
+const comboMaxDisplay = document.getElementById('comboMax');
+const comboTimeoutFill = document.getElementById('comboTimeoutFill');
 const pickupSound = document.getElementById('pickupSound');
 const bgm = document.getElementById('bgm');
-const comboMaxDisplay = document.getElementById('comboMax');
 
 const ROWS = 4, COLS = 4, MIN_COINS = 2, MAX_COINS = 8;
 const SPRITES = {
@@ -167,7 +169,7 @@ const PROBABILITIES = [
   { value: 3, prob: 0.3, duration: 600 }
 ];
 let board = [], direction = null, index = null, clickCount = 0, score = 0, combo = 0, comboMax = 0;
-let isRunning = false, lastComboTime = 0, comboTimeout = null;
+let isRunning = false, lastComboTime = 0, comboTimeout = null, comboTimerActive = false;
 let gameTime = 60000, gameStart = null, gameInterval = null;
 
 bgm.volume = 0.4;
@@ -224,6 +226,7 @@ function startRun(dir, idx, speedLevel) {
       pickupSound.currentTime = 0;
       pickupSound.play();
       target.value = 0;
+      target.element.classList.remove('glow');
     }
     clearSprites();
     const img = document.createElement('img');
@@ -238,37 +241,45 @@ function startRun(dir, idx, speedLevel) {
 function updateCombo(gained) {
   if (gained >= 2) {
     const now = Date.now();
-    if (now - lastComboTime < 3000) combo++;
-    else combo = 1;
+    combo = (now - lastComboTime < 3000) ? combo + 1 : 1;
     lastComboTime = now;
     comboMax = Math.max(comboMax, combo);
     comboMaxDisplay.textContent = comboMax;
     if (combo % 10 === 0) gameTime += 10000;
-    if (comboTimeout) clearTimeout(comboTimeout);
-    comboTimeout = setTimeout(() => {
-      combo = 0;
-      updateComboJauge();
-    }, 3000);
+    resetComboTimeout();
   } else {
     combo = 0;
+    comboTimerActive = false;
   }
   updateComboJauge();
   scoreDisplay.textContent = score;
 }
 
+function resetComboTimeout() {
+  if (comboTimeout) clearInterval(comboTimeout);
+  const comboStart = Date.now();
+  comboTimerActive = true;
+  comboTimeout = setInterval(() => {
+    let elapsed = Date.now() - comboStart;
+    let ratio = Math.max(0, 1 - elapsed / 3000);
+    comboTimeoutFill.style.width = (ratio * 100) + '%';
+    if (elapsed >= 3000) {
+      clearInterval(comboTimeout);
+      combo = 0;
+      comboTimerActive = false;
+      updateComboJauge();
+    }
+  }, 33);
+}
+
 function updateComboJauge() {
-  const maxCombo = 20;
-  let ratio = Math.min(combo / maxCombo, 1);
+  let ratio = Math.min(combo / 20, 1);
   comboFill.style.width = (ratio * 100) + '%';
   comboLabel.textContent = `Combo x${combo}`;
 }
 
 function updateGameTimer() {
-  const now = Date.now();
-  let remaining = Math.max(gameTime - (now - gameStart), 0);
-  let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
-  let ms = String(remaining % 1000).padStart(3, '0');
-  timerLabel.textContent = `${s}:${ms}`;
+  let remaining = Math.max(gameTime - (Date.now() - gameStart), 0);
   timerFill.style.width = (remaining / gameTime * 100) + '%';
   if (remaining <= 0) endGame();
 }
@@ -276,6 +287,7 @@ function updateGameTimer() {
 function endGame() {
   clearInterval(gameInterval);
   alert(`Temps écoulé !\nScore: ${score}\nCombo max: ${comboMax}`);
+  location.reload();
 }
 
 function getCell(r, c) {
@@ -290,36 +302,34 @@ function clearSprites() {
 
 function spawnCoinAuto() {
   if (document.hidden) return;
-  const coins = board.filter(c => c.value > 0);
+  let coins = board.filter(c => c.value > 0);
   if (coins.length >= MAX_COINS) return;
-  while (coins.length < MIN_COINS) {
-    const empty = board.filter(c => c.value === 0);
-    if (!empty.length) return;
-    const target = empty[Math.floor(Math.random() * empty.length)];
-    let rand = Math.random();
-    let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0) || PROBABILITIES[0];
-    target.value = chosen.value;
-    const img = document.createElement('img');
-    img.src = SPRITES[`coin${chosen.value}`];
-    img.classList.add('sprite');
-    target.element.innerHTML = '';
-    target.element.appendChild(img);
-    target.element.classList.add('glow');
-    setTimeout(() => {
-      if (target.value === chosen.value) {
-        target.value = 0;
-        target.element.innerHTML = '';
-        target.element.classList.remove('glow');
-      }
-    }, chosen.duration);
-  }
+  const empty = board.filter(c => c.value === 0);
+  if (!empty.length) return;
+  const target = empty[Math.floor(Math.random() * empty.length)];
+  let rand = Math.random();
+  let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0) || PROBABILITIES[0];
+  target.value = chosen.value;
+  const img = document.createElement('img');
+  img.src = SPRITES[`coin${chosen.value}`];
+  img.classList.add('sprite');
+  target.element.innerHTML = '';
+  target.element.appendChild(img);
+  target.element.classList.add('glow');
+  setTimeout(() => {
+    if (target.value === chosen.value) {
+      target.value = 0;
+      target.element.innerHTML = '';
+      target.element.classList.remove('glow');
+    }
+  }, chosen.duration);
 }
 
 createGrid();
 updateComboJauge();
 gameStart = Date.now();
 gameInterval = setInterval(updateGameTimer, 33);
-setInterval(spawnCoinAuto, 1000);
+setInterval(spawnCoinAuto, 300); // génère progressivement
 </script>
 </body>
 </html>
