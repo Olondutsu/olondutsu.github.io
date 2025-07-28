@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Jeu avec jauge combo et timer</title>
+  <title>Jeu Portfolio Amélioré</title>
   <style>
     body {
       margin: 0;
@@ -47,6 +47,10 @@
       position: relative;
       font-weight: bold;
       color: #fff;
+    }
+
+    .cell.glow {
+      box-shadow: 0 0 15px 5px gold;
     }
 
     .selector {
@@ -109,7 +113,7 @@
       font-family: 'Courier New', monospace;
     }
 
-    .score {
+    .score, .combo-max {
       font-size: 1.5em;
       color: lime;
       text-align: center;
@@ -118,16 +122,16 @@
   </style>
 </head>
 <body>
-
 <div class="game-container">
   <div class="left-side">
     <div class="game-grid" id="grid"></div>
     <div class="score">Score: <span id="score">0</span></div>
+    <div class="combo-max">Max Combo: <span id="comboMax">0</span></div>
   </div>
   <div class="right-side">
     <div class="jauge" id="timerJauge">
       <div class="jauge-fill" id="timerFill"></div>
-      <div class="label-jauge" id="timerLabel">00:000</div>
+      <div class="label-jauge" id="timerLabel">60:000</div>
     </div>
 
     <div class="jauge" id="comboJauge">
@@ -141,226 +145,181 @@
 <audio id="bgm" src="https://cdn.pixabay.com/audio/2023/02/21/audio_d9c75e6dfb.mp3" loop></audio>
 
 <script>
-  const grid = document.getElementById('grid');
-  const scoreDisplay = document.getElementById('score');
-  const timerFill = document.getElementById('timerFill');
-  const timerLabel = document.getElementById('timerLabel');
-  const comboFill = document.getElementById('comboFill');
-  const comboLabel = document.getElementById('comboLabel');
-  const pickupSound = document.getElementById('pickupSound');
-  const bgm = document.getElementById('bgm');
+// Variables
+const grid = document.getElementById('grid');
+const scoreDisplay = document.getElementById('score');
+const timerFill = document.getElementById('timerFill');
+const timerLabel = document.getElementById('timerLabel');
+const comboFill = document.getElementById('comboFill');
+const comboLabel = document.getElementById('comboLabel');
+const pickupSound = document.getElementById('pickupSound');
+const bgm = document.getElementById('bgm');
+const comboMaxDisplay = document.getElementById('comboMax');
 
-  const ROWS = 4;
-  const COLS = 4;
-  const MAX_COINS = 5;
+const ROWS = 4, COLS = 4, MIN_COINS = 2, MAX_COINS = 8;
+const SPRITES = {
+  player: "images/player_default.png",
+  coin1: "images/coin1.png",
+  coin3: "images/coin3.png"
+};
+const PROBABILITIES = [
+  { value: 1, prob: 0.7, duration: 1000 },
+  { value: 3, prob: 0.3, duration: 600 }
+];
+let board = [], direction = null, index = null, clickCount = 0, score = 0, combo = 0, comboMax = 0;
+let isRunning = false, lastComboTime = 0, comboTimeout = null;
+let gameTime = 60000, gameStart = null, gameInterval = null;
 
-  const SPRITES = {
-    player: "images/player_default.png",
-    coin1: "images/coin1.png",
-    coin3: "images/coin3.png"
-  };
+bgm.volume = 0.4;
+bgm.play().catch(() => {});
 
-  const PROBABILITIES = [
-    { value: 1, prob: 0.7, duration: 4000 },
-    { value: 3, prob: 0.3, duration: 2500 }
-  ];
-
-  const board = [];
-  let direction = null;
-  let index = null;
-  let clickCount = 0;
-  let score = 0;
-  let combo = 0;
-  let isRunning = false;
-  let lastComboTime = 0;
-
-  bgm.volume = 0.4;
-  bgm.play().catch(() => {});
-
-  function createGrid() {
-    grid.innerHTML = '';
-    board.length = 0;
-    for (let r = 0; r <= ROWS; r++) {
-      for (let c = 0; c <= COLS; c++) {
-        const cell = document.createElement('div');
-        if (r === 0 && c === 0) {
-          cell.style.visibility = 'hidden';
-        } else if (r === 0 || c === 0) {
-          cell.classList.add('selector');
-          if (r === 0) {
-            cell.dataset.col = c - 1;
-            cell.dataset.dir = 'col';
-          } else {
-            cell.dataset.row = r - 1;
-            cell.dataset.dir = 'row';
-          }
-          const label = document.createElement('div');
-          label.textContent = r === 0 ? '→' : '↓';
-          cell.appendChild(label);
-          cell.addEventListener('click', handleSelectorClick);
-        } else {
-          cell.classList.add('cell');
-          board.push({ row: r - 1, col: c - 1, element: cell, value: 0 });
-        }
-        grid.appendChild(cell);
-      }
-    }
-  }
-
-  function handleSelectorClick(e) {
-    if (isRunning) return;
-
-    direction = e.currentTarget.dataset.dir;
-    index = direction === 'col' ? parseInt(e.currentTarget.dataset.col) : parseInt(e.currentTarget.dataset.row);
-    clickCount = (clickCount % 3) + 1;
-
-    document.querySelectorAll('.selector').forEach(sel => sel.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-
-    startRun(direction, index, clickCount);
-  }
-
-  function startRun(dir, idx, speedLevel) {
-    isRunning = true;
-    let speed = 5 + (speedLevel * 3); // base 8, 11, 14
-    let delay = 1000 / speed;
-    let steps = dir === 'col' ? ROWS : COLS;
-    let i = 0;
-    let gained = 0;
-
-    const timerDuration = steps * delay + 500;
-    startCountdown(timerDuration);
-
-    const interval = setInterval(() => {
-      if (i >= steps) {
-        clearInterval(interval);
-        isRunning = false;
-        updateCombo(gained);
-        resetTimer();
-        return;
-      }
-
-      let target = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
-      if (!target) return;
-
-      if (target.value > 0) {
-        score += target.value;
-        gained += target.value;
-        pickupSound.currentTime = 0;
-        pickupSound.play();
-        target.value = 0;
-      }
-
-      clearSprites();
-      const img = document.createElement('img');
-      img.src = SPRITES.player;
-      img.classList.add('sprite');
-      target.element.innerHTML = '';
-      target.element.appendChild(img);
-
-      i++;
-    }, delay);
-  }
-
-  function updateCombo(gained) {
-    if (gained > 0) {
-      const now = Date.now();
-      if (now - lastComboTime < 2000) {
-        combo = Math.min(combo + 1, 9999);
+function createGrid() {
+  grid.innerHTML = ''; board = [];
+  for (let r = 0; r <= ROWS; r++) {
+    for (let c = 0; c <= COLS; c++) {
+      const cell = document.createElement('div');
+      if (r === 0 && c === 0) cell.style.visibility = 'hidden';
+      else if (r === 0 || c === 0) {
+        cell.classList.add('selector');
+        if (r === 0) { cell.dataset.col = c - 1; cell.dataset.dir = 'col'; cell.textContent = '→'; }
+        else { cell.dataset.row = r - 1; cell.dataset.dir = 'row'; cell.textContent = '↓'; }
+        cell.addEventListener('click', handleSelectorClick);
       } else {
-        combo = 1;
+        cell.classList.add('cell');
+        board.push({ row: r - 1, col: c - 1, element: cell, value: 0 });
       }
-      lastComboTime = now;
-    } else {
-      combo = 0;
+      grid.appendChild(cell);
     }
-    updateComboJauge();
-    scoreDisplay.textContent = score;
   }
+}
 
-  function updateComboJauge() {
-    // Combo max arbitraire, ex: 20 combos max pour jauge pleine
-    const maxCombo = 20;
-    let ratio = Math.min(combo / maxCombo, 1);
-    comboFill.style.width = (ratio * 100) + '%';
-    comboLabel.textContent = `Combo x${combo}`;
+function handleSelectorClick(e) {
+  if (isRunning) return;
+  direction = e.currentTarget.dataset.dir;
+  index = parseInt(direction === 'col' ? e.currentTarget.dataset.col : e.currentTarget.dataset.row);
+  clickCount = (clickCount % 3) + 1;
+  document.querySelectorAll('.selector').forEach(sel => sel.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+  startRun(direction, index, clickCount);
+}
+
+function startRun(dir, idx, speedLevel) {
+  isRunning = true;
+  const speed = 5 + (speedLevel * 3), delay = 1000 / speed;
+  const steps = dir === 'col' ? ROWS : COLS;
+  let i = 0, gained = 0;
+  const runInterval = setInterval(() => {
+    if (i >= steps) {
+      clearInterval(runInterval);
+      setTimeout(() => clearSprites(), 200);
+      isRunning = false;
+      updateCombo(gained);
+      return;
+    }
+    const target = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
+    if (!target) return;
+    if (target.value > 0) {
+      score += target.value;
+      gained++;
+      pickupSound.currentTime = 0;
+      pickupSound.play();
+      target.value = 0;
+    }
+    clearSprites();
+    const img = document.createElement('img');
+    img.src = SPRITES.player;
+    img.classList.add('sprite');
+    target.element.innerHTML = '';
+    target.element.appendChild(img);
+    i++;
+  }, delay);
+}
+
+function updateCombo(gained) {
+  if (gained >= 2) {
+    const now = Date.now();
+    if (now - lastComboTime < 3000) combo++;
+    else combo = 1;
+    lastComboTime = now;
+    comboMax = Math.max(comboMax, combo);
+    comboMaxDisplay.textContent = comboMax;
+    if (combo % 10 === 0) gameTime += 10000;
+    if (comboTimeout) clearTimeout(comboTimeout);
+    comboTimeout = setTimeout(() => {
+      combo = 0;
+      updateComboJauge();
+    }, 3000);
+  } else {
+    combo = 0;
   }
+  updateComboJauge();
+  scoreDisplay.textContent = score;
+}
 
-  let countdownInterval = null;
-  function startCountdown(duration) {
-    clearInterval(countdownInterval);
-    let start = Date.now();
+function updateComboJauge() {
+  const maxCombo = 20;
+  let ratio = Math.min(combo / maxCombo, 1);
+  comboFill.style.width = (ratio * 100) + '%';
+  comboLabel.textContent = `Combo x${combo}`;
+}
 
-    countdownInterval = setInterval(() => {
-      let elapsed = Date.now() - start;
-      let remaining = Math.max(duration - elapsed, 0);
+function updateGameTimer() {
+  const now = Date.now();
+  let remaining = Math.max(gameTime - (now - gameStart), 0);
+  let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
+  let ms = String(remaining % 1000).padStart(3, '0');
+  timerLabel.textContent = `${s}:${ms}`;
+  timerFill.style.width = (remaining / gameTime * 100) + '%';
+  if (remaining <= 0) endGame();
+}
 
-      // Affichage texte
-      let s = String(Math.floor(remaining / 1000)).padStart(2, '0');
-      let msPart = String(remaining % 1000).padStart(3, '0');
-      timerLabel.textContent = `${s}:${msPart}`;
+function endGame() {
+  clearInterval(gameInterval);
+  alert(`Temps écoulé !\nScore: ${score}\nCombo max: ${comboMax}`);
+}
 
-      // Affichage jauge
-      let ratio = remaining / duration;
-      timerFill.style.width = (ratio * 100) + '%';
+function getCell(r, c) {
+  return board.find(cell => cell.row === r && cell.col === c);
+}
 
-      if (remaining <= 0) {
-        clearInterval(countdownInterval);
-        timerFill.style.width = '0%';
-        timerLabel.textContent = "00:000";
-      }
-    }, 33);
-  }
+function clearSprites() {
+  board.forEach(cell => {
+    if (cell.value === 0) cell.element.innerHTML = '';
+  });
+}
 
-  function resetTimer() {
-    clearInterval(countdownInterval);
-    timerFill.style.width = '0%';
-    timerLabel.textContent = "00:000";
-  }
-
-  function getCell(r, c) {
-    return board.find(cell => cell.row === r && cell.col === c);
-  }
-
-  function clearSprites() {
-    board.forEach(cell => {
-      if (cell.value === 0) cell.element.innerHTML = '';
-    });
-  }
-
-  function spawnCoinAuto() {
-    if (document.hidden) return;
-    const current = board.filter(c => c.value > 0).length;
-    if (current >= MAX_COINS) return;
-
+function spawnCoinAuto() {
+  if (document.hidden) return;
+  const coins = board.filter(c => c.value > 0);
+  if (coins.length >= MAX_COINS) return;
+  while (coins.length < MIN_COINS) {
     const empty = board.filter(c => c.value === 0);
-    if (empty.length === 0) return;
-
+    if (!empty.length) return;
     const target = empty[Math.floor(Math.random() * empty.length)];
     let rand = Math.random();
-    let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0);
-    if (!chosen) chosen = PROBABILITIES[0];
-
+    let chosen = PROBABILITIES.find(p => (rand -= p.prob) < 0) || PROBABILITIES[0];
     target.value = chosen.value;
     const img = document.createElement('img');
     img.src = SPRITES[`coin${chosen.value}`];
     img.classList.add('sprite');
     target.element.innerHTML = '';
     target.element.appendChild(img);
-
-    // Disparition automatique après durée
+    target.element.classList.add('glow');
     setTimeout(() => {
       if (target.value === chosen.value) {
         target.value = 0;
         target.element.innerHTML = '';
+        target.element.classList.remove('glow');
       }
     }, chosen.duration);
   }
+}
 
-  setInterval(spawnCoinAuto, 1500);
-
-  createGrid();
-  updateComboJauge();
+createGrid();
+updateComboJauge();
+gameStart = Date.now();
+gameInterval = setInterval(updateGameTimer, 33);
+setInterval(spawnCoinAuto, 1000);
 </script>
 </body>
 </html>
