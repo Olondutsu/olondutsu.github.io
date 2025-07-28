@@ -48,17 +48,10 @@
       font-weight: bold;
       color: #fff;
     }
+
     .cell {
-    box-shadow: 0 0 20px #f0f;
+      box-shadow: 0 0 20px #f0f;
       justify-content: center;
-    }
-
-    .selector {
-      gap: 150px;
-    }
-
-    .cell.glow {
-      box-shadow: 0 0 15px 5px gold;
     }
 
     .selector {
@@ -66,6 +59,7 @@
       cursor: pointer;
       flex-direction: column;
       transition: background-color 0.2s;
+      gap: 150px;
     }
 
     .selector.active {
@@ -127,6 +121,27 @@
       text-align: center;
       margin-top: 10px;
     }
+
+    .float-text {
+      position: absolute;
+      color: gold;
+      font-size: 1.2em;
+      font-weight: bold;
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+      text-shadow: 0 0 5px black;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translateY(0px);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-40px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -170,11 +185,13 @@ const ROWS = 4, COLS = 4, MIN_COINS = 2, MAX_COINS = 8;
 const SPRITES = {
   player: "images/player_default.png",
   coin1: "images/coin1.png",
+  coin2: "images/coin2.png",
   coin3: "images/coin3.png"
 };
 const PROBABILITIES = [
-  { value: 1, prob: 0.7, duration: 2000 },
-  { value: 3, prob: 0.3, duration: 600 }
+  { value: 1, prob: 0.6, duration: 2000 },
+  { value: 2, prob: 0.25, duration: 1500 },
+  { value: 3, prob: 0.15, duration: 800 }
 ];
 let board = [], direction = null, index = null, clickCount = 0, score = 0, combo = 0, comboMax = 0;
 let isRunning = false, lastComboTime = 0, comboTimeout = null, comboTimerActive = false;
@@ -217,20 +234,32 @@ function startRun(dir, idx, speedLevel) {
   isRunning = true;
   const speed = 5 + (speedLevel * 3), delay = 1000 / speed;
   const steps = dir === 'col' ? ROWS : COLS;
-  let i = 0, gained = 0;
+  let i = 0, gained = 0, gainedPoints = 0;
   const runInterval = setInterval(() => {
     if (i >= steps) {
       clearInterval(runInterval);
       setTimeout(() => clearSprites(), 200);
       isRunning = false;
       updateCombo(gained);
+      score += gainedPoints;
+      scoreDisplay.textContent = score;
       return;
     }
     const target = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
     if (!target) return;
     if (target.value > 0) {
-      score += target.value;
+      let baseValue = target.value;
+      let multiplier = combo >= 2 ? 2 : 1;
+      let totalGain = baseValue * multiplier;
       gained++;
+      gainedPoints += totalGain;
+
+      // Floating +X points
+      const float = document.createElement('div');
+      float.className = 'float-text';
+      float.textContent = `+${totalGain}`;
+      target.element.appendChild(float);
+
       pickupSound.currentTime = 0;
       pickupSound.play();
       target.value = 0;
@@ -260,7 +289,6 @@ function updateCombo(gained) {
     comboTimerActive = false;
   }
   updateComboJauge();
-  scoreDisplay.textContent = score;
 }
 
 function resetComboTimeout() {
@@ -337,7 +365,7 @@ createGrid();
 updateComboJauge();
 gameStart = Date.now();
 gameInterval = setInterval(updateGameTimer, 33);
-setInterval(spawnCoinAuto, 300); // génère progressivement
+setInterval(spawnCoinAuto, 300);
 </script>
 </body>
 </html>
