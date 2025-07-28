@@ -9,7 +9,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    color: black;
+    background-color: black;
 }
 
 header {
