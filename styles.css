@@ -22,6 +22,7 @@ body {
       background-color: #202020;
       box-shadow: 0 0 20px #f0f;
       color: white;
+      order: 5;
     }
 
 header img {
