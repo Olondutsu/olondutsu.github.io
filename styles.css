@@ -7,13 +7,13 @@
 }
 
 body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-      min-height: calc(100vh - 80px);
-      position: relative;
+      margin: 0;
+      background-color: black;
+      font-family: 'Arial Black', sans-serif;
+      color: white;
+      box-shadow: 0 0 20px #f0f;
 }
+
 
 header {
       display: flex;
@@ -40,6 +40,11 @@ header h1 {
 main {
     display: flex;
     flex: 1;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    min-height: calc(100vh - 80px);
+    position: relative; /* 🔧 Pour placer les éléments combo/float */
 }
 
 .navigation {
