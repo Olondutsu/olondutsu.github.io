@@ -15,7 +15,8 @@ body {
 header {
     align-items: center;
     background-color: #202020;
-    box-shadow: 0 0 -20px #f0f;
+    display: flex;
+    box-shadow: 0 0 20px #f0f;
     color: white;
 }
 
