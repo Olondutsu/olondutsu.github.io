@@ -23,7 +23,7 @@ header {
     align-items: center;
     padding: 8px;
     background-color: #202020;
-    box-shadow: 0 0 20px #f0f;
+    box-shadow: 0 20 0px #f0f;
     color: white;
 }
 
