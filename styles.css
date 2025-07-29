@@ -55,6 +55,7 @@ main {
 
 section.indexmenu {
     background-color: black;
+    align-items: center;
 }
 .navigation a {
     
