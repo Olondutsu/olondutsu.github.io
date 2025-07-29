@@ -46,6 +46,10 @@ main {
     padding: 16px;
     overflow-y: auto;
 }
+
+.indexmenu {
+    background-color: black;
+}
 .navigation a {
     
     color: black; /* Change la couleur du texte du lien */
