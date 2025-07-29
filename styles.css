@@ -1,6 +1,11 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
 
+* {
+  background-color: transparent;
+  color: inherit;
+}
+
 body {
     max-width: 1200px;
     margin: auto;
