@@ -370,8 +370,7 @@
           let multiplier = combo >= 2 ? 2 : 1;
           let totalGain = baseValue * multiplier;
           gained++;
-          displayedGain = totalGain + 1
-          showPointsGained(displayedGain);
+          showPointsGained(totalGain);
           gainedPoints += totalGain;
 
           const float = document.createElement('div');
