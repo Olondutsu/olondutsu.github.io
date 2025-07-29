@@ -395,18 +395,27 @@
       }, delay);
     }
 
-    // function à appeler quand sprite prend un coin
-    // posX, posY = coordonnées du coin en pixels dans la page (ou relatif au container)
-   function showPointsGained(points) {
+    function showPointsGained(points) {
       const pointsText = document.createElement('div');
       pointsText.className = 'plus-point';
       pointsText.textContent = `+${points}`;
       const container = document.querySelector('.left-side');
-    
       container.appendChild(pointsText);
-      // On centre le texte horizontalement un peu au-dessus (ou autre position)
-      pointsText.style.left = '50%';
-      pointsText.style.top = '50px'; // tu peux adapter la position verticale
+    
+      // Position de base (centre horizontal, un peu en haut)
+      const baseLeft = 50; // en pourcentage
+      const baseTop = 40; // en pixels
+    
+      // On ajoute une variation aléatoire de +/- 20 pixels horizontalement et +/- 10 pixels verticalement
+      const randomX = (Math.random() * 40) - 20; // -20 à +20 px
+      const randomY = (Math.random() * 20) - 10; // -10 à +10 px
+    
+      // On convertit baseLeft % en px pour appliquer l’aléatoire (on récupère largeur du container)
+      const containerWidth = container.offsetWidth;
+      const leftPx = containerWidth * (baseLeft / 100) + randomX;
+    
+      pointsText.style.left = `${leftPx}px`;
+      pointsText.style.top = `${baseTop + randomY}px`;
       pointsText.style.transform = 'translateX(-50%)';
     
       setTimeout(() => pointsText.remove(), 1000);
