@@ -13,7 +13,7 @@ body {
       color: white;
 }
 
-    header {
+header {
       display: flex;
       align-items: center;
       gap: 16px;
@@ -22,7 +22,7 @@ body {
       box-shadow: 0 0 20px #f0f;
       color: white;
       order: 5;
-    }
+}
 
 header img {
     height: 60px;
