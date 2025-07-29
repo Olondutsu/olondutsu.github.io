@@ -52,7 +52,7 @@ main {
     overflow-y: auto;
 }
 
-.indexmenu {
+section.indexmenu {
     background-color: black;
 }
 .navigation a {
