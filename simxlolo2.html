@@ -370,6 +370,7 @@
           let multiplier = combo >= 2 ? 2 : 1;
           let totalGain = baseValue * multiplier;
           gained++;
+          showPointsGained(gainedPoints);
           gainedPoints += totalGain;
 
           const float = document.createElement('div');
@@ -395,22 +396,19 @@
 
     // function à appeler quand sprite prend un coin
     // posX, posY = coordonnées du coin en pixels dans la page (ou relatif au container)
-    function showPlusPoints(posX, posY, points) {
-      const plus = document.createElement('div');
-      plus.className = 'plus-point';
-      plus.textContent = '+' + points;
+   function showPointsGained(points) {
+      const pointsText = document.createElement('div');
+      pointsText.className = 'plus-point';
+      pointsText.textContent = `+${points}`;
+      const container = document.querySelector('.left-side');
     
-      plus.style.position = 'absolute';
-      plus.style.left = posX + 'px';
-      plus.style.top = posY + 'px';
+      container.appendChild(pointsText);
+      // On centre le texte horizontalement un peu au-dessus (ou autre position)
+      pointsText.style.left = '50%';
+      pointsText.style.top = '50px'; // tu peux adapter la position verticale
+      pointsText.style.transform = 'translateX(-50%)';
     
-      // Assure-toi d'avoir un container positionné en relatif pour append dedans (ex: la grille)
-      const container = document.querySelector('#container'); // adapter selon ta page
-      container.appendChild(plus);
-    
-      setTimeout(() => {
-        plus.remove();
-      }, 1000);
+      setTimeout(() => pointsText.remove(), 1000);
     }
     
     function showComboText(combo) {
