@@ -21,7 +21,6 @@
       background-color: #202020;
       box-shadow: 0 0 20px #f0f;
       color: white;
-      justify-content: center;
     }
 
     header img {
@@ -32,13 +31,18 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: calc(100vh - 80px); /* ajuste si nécessaire */
-      overflow: hidden;
+      padding: 20px;
+      min-height: calc(100vh - 80px);
     }
 
     .game-container {
       display: flex;
+      flex-direction: row;
       gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      max-width: 900px;
     }
 
     .left-side {
@@ -46,6 +50,9 @@
       padding: 10px;
       border-radius: 12px;
       box-shadow: 0 0 20px #f0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .game-grid {
@@ -106,8 +113,8 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      min-width: 160px;
       gap: 20px;
+      min-width: 160px;
     }
 
     .jauge {
@@ -163,6 +170,51 @@
     @keyframes floatUp {
       0% { opacity: 1; transform: translateY(0px); }
       100% { opacity: 0; transform: translateY(-40px); }
+    }
+
+    /* RESPONSIVE MOBILE */
+    @media (max-width: 768px) {
+      .main {
+        padding: 10px;
+        flex-direction: column;
+      }
+
+      .game-container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .left-side, .right-side {
+        width: 100%;
+        max-width: 95vw;
+      }
+
+      .game-grid {
+        grid-template-columns: 10% repeat(4, 1fr);
+        grid-template-rows: 10% repeat(4, auto);
+        gap: 1vw;
+      }
+
+      .cell {
+        width: 16vw;
+        height: 16vw;
+      }
+
+      .selector {
+        width: 12vw;
+        height: 12vw;
+        font-size: 1.2em;
+      }
+
+      .sprite {
+        width: 80%;
+        height: 80%;
+      }
+
+      .jauge {
+        width: 90%;
+        max-width: 300px;
+      }
     }
   </style>
 </head>
@@ -222,7 +274,7 @@
       coin3: "images/coin3.png"
     };
     const PROBABILITIES = [
-      { value: 1, prob: 0.6, duration: 3000 },
+      { value: 1, prob: 0.6, duration: 2000 },
       { value: 2, prob: 0.25, duration: 1500 },
       { value: 3, prob: 0.15, duration: 800 }
     ];
@@ -241,8 +293,8 @@
           if (r === 0 && c === 0) cell.style.visibility = 'hidden';
           else if (r === 0 || c === 0) {
             cell.classList.add('selector');
-            if (r === 0) { cell.dataset.col = c - 1; cell.dataset.dir = 'col'; cell.textContent = '↓'; }
-            else { cell.dataset.row = r - 1; cell.dataset.dir = 'row'; cell.textContent = '→'; }
+            if (r === 0) { cell.dataset.col = c - 1; cell.dataset.dir = 'col'; cell.textContent = '→'; }
+            else { cell.dataset.row = r - 1; cell.dataset.dir = 'row'; cell.textContent = '↓'; }
             cell.addEventListener('click', handleSelectorClick);
           } else {
             cell.classList.add('cell');
