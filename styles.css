@@ -12,13 +12,15 @@ body {
     color: white;
 }
 
-header {
-    align-items: center;
-    background-color: #202020;
-    display: flex;
-    box-shadow: 0 0 20px #f0f;
-    color: white;
-}
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 20px;
+      background-color: #202020;
+      box-shadow: 0 0 20px #f0f;
+      color: white;
+    }
 
 header img {
     height: 60px;
