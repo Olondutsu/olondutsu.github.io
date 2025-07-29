@@ -326,8 +326,8 @@
           if (r === 0 && c === 0) cell.style.visibility = 'hidden';
           else if (r === 0 || c === 0) {
             cell.classList.add('selector');
-            if (r === 0) { cell.dataset.col = c - 1; cell.dataset.dir = 'col'; cell.textContent = '→'; }
-            else { cell.dataset.row = r - 1; cell.dataset.dir = 'row'; cell.textContent = '↓'; }
+            if (r === 0) { cell.dataset.col = c - 1; cell.dataset.dir = 'col'; cell.textContent = '↓'; }
+            else { cell.dataset.row = r - 1; cell.dataset.dir = 'row'; cell.textContent = '→'; }
             cell.addEventListener('click', handleSelectorClick);
           } else {
             cell.classList.add('cell');
