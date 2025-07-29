@@ -87,8 +87,8 @@
     }
 
     .selector {
-      width: 60px;
-      height: 60px;
+      width: 80px;
+      height: 80px;
       background-color: #f0f;
       cursor: pointer;
       font-size: 1.4em;
@@ -186,7 +186,31 @@
       text-shadow: 0 0 6px black;
       z-index: 20;
     }
-
+    
+    .plus-point {
+      color: #0ff;
+      font-weight: bold;
+      font-size: 1.5rem;
+      text-shadow:
+        0 0 8px #0ff,
+        0 0 15px #0ff,
+        0 0 20px #0ff;
+      animation: floatUp 1s ease-out forwards;
+      pointer-events: none;
+      user-select: none;
+      transform-origin: center;
+    }
+    
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-50px) scale(1.5);
+      }
+    }
     @keyframes comboPop {
       0%   { opacity: 1; transform: translateY(0px) scale(1); }
       30%  { transform: translateY(-10px) scale(1.3); }
@@ -369,6 +393,26 @@
       }, delay);
     }
 
+    // function à appeler quand sprite prend un coin
+    // posX, posY = coordonnées du coin en pixels dans la page (ou relatif au container)
+    function showPlusPoints(posX, posY, points) {
+      const plus = document.createElement('div');
+      plus.className = 'plus-point';
+      plus.textContent = '+' + points;
+    
+      plus.style.position = 'absolute';
+      plus.style.left = posX + 'px';
+      plus.style.top = posY + 'px';
+    
+      // Assure-toi d'avoir un container positionné en relatif pour append dedans (ex: la grille)
+      const container = document.querySelector('#container'); // adapter selon ta page
+      container.appendChild(plus);
+    
+      setTimeout(() => {
+        plus.remove();
+      }, 1000);
+    }
+    
     function showComboText(combo) {
       const comboText = document.createElement('div');
       comboText.className = 'combo-text';
