@@ -42,7 +42,7 @@ main {
     display: flex;
     flex: 1;
 }
-.all-scripts {
+ul.all-scripts {
     color: white;
 }
 .navigation {
