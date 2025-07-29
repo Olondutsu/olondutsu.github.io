@@ -164,6 +164,17 @@
             font-weight: bold;
         }
 
+        .search-box {
+            margin: 1rem 0;
+        }
+
+        #search-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
         @media (max-width: 768px) {
             .menu {
                 position: absolute;
@@ -225,6 +236,7 @@
 
         let recipes = [];
         let selectedParts = [];
+        let allParts = [];
 
         async function loadPartsAndRecipes() {
             const response = await fetch('parts-list.json');
@@ -385,9 +397,17 @@
 
         loadPartsAndRecipes().then(({ parts, recipes: loadedRecipes }) => {
             recipes = loadedRecipes;
+            allParts = parts;
             generateCategoryMenu(parts);
             setupTabs();
         });
+        document.getElementById('search-input').addEventListener('input', function () {
+        const query = this.value.toLowerCase();
+        const filteredParts = allParts.filter(part =>
+            part.name.toLowerCase().includes(query)
+        );
+        displayParts(filteredParts);
+    });
     </script>
 </body>
 </html>
