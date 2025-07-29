@@ -33,6 +33,7 @@
       align-items: center;
       padding: 20px;
       min-height: calc(100vh - 80px);
+      position: relative; /* 🔧 Pour placer les éléments combo/float */
     }
 
     .game-container {
@@ -53,6 +54,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      position: relative; /* 🔧 Pour placer le texte combo */
     }
 
     .game-grid {
@@ -165,6 +167,7 @@
       pointer-events: none;
       animation: floatUp 1s ease-out forwards;
       text-shadow: 0 0 5px black;
+      z-index: 10;
     }
 
     @keyframes floatUp {
@@ -172,43 +175,56 @@
       100% { opacity: 0; transform: translateY(-40px); }
     }
 
+    /* 🔧 Combo floating text style */
+    .combo-text {
+      position: absolute;
+      color: #f0f;
+      font-size: 1.5em;
+      font-weight: bold;
+      pointer-events: none;
+      animation: comboPop 1.2s ease-out forwards;
+      text-shadow: 0 0 6px black;
+      z-index: 20;
+    }
+
+    @keyframes comboPop {
+      0%   { opacity: 1; transform: translateY(0px) scale(1); }
+      30%  { transform: translateY(-10px) scale(1.3); }
+      100% { opacity: 0; transform: translateY(-40px) scale(0.8); }
+    }
+
     @media screen and (max-width: 600px) {
-  .main {
-    flex-direction: column;
-    align-items: center;
-  }
+      .main {
+        flex-direction: column;
+        align-items: center;
+      }
 
-  .game-grid {
-    width: 100vw;
-    overflow-x: auto;
-    justify-content: center;
-    padding: 0 10px;
-  }
+      .game-grid {
+        width: 100vw;
+        overflow-x: auto;
+        justify-content: center;
+        padding: 0 10px;
+      }
 
-  .cell {
-    width: min(18vw, 70px);
-    height: min(18vw, 70px);
-  }
+      .cell, .selector {
+        width: min(18vw, 70px);
+        height: min(18vw, 70px);
+        font-size: clamp(1rem, 3vw, 1.3rem);
+      }
 
-  .selector {
-    width: min(18vw, 70px);
-    height: min(18vw, 70px);
-    font-size: clamp(1rem, 3vw, 1.3rem);
-  }
+      .stats {
+        font-size: 4vw;
+        padding: 10px;
+      }
 
-  .stats {
-    font-size: 4vw;
-    padding: 10px;
-  }
+      .header h1 {
+        font-size: 6vw;
+      }
 
-  .header h1 {
-    font-size: 6vw;
-  }
-
-  .header img {
-    height: 2rem;
-  }
-}
+      .header img {
+        height: 2rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -335,6 +351,7 @@
           const float = document.createElement('div');
           float.className = 'float-text';
           float.textContent = `+${totalGain}`;
+          float.style.color = combo >= 10 ? '#ff0' : combo >= 5 ? '#f0f' : 'gold';
           target.element.appendChild(float);
 
           pickupSound.currentTime = 0;
@@ -352,6 +369,18 @@
       }, delay);
     }
 
+    function showComboText(combo) {
+      const comboText = document.createElement('div');
+      comboText.className = 'combo-text';
+      comboText.textContent = `Combo x${combo} !`;
+      const container = document.querySelector('.left-side');
+      container.appendChild(comboText);
+      comboText.style.left = '50%';
+      comboText.style.top = '10px';
+      comboText.style.transform = 'translateX(-50%)';
+      setTimeout(() => comboText.remove(), 1200);
+    }
+
     function updateCombo(gained) {
       if (gained >= 2) {
         const now = Date.now();
@@ -360,6 +389,7 @@
         comboMax = Math.max(comboMax, combo);
         comboMaxDisplay.textContent = comboMax;
         if (combo % 10 === 0) gameTime += 10000;
+        showComboText(combo); // 🔧 combo display
         resetComboTimeout();
       } else {
         combo = 0;
