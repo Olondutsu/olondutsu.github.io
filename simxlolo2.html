@@ -366,7 +366,7 @@
         const target = dir === 'col' ? getCell(i, idx) : getCell(idx, i);
         if (!target) return;
         if (target.value > 0) {
-          let baseValue = target.value;
+          let baseValue = valueToPoints[target.value] || target.value;
           let multiplier = combo >= 2 ? 2 : 1;
           let totalGain = baseValue * multiplier;
           gained++;
@@ -477,7 +477,11 @@
       timerFill.style.width = (remaining / gameTime * 100) + '%';
       if (remaining <= 0) endGame();
     }
-
+    const valueToPoints = {
+      1: 1,
+      2: 3,
+      3: 10
+    };
     function endGame() {
       clearInterval(gameInterval);
       alert(`Temps écoulé !\nScore: ${score}\nCombo max: ${comboMax}`);
