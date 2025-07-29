@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>In Your Fridge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f4f4;
+            color: #333;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background-color: #222;
+            color: #fff;
+        }
+
+        header img {
+            height: 50px;
+            margin-right: 1rem;
+        }
+
+        main {
+            display: flex;
+            position: relative;
+        }
+
+        .menu {
+            width: 250px;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            padding: 1rem;
+            position: fixed;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .menu.closed {
+            transform: translateX(-100%);
+        }
+
+        .floating-menu {
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-toggle {
+            position: absolute;
+            top: 1rem;
+            right: -2.5rem;
+            background: #222;
+            color: #fff;
+            border: none;
+            border-radius: 4px 0 0 4px;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+
+        .category-list,
+        .fridge-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 1rem;
+        }
+
+        .category-list li,
+        .fridge-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        .category-list button {
+            background: #eee;
+            border: none;
+            padding: 0.5rem;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .category-list button:hover {
+            background: #ddd;
+        }
+
+        .content {
+            margin-left: 260px;
+            padding: 1rem;
+            flex: 1;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            background: #ccc;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            margin-right: 4px;
+        }
+
+        .tab.active {
+            background: #fff;
+            font-weight: bold;
+            border-bottom: 2px solid #f4f4f4;
+        }
+
+        .tab-content {
+            background: #fff;
+            border-radius: 0 0 8px 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        article {
+            background: #fafafa;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        article:hover {
+            transform: translateY(-3px);
+        }
+
+        article.selected {
+            border: 2px solid #28a745;
+            background: #e6f9ec;
+        }
+
+        article img {
+            width: 100%;
+            border-radius: 6px;
+        }
+
+        #back-home {
+            padding: 1rem;
+            text-align: center;
+        }
+
+        #back-home a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .menu {
+                position: absolute;
+                z-index: 10;
+                transform: translateX(-100%);
+            }
+
+            .menu-toggle {
+                right: -2.5rem;
+            }
+
+            .content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="images/main-frigo.jpg" alt="LOGO">
+        <h1>In Your Fridge</h1>
+    </header>
+    <main>
+        <aside class="menu closed floating-menu">
+            <button id="menu-toggle" class="menu-toggle">☰</button>
+            <h2>Catégories</h2>
+            <ul class="category-list"></ul>
+            <h3>In my fridge</h3>
+            <ul class="fridge-list"></ul>
+        </aside>
+        <section class="content">
+            <div class="tabs">
+                <button id="tab-ingredients" class="tab active">Ingrédients</button>
+                <button id="tab-recipes" class="tab">Recettes</button>
+            </div>
+            <div class="tab-content">
+                <div id="ingredients-content" class="tab-panel active">
+                    <div class="cards ingredients-cards"></div>
+                </div>
+                <div id="recipes-content" class="tab-panel">
+                    <div class="cards recipes-cards"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <div id="back-home">
+        <a href="index.html">back to home</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menu-toggle');
+            const menu = document.querySelector('.menu');
+            menuToggle.addEventListener('click', function() {
+                menu.classList.toggle('closed');
+            });
+        });
+
+        let recipes = [];
+        let selectedParts = [];
+
+        async function loadPartsAndRecipes() {
+            const response = await fetch('parts-list.json');
+            const parts = await response.json();
+
+            const recipesResponse = await fetch('recipes.json');
+            const recipes = await recipesResponse.json();
+
+            return { parts, recipes };
+        }
+
+        function generateCategoryMenu(parts) {
+            const categoryList = document.querySelector('.category-list');
+            const categories = new Set();
+
+            parts.forEach(part => {
+                categories.add(part.category);
+            });
+
+            categories.forEach(category => {
+                const listItem = document.createElement('li');
+                const button = document.createElement('button');
+                button.innerText = category;
+                button.addEventListener('click', () => {
+                    displayPartsByCategory(category, parts);
+                });
+                listItem.appendChild(button);
+                categoryList.appendChild(listItem);
+            });
+        }
+
+        function displayPartsByCategory(category, parts) {
+            const filteredParts = parts.filter(part => part.category === category);
+            displayParts(filteredParts);
+        }
+
+        function displayParts(parts) {
+            const sectionCards = document.querySelector(".ingredients-cards");
+            sectionCards.innerHTML = "";
+
+            parts.forEach(part => {
+                const partElement = document.createElement("article");
+
+                const imageElement = document.createElement("img");
+                imageElement.src = part.image;
+
+                const nameElement = document.createElement("h2");
+                nameElement.innerText = part.name;
+
+                const priceElement = document.createElement("p");
+                priceElement.innerText = `Prix: ${part.price} €`;
+
+                const stockElement = document.createElement("p");
+                stockElement.innerText = part.available ? "En stock" : "Rupture de stock";
+
+                const replaceableElement = document.createElement("p");
+                replaceableElement.innerText = `Remplaçables: ${part.replaceables ? part.replaceables.join(', ') : "Aucun"}`;
+
+                partElement.appendChild(imageElement);
+                partElement.appendChild(nameElement);
+                partElement.appendChild(priceElement);
+                partElement.appendChild(stockElement);
+                partElement.appendChild(replaceableElement);
+
+                sectionCards.appendChild(partElement);
+
+                partElement.addEventListener('click', () => togglePartSelection(part, partElement));
+            });
+        }
+
+        function togglePartSelection(part, partElement) {
+            const index = selectedParts.indexOf(part);
+            if (index === -1) {
+                selectedParts.push(part);
+                partElement.classList.add('selected');
+            } else {
+                selectedParts.splice(index, 1);
+                partElement.classList.remove('selected');
+            }
+            updateFridgeList();
+            showAvailableRecipes();
+        }
+
+        function updateFridgeList() {
+            const fridgeList = document.querySelector('.fridge-list');
+            fridgeList.innerHTML = "";
+
+            selectedParts.forEach(part => {
+                const listItem = document.createElement('li');
+                listItem.innerText = part.name;
+                const removeButton = document.createElement('button');
+                removeButton.innerText = 'x';
+                removeButton.addEventListener('click', () => removeFromFridge(part));
+                listItem.appendChild(removeButton);
+                fridgeList.appendChild(listItem);
+            });
+        }
+
+        function removeFromFridge(part) {
+            const index = selectedParts.indexOf(part);
+            if (index !== -1) {
+                selectedParts.splice(index, 1);
+                document.querySelectorAll('.ingredients-cards article').forEach(article => {
+                    if (article.querySelector('h2').innerText === part.name) {
+                        article.classList.remove('selected');
+                    }
+                });
+            }
+            updateFridgeList();
+            showAvailableRecipes();
+        }
+
+        function showAvailableRecipes() {
+            const selectedNames = selectedParts.map(part => part.name);
+            const recipeSection = document.querySelector('.recipes-cards');
+            recipeSection.innerHTML = "";
+
+            const availableRecipes = recipes.filter(recipe =>
+                recipe.ingredients.every(ingredient => selectedNames.includes(ingredient))
+            );
+
+            availableRecipes.forEach(recipe => {
+                const recipeElement = document.createElement('article');
+                const nameElement = document.createElement('h2');
+                nameElement.innerText = recipe.name;
+                const ingredientsElement = document.createElement('p');
+                ingredientsElement.innerText = `Ingrédients: ${recipe.ingredients.join(', ')}`;
+                recipeElement.appendChild(nameElement);
+                recipeElement.appendChild(ingredientsElement);
+                recipeSection.appendChild(recipeElement);
+
+                recipeElement.addEventListener('click', () => {
+                    alert(`Vous avez sélectionné la recette: ${recipe.name}`);
+                });
+            });
+        }
+
+        function setupTabs() {
+            const tabIngredients = document.getElementById('tab-ingredients');
+            const tabRecipes = document.getElementById('tab-recipes');
+            const ingredientsContent = document.getElementById('ingredients-content');
+            const recipesContent = document.getElementById('recipes-content');
+
+            tabIngredients.addEventListener('click', () => {
+                tabIngredients.classList.add('active');
+                tabRecipes.classList.remove('active');
+                ingredientsContent.classList.add('active');
+                recipesContent.classList.remove('active');
+            });
+
+            tabRecipes.addEventListener('click', () => {
+                tabRecipes.classList.add('active');
+                tabIngredients.classList.remove('active');
+                recipesContent.classList.add('active');
+                ingredientsContent.classList.remove('active');
+            });
+        }
+
+        loadPartsAndRecipes().then(({ parts, recipes: loadedRecipes }) => {
+            recipes = loadedRecipes;
+            generateCategoryMenu(parts);
+            setupTabs();
+        });
+    </script>
+</body>
+</html>
