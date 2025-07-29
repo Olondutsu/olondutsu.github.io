@@ -7,10 +7,12 @@
 }
 
 body {
-      margin: 0;
-      background-color: black;
-      font-family: 'Arial Black', sans-serif;
-      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      min-height: calc(100vh - 80px);
+      position: relative;
 }
 
 header {
