@@ -42,9 +42,7 @@ main {
     display: flex;
     flex: 1;
 }
-ul.all-scripts {
-    color: white;
-}
+
 .navigation {
     justify-content: center;
     width: 250px;
@@ -94,6 +92,7 @@ section.indexmenu {
 
     .menu li {
         margin-bottom: 8px;
+        color: white;
     }
 
     .menu li button {
