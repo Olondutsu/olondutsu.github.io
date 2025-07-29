@@ -172,50 +172,43 @@
       100% { opacity: 0; transform: translateY(-40px); }
     }
 
-    /* RESPONSIVE MOBILE */
-    @media (max-width: 768px) {
-      .main {
-        padding: 10px;
-        flex-direction: column;
-      }
+    @media screen and (max-width: 600px) {
+  .main {
+    flex-direction: column;
+    align-items: center;
+  }
 
-      .game-container {
-        flex-direction: column;
-        align-items: center;
-      }
+  .game-grid {
+    width: 100vw;
+    overflow-x: auto;
+    justify-content: center;
+    padding: 0 10px;
+  }
 
-      .left-side, .right-side {
-        width: 100%;
-        max-width: 95vw;
-      }
+  .cell {
+    width: min(18vw, 70px);
+    height: min(18vw, 70px);
+  }
 
-      .game-grid {
-        grid-template-columns: 10% repeat(4, 1fr);
-        grid-template-rows: 10% repeat(4, auto);
-        gap: 1vw;
-      }
+  .selector {
+    width: min(18vw, 70px);
+    height: min(18vw, 70px);
+    font-size: clamp(1rem, 3vw, 1.3rem);
+  }
 
-      .cell {
-        width: 16vw;
-        height: 16vw;
-      }
+  .stats {
+    font-size: 4vw;
+    padding: 10px;
+  }
 
-      .selector {
-        width: 12vw;
-        height: 12vw;
-        font-size: 1.2em;
-      }
+  .header h1 {
+    font-size: 6vw;
+  }
 
-      .sprite {
-        width: 80%;
-        height: 80%;
-      }
-
-      .jauge {
-        width: 90%;
-        max-width: 300px;
-      }
-    }
+  .header img {
+    height: 2rem;
+  }
+}
   </style>
 </head>
 <body>
