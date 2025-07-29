@@ -56,7 +56,7 @@ section.indexmenu {
 }
 .navigation a {
     
-    color: black; /* Change la couleur du texte du lien */
+    color: white; /* Change la couleur du texte du lien */
     text-decoration: none; /* Supprime le soulignement par défaut */
 }
 
