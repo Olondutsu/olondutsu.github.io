@@ -15,7 +15,6 @@ body {
   overflow: hidden;
 }
 
-/* TOP BAR */
 #top {
   height: 44px;
   background: #222;
@@ -23,10 +22,17 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px;
-  z-index: 5;
 }
 
-/* TOOLBOX */
+button {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 6px;
+}
+
+button.active { background: #666; }
+
 #tools {
   position: fixed;
   left: 8px;
@@ -41,18 +47,6 @@ body {
   z-index: 10;
 }
 
-button {
-  background: #333;
-  color: #eee;
-  border: 1px solid #555;
-  padding: 6px;
-}
-
-button.active {
-  background: #666;
-}
-
-/* CANVAS */
 #canvasContainer {
   position: absolute;
   top: 44px;
@@ -63,17 +57,14 @@ button.active {
   justify-content: center;
   align-items: center;
   overflow: auto;
-  z-index: 1;
 }
 
 canvas {
   background: #fff;
   image-rendering: pixelated;
   touch-action: none;
-  pointer-events: auto;
 }
 
-/* PALETTE */
 #palette {
   position: fixed;
   bottom: 0;
@@ -85,7 +76,6 @@ canvas {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  z-index: 5;
 }
 
 .color {
@@ -94,9 +84,7 @@ canvas {
   border: 2px solid #000;
 }
 
-.color.active {
-  border-color: #fff;
-}
+.color.active { border-color: #fff; }
 </style>
 </head>
 
@@ -112,7 +100,6 @@ canvas {
 
 <div id="tools">
   <button data-tool="pencil" class="active">✏️</button>
-  <button data-tool="line">📏</button>
   <button data-tool="fill">🪣</button>
   <button id="mirrorXBtn">↔️</button>
   <button id="mirrorYBtn">↕️</button>
@@ -126,57 +113,61 @@ canvas {
 
 <div id="palette"></div>
 
+<input type="file" id="fileInput" accept="image/*" hidden>
+
 <script>
-/* ===== CORE ===== */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
 let W = 16, H = 16;
 let pixelSize = 24;
-let bgColor = "#ffffff";
 
-let pixels = new Array(W*H).fill("#ffffff");
+let pixels = [];
 let currentColor = "#000000";
 
 let tool = "pencil";
-let mirrorXEnabled = false;
-let mirrorYEnabled = false;
+let mirrorX = false, mirrorY = false;
 
 let undoStack=[], redoStack=[], stroke=null;
-let drawing=false, start=null;
+let drawing=false;
 
-/* ===== INIT ===== */
-function resize() {
-  canvas.width = W * pixelSize;
-  canvas.height = H * pixelSize;
+let paletteColors = ["#000000","#ffffff","#ff0000","#00ff00","#0000ff"];
+
+function init(w,h){
+  W=w; H=h;
+  pixels = new Array(W*H).fill("#ffffff");
+  resize();
+}
+
+function resize(){
+  canvas.width=W*pixelSize;
+  canvas.height=H*pixelSize;
   render();
 }
 
-/* ===== RENDER ===== */
-function render(preview=null){
-  ctx.fillStyle = bgColor;
+function render(){
+  ctx.fillStyle="#fff";
   ctx.fillRect(0,0,canvas.width,canvas.height);
-
   for(let y=0;y<H;y++)
     for(let x=0;x<W;x++){
       ctx.fillStyle=pixels[y*W+x];
       ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
-
-  if(preview) preview();
 }
 
-/* ===== DRAW ===== */
-function canDraw(x,y){
-  if(mirrorXEnabled && x>=Math.floor(W/2)) return false;
-  if(mirrorYEnabled && y>=Math.floor(H/2)) return false;
-  return true;
+function pos(e){
+  const r=canvas.getBoundingClientRect();
+  return {
+    x:Math.floor((e.clientX-r.left)/pixelSize),
+    y:Math.floor((e.clientY-r.top)/pixelSize)
+  };
 }
 
 function applyPixel(x,y){
   if(x<0||y<0||x>=W||y>=H) return;
-  if(!canDraw(x,y)) return;
+  if(mirrorX && x>=Math.floor(W/2)) return;
+  if(mirrorY && y>=Math.floor(H/2)) return;
 
   const i=y*W+x;
   if(pixels[i]===currentColor) return;
@@ -184,13 +175,10 @@ function applyPixel(x,y){
   stroke.set(i,pixels[i]);
   pixels[i]=currentColor;
 
-  if(mirrorXEnabled) pixels[y*W+(W-1-x)] = currentColor;
-  if(mirrorYEnabled) pixels[(H-1-y)*W+x] = currentColor;
-  if(mirrorXEnabled && mirrorYEnabled)
-    pixels[(H-1-y)*W+(W-1-x)] = currentColor;
+  if(mirrorX) pixels[y*W+(W-1-x)] = currentColor;
+  if(mirrorY) pixels[(H-1-y)*W+x] = currentColor;
 }
 
-/* ===== FILL ===== */
 function floodFill(x,y,target){
   if(target===currentColor) return;
   const stack=[[x,y]];
@@ -204,29 +192,23 @@ function floodFill(x,y,target){
   }
 }
 
-/* ===== INPUT ===== */
-function pos(e){
-  const r=canvas.getBoundingClientRect();
-  return {
-    x:Math.floor((e.clientX-r.left)/pixelSize),
-    y:Math.floor((e.clientY-r.top)/pixelSize)
-  };
-}
-
+/* INPUT */
 canvas.onpointerdown=e=>{
   drawing=true;
   stroke=new Map();
-  start=pos(e);
-  if(tool==="pencil") applyPixel(start.x,start.y);
-  if(tool==="fill") floodFill(start.x,start.y,pixels[start.y*W+start.x]);
+  const p=pos(e);
+  if(tool==="pencil") applyPixel(p.x,p.y);
+  if(tool==="fill") floodFill(p.x,p.y,pixels[p.y*W+p.x]);
   render();
 };
 
 canvas.onpointermove=e=>{
   if(!drawing) return;
-  const p=pos(e);
-  if(tool==="pencil") applyPixel(p.x,p.y);
-  render();
+  if(tool==="pencil"){
+    const p=pos(e);
+    applyPixel(p.x,p.y);
+    render();
+  }
 };
 
 window.onpointerup=()=>{
@@ -236,10 +218,9 @@ window.onpointerup=()=>{
     undoStack.push(stroke);
     redoStack.length=0;
   }
-  render();
 };
 
-/* ===== UI ===== */
+/* UI */
 document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
   b.onclick=()=>{
     document.querySelectorAll("#tools button").forEach(x=>x.classList.remove("active"));
@@ -248,64 +229,6 @@ document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
   };
 });
 
-mirrorXBtn.onclick=()=>{
-  mirrorXEnabled=!mirrorXEnabled;
-  mirrorXBtn.classList.toggle("active",mirrorXEnabled);
-};
-mirrorYBtn.onclick=()=>{
-  mirrorYEnabled=!mirrorYEnabled;
-  mirrorYBtn.classList.toggle("active",mirrorYEnabled);
-};
-
-zoomIn.onclick=()=>{pixelSize+=4;resize();};
-zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();};
-
-undoBtn.onclick=()=>{
-  const s=undoStack.pop(); if(!s)return;
-  const r=new Map();
-  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
-  redoStack.push(r); render();
-};
-
-redoBtn.onclick=()=>{
-  const s=redoStack.pop(); if(!s)return;
-  const r=new Map();
-  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
-  undoStack.push(r); render();
-};
-
-newBtn.onclick=()=>{
-  pixels=new Array(W*H).fill("#ffffff");
-  undoStack=[]; redoStack=[];
-  render();
-};
-
-exportBtn.onclick=()=>{
-  const a=document.createElement("a");
-  a.href=canvas.toDataURL();
-  a.download="pixolator.png";
-  a.click();
-};
-
-/* ===== PALETTE ===== */
-const palette=document.getElementById("palette");
-["#000","#fff","#f00","#0f0","#00f","#ff0","#f0f","#0ff"].forEach((c,i)=>{
-  const d=document.createElement("div");
-  d.className="color";
-  d.style.background=c;
-  if(i===0)d.classList.add("active");
-  d.onclick=()=>{
-    document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
-    d.classList.add("active");
-    currentColor=c;
-  };
-  palette.appendChild(d);
-});
-
-/* START */
-resize();
-render();
-</script>
-
-</body>
-</html>
+mirrorXBtn.onclick=()=>mirrorXBtn.classList.toggle("active",mirrorX=!mirrorX);
+mirrorY
+  
