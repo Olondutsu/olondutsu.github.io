@@ -6,97 +6,88 @@
 <title>Pix-o-lator</title>
 
 <style>
-body {
-  margin: 0;
-  background: #1a1a1a;
-  color: #eee;
-  font-family: sans-serif;
-  height: 100vh;
-  overflow: hidden;
+body{
+  margin:0;
+  background:#1a1a1a;
+  color:#eee;
+  font-family:sans-serif;
+  height:100vh;
+  overflow:hidden;
 }
 
 /* TOP BAR */
-#top {
-  height: 44px;
-  background: #222;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px;
-  z-index: 5;
+#top{
+  height:44px;
+  background:#222;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px;
+  z-index:5;
 }
 
 /* TOOLBOX */
-#tools {
-  position: fixed;
-  left: 8px;
-  top: 60px;
-  background: #222;
-  border: 1px solid #555;
-  border-radius: 10px;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 10;
+#tools{
+  position:fixed;
+  left:8px;
+  top:60px;
+  background:#222;
+  border:1px solid #555;
+  border-radius:10px;
+  padding:6px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  z-index:10;
 }
 
-button {
-  background: #333;
-  color: #eee;
-  border: 1px solid #555;
-  padding: 6px;
+button{
+  background:#333;
+  color:#eee;
+  border:1px solid #555;
+  padding:6px;
 }
-
-button.active {
-  background: #666;
-}
+button.active{background:#666;}
 
 /* CANVAS */
-#canvasContainer {
-  position: absolute;
-  top: 44px;
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: auto;
-  z-index: 1;
+#canvasContainer{
+  position:absolute;
+  top:44px;
+  bottom:60px;
+  left:0;
+  right:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:auto;
+  background:#000;
 }
-
-canvas {
-  background: #fff;
-  image-rendering: pixelated;
-  touch-action: none;
-  pointer-events: auto;
+canvas{
+  background:#fff;
+  image-rendering:pixelated;
+  touch-action:none;
 }
 
 /* PALETTE */
-#palette {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background: #222;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  z-index: 5;
+#palette{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:60px;
+  background:#222;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  z-index:5;
 }
-
-.color {
-  width: 32px;
-  height: 32px;
-  border: 2px solid #000;
+.color{
+  width:32px;
+  height:32px;
+  border:2px solid #000;
 }
-
-.color.active {
-  border-color: #fff;
-}
+.color.active{border-color:#fff;}
 </style>
 </head>
 
@@ -104,10 +95,12 @@ canvas {
 
 <div id="top">
   <button id="newBtn">New</button>
+  <button id="resizeBtn">Resize</button>
   <button id="importBtn">Import</button>
+  <button id="exportBtn">Export</button>
+  <button id="gridBtn">Grid</button>
   <button id="undoBtn">Undo</button>
   <button id="redoBtn">Redo</button>
-  <button id="exportBtn">Export</button>
 </div>
 
 <div id="tools">
@@ -126,36 +119,46 @@ canvas {
 
 <div id="palette"></div>
 
+<input type="file" id="fileInput" accept="image/*" hidden>
+
 <script>
 /* ===== CORE ===== */
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+ctx.imageSmoothingEnabled=false;
 
-let W = 16, H = 16;
-let pixelSize = 24;
-let bgColor = "#ffffff";
+let W=16,H=16;
+let pixelSize=24;
+let bgColor="#ffffff";
 
-let pixels = new Array(W*H).fill("#ffffff");
-let currentColor = "#000000";
+let pixels=[];
+let currentColor="#000000";
 
-let tool = "pencil";
-let mirrorXEnabled = false;
-let mirrorYEnabled = false;
+let tool="pencil";
+let mirrorX=false, mirrorY=false;
 
 let undoStack=[], redoStack=[], stroke=null;
 let drawing=false, start=null;
 
+let gridMode=0;
+
 /* ===== INIT ===== */
-function resize() {
-  canvas.width = W * pixelSize;
-  canvas.height = H * pixelSize;
+function init(w,h){
+  W=w; H=h;
+  pixels=new Array(W*H).fill(bgColor);
+  undoStack=[]; redoStack=[];
+  resize();
+}
+
+function resize(){
+  canvas.width=W*pixelSize;
+  canvas.height=H*pixelSize;
   render();
 }
 
 /* ===== RENDER ===== */
 function render(preview=null){
-  ctx.fillStyle = bgColor;
+  ctx.fillStyle=bgColor;
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   for(let y=0;y<H;y++)
@@ -164,14 +167,54 @@ function render(preview=null){
       ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
 
+  if(gridMode>0) drawGrid();
   if(preview) preview();
 }
 
-/* ===== DRAW ===== */
+/* ===== GRID ===== */
+function drawGrid(){
+  ctx.strokeStyle="#888";
+  ctx.lineWidth=1;
+
+  for(let x=0;x<=W;x++){
+    ctx.beginPath();
+    ctx.moveTo(x*pixelSize,0);
+    ctx.lineTo(x*pixelSize,canvas.height);
+    ctx.stroke();
+  }
+  for(let y=0;y<=H;y++){
+    ctx.beginPath();
+    ctx.moveTo(0,y*pixelSize);
+    ctx.lineTo(canvas.width,y*pixelSize);
+    ctx.stroke();
+  }
+
+  if(gridMode===2){
+    ctx.fillStyle="#aaa";
+    ctx.font="10px monospace";
+    for(let x=0;x<W;x++) ctx.fillText(x+1,x*pixelSize+2,10);
+    for(let y=0;y<H;y++) ctx.fillText(y+1,2,y*pixelSize+10);
+  }
+}
+
+/* ===== DRAW LOGIC ===== */
+function pos(e){
+  const r=canvas.getBoundingClientRect();
+  return {
+    x:Math.floor((e.clientX-r.left)/pixelSize),
+    y:Math.floor((e.clientY-r.top)/pixelSize)
+  };
+}
+
 function canDraw(x,y){
-  if(mirrorXEnabled && x>=Math.floor(W/2)) return false;
-  if(mirrorYEnabled && y>=Math.floor(H/2)) return false;
+  if(mirrorX && x>=Math.floor(W/2)) return false;
+  if(mirrorY && y>=Math.floor(H/2)) return false;
   return true;
+}
+
+function setPixel(i,color){
+  if(!stroke.has(i)) stroke.set(i,pixels[i]);
+  pixels[i]=color;
 }
 
 function applyPixel(x,y){
@@ -181,13 +224,25 @@ function applyPixel(x,y){
   const i=y*W+x;
   if(pixels[i]===currentColor) return;
 
-  stroke.set(i,pixels[i]);
-  pixels[i]=currentColor;
+  setPixel(i,currentColor);
+  if(mirrorX) setPixel(y*W+(W-1-x),currentColor);
+  if(mirrorY) setPixel((H-1-y)*W+x,currentColor);
+  if(mirrorX&&mirrorY)
+    setPixel((H-1-y)*W+(W-1-x),currentColor);
+}
 
-  if(mirrorXEnabled) pixels[y*W+(W-1-x)] = currentColor;
-  if(mirrorYEnabled) pixels[(H-1-y)*W+x] = currentColor;
-  if(mirrorXEnabled && mirrorYEnabled)
-    pixels[(H-1-y)*W+(W-1-x)] = currentColor;
+/* ===== LINE TOOL ===== */
+function drawLine(x0,y0,x1,y1){
+  let dx=Math.abs(x1-x0), dy=-Math.abs(y1-y0);
+  let sx=x0<x1?1:-1, sy=y0<y1?1:-1;
+  let err=dx+dy;
+  while(true){
+    applyPixel(x0,y0);
+    if(x0===x1 && y0===y1) break;
+    let e2=2*err;
+    if(e2>=dy){err+=dy;x0+=sx;}
+    if(e2<=dx){err+=dx;y0+=sy;}
+  }
 }
 
 /* ===== FILL ===== */
@@ -197,22 +252,13 @@ function floodFill(x,y,target){
   while(stack.length){
     const [cx,cy]=stack.pop();
     if(cx<0||cy<0||cx>=W||cy>=H) continue;
-    const i=cy*W+cx;
-    if(pixels[i]!==target) continue;
+    if(pixels[cy*W+cx]!==target) continue;
     applyPixel(cx,cy);
     stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
   }
 }
 
 /* ===== INPUT ===== */
-function pos(e){
-  const r=canvas.getBoundingClientRect();
-  return {
-    x:Math.floor((e.clientX-r.left)/pixelSize),
-    y:Math.floor((e.clientY-r.top)/pixelSize)
-  };
-}
-
 canvas.onpointerdown=e=>{
   drawing=true;
   stroke=new Map();
@@ -226,15 +272,21 @@ canvas.onpointermove=e=>{
   if(!drawing) return;
   const p=pos(e);
   if(tool==="pencil") applyPixel(p.x,p.y);
-  render();
+  if(tool==="line"){
+    render(()=>drawLine(start.x,start.y,p.x,p.y));
+  } else render();
 };
 
 window.onpointerup=()=>{
   if(!drawing) return;
   drawing=false;
+  if(tool==="line"){
+    const p=pos(event);
+    drawLine(start.x,start.y,p.x,p.y);
+  }
   if(stroke.size){
     undoStack.push(stroke);
-    redoStack.length=0;
+    redoStack=[];
   }
   render();
 };
@@ -248,14 +300,8 @@ document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
   };
 });
 
-mirrorXBtn.onclick=()=>{
-  mirrorXEnabled=!mirrorXEnabled;
-  mirrorXBtn.classList.toggle("active",mirrorXEnabled);
-};
-mirrorYBtn.onclick=()=>{
-  mirrorYEnabled=!mirrorYEnabled;
-  mirrorYBtn.classList.toggle("active",mirrorYEnabled);
-};
+mirrorXBtn.onclick=()=>mirrorXBtn.classList.toggle("active",mirrorX=!mirrorX);
+mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
 
 zoomIn.onclick=()=>{pixelSize+=4;resize();};
 zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();};
@@ -274,10 +320,18 @@ redoBtn.onclick=()=>{
   undoStack.push(r); render();
 };
 
-newBtn.onclick=()=>{
-  pixels=new Array(W*H).fill("#ffffff");
-  undoStack=[]; redoStack=[];
+gridBtn.onclick=()=>{
+  gridMode=(gridMode+1)%3;
+  gridBtn.classList.toggle("active",gridMode>0);
   render();
+};
+
+newBtn.onclick=()=>init(W,H);
+
+resizeBtn.onclick=()=>{
+  const w=parseInt(prompt("Width ?",W));
+  const h=parseInt(prompt("Height ?",H));
+  if(w>0&&h>0&&w<=128&&h<=128) init(w,h);
 };
 
 exportBtn.onclick=()=>{
@@ -287,24 +341,63 @@ exportBtn.onclick=()=>{
   a.click();
 };
 
+/* ===== IMPORT ===== */
+importBtn.onclick=()=>fileInput.click();
+fileInput.onchange=e=>{
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement("canvas");
+    c.width=W; c.height=H;
+    const x=c.getContext("2d");
+    x.drawImage(img,0,0,W,H);
+    const d=x.getImageData(0,0,W,H).data;
+    for(let i=0;i<pixels.length;i++)
+      pixels[i]=`rgb(${d[i*4]},${d[i*4+1]},${d[i*4+2]})`;
+    render();
+  };
+  img.src=URL.createObjectURL(e.target.files[0]);
+};
+
 /* ===== PALETTE ===== */
 const palette=document.getElementById("palette");
-["#000","#fff","#f00","#0f0","#00f","#ff0","#f0f","#0ff"].forEach((c,i)=>{
-  const d=document.createElement("div");
-  d.className="color";
-  d.style.background=c;
-  if(i===0)d.classList.add("active");
-  d.onclick=()=>{
-    document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
-    d.classList.add("active");
-    currentColor=c;
+let paletteColors=["#000000","#ffffff","#ff0000","#00ff00","#0000ff"];
+
+function rebuildPalette(){
+  palette.innerHTML="";
+  paletteColors.forEach((c,i)=>{
+    const d=document.createElement("div");
+    d.className="color";
+    d.style.background=c;
+    if(c===currentColor)d.classList.add("active");
+    d.onclick=()=>{
+      document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
+      d.classList.add("active");
+      currentColor=c;
+    };
+    d.ondblclick=()=>{
+      const input=document.createElement("input");
+      input.type="color";
+      input.value=c;
+      input.oninput=e=>{
+        paletteColors[i]=e.target.value;
+        rebuildPalette();
+      };
+      input.click();
+    };
+    palette.appendChild(d);
+  });
+  const add=document.createElement("button");
+  add.textContent="+";
+  add.onclick=()=>{
+    paletteColors.push("#888888");
+    rebuildPalette();
   };
-  palette.appendChild(d);
-});
+  palette.appendChild(add);
+}
 
 /* START */
-resize();
-render();
+init(W,H);
+rebuildPalette();
 </script>
 
 </body>
