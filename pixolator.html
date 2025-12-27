@@ -6,79 +6,118 @@
 <title>Pix-o-lator</title>
 
 <style>
-body{
-  margin:0;
-  background:#111;
-  color:#eee;
-  font-family:sans-serif;
-  display:flex;
-  flex-direction:column;
-  height:100vh;
+body {
+  margin: 0;
+  background: #1a1a1a;
+  color: #eee;
+  font-family: sans-serif;
+  height: 100vh;
+  overflow: hidden;
 }
 
-#top{
-  display:flex;
-  gap:6px;
-  padding:6px;
-  background:#222;
-  flex-wrap:wrap;
-  align-items:center;
+/* TOP BAR */
+#top {
+  height: 44px;
+  background: #222;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  z-index: 5;
 }
 
-input,button{
-  background:#333;
-  color:#eee;
-  border:1px solid #555;
-  padding:6px;
+/* TOOLBOX */
+#tools {
+  position: fixed;
+  left: 8px;
+  top: 60px;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
 }
 
-button.active{background:#666;}
-
-#canvasContainer{
-  flex:1;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  overflow:auto;
-  background:#000;
+button {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 6px;
 }
 
-canvas{
-  image-rendering:pixelated;
-  touch-action:none;
-  background:#fff;
+button.active {
+  background: #666;
 }
 
-#palette{
-  display:flex;
-  gap:6px;
-  padding:6px;
-  background:#222;
-  justify-content:center;
-  flex-wrap:wrap;
+/* CANVAS */
+#canvasContainer {
+  position: absolute;
+  top: 44px;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+  z-index: 1;
 }
 
-.color{
-  width:28px;
-  height:28px;
-  border:2px solid #000;
+canvas {
+  background: #fff;
+  image-rendering: pixelated;
+  touch-action: none;
+  pointer-events: auto;
 }
 
-.color.active{border-color:#fff;}
+/* PALETTE */
+#palette {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 5;
+}
+
+.color {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #000;
+}
+
+.color.active {
+  border-color: #fff;
+}
 </style>
 </head>
 
 <body>
 
 <div id="top">
-  W <input id="w" type="number" value="16" min="1" max="128">
-  H <input id="h" type="number" value="16" min="1" max="128">
-  <button id="new">New</button>
-  <button id="import">Import</button>
-  <button id="export">Export</button>
-  <button id="grid">Grid</button>
-  <button id="undo">Undo</button>
-  <button id="redo">Redo</button>
+  <button id="newBtn">New</button>
+  <button id="importBtn">Import</button>
+  <button id="undoBtn">Undo</button>
+  <button id="redoBtn">Redo</button>
+  <button id="exportBtn">Export</button>
+</div>
+
+<div id="tools">
+  <button data-tool="pencil" class="active">✏️</button>
+  <button data-tool="line">📏</button>
+  <button data-tool="fill">🪣</button>
+  <button id="mirrorXBtn">↔️</button>
+  <button id="mirrorYBtn">↕️</button>
+  <button id="zoomIn">＋</button>
+  <button id="zoomOut">－</button>
 </div>
 
 <div id="canvasContainer">
@@ -87,72 +126,85 @@ canvas{
 
 <div id="palette"></div>
 
-<input type="file" id="file" accept="image/*" hidden>
-
 <script>
+/* ===== CORE ===== */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled=false;
+ctx.imageSmoothingEnabled = false;
 
-let W=16,H=16,pixelSize=24;
-let pixels=[];
-let drawing=false;
-let currentColor="#000000";
-let undoStack=[],redoStack=[],stroke=null;
+let W = 16, H = 16;
+let pixelSize = 24;
+let bgColor = "#ffffff";
 
-let gridMode=0; // 0 off, 1 lines, 2 lines+numbers
+let pixels = new Array(W*H).fill("#ffffff");
+let currentColor = "#000000";
 
-let paletteColors=["#000000","#ffffff","#ff0000","#00ff00","#0000ff"];
+let tool = "pencil";
+let mirrorXEnabled = false;
+let mirrorYEnabled = false;
 
-function init(w,h){
-  W=w;H=h;
-  pixels=new Array(W*H).fill("#ffffff");
-  undoStack=[];redoStack=[];
-  resize();
-}
+let undoStack=[], redoStack=[], stroke=null;
+let drawing=false, start=null;
 
-function resize(){
-  canvas.width=W*pixelSize;
-  canvas.height=H*pixelSize;
+/* ===== INIT ===== */
+function resize() {
+  canvas.width = W * pixelSize;
+  canvas.height = H * pixelSize;
   render();
 }
 
-function render(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  for(let y=0;y<H;y++){
+/* ===== RENDER ===== */
+function render(preview=null){
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  for(let y=0;y<H;y++)
     for(let x=0;x<W;x++){
       ctx.fillStyle=pixels[y*W+x];
       ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
-  }
-  if(gridMode>0) drawGrid();
+
+  if(preview) preview();
 }
 
-function drawGrid(){
-  ctx.strokeStyle="#444";
-  ctx.lineWidth=1;
-  for(let x=0;x<=W;x++){
-    ctx.beginPath();
-    ctx.moveTo(x*pixelSize,0);
-    ctx.lineTo(x*pixelSize,canvas.height);
-    ctx.stroke();
-  }
-  for(let y=0;y<=H;y++){
-    ctx.beginPath();
-    ctx.moveTo(0,y*pixelSize);
-    ctx.lineTo(canvas.width,y*pixelSize);
-    ctx.stroke();
-  }
-  if(gridMode===2){
-    ctx.fillStyle="#888";
-    ctx.font="10px monospace";
-    for(let x=0;x<W;x++)
-      ctx.fillText(x+1,x*pixelSize+2,10);
-    for(let y=0;y<H;y++)
-      ctx.fillText(y+1,2,y*pixelSize+10);
+/* ===== DRAW ===== */
+function canDraw(x,y){
+  if(mirrorXEnabled && x>=Math.floor(W/2)) return false;
+  if(mirrorYEnabled && y>=Math.floor(H/2)) return false;
+  return true;
+}
+
+function applyPixel(x,y){
+  if(x<0||y<0||x>=W||y>=H) return;
+  if(!canDraw(x,y)) return;
+
+  const i=y*W+x;
+  if(pixels[i]===currentColor) return;
+
+  stroke.set(i,pixels[i]);
+  pixels[i]=currentColor;
+
+  if(mirrorXEnabled) pixels[y*W+(W-1-x)] = currentColor;
+  if(mirrorYEnabled) pixels[(H-1-y)*W+x] = currentColor;
+  if(mirrorXEnabled && mirrorYEnabled)
+    pixels[(H-1-y)*W+(W-1-x)] = currentColor;
+}
+
+/* ===== FILL ===== */
+function floodFill(x,y,target){
+  if(target===currentColor) return;
+  const stack=[[x,y]];
+  while(stack.length){
+    const [cx,cy]=stack.pop();
+    if(cx<0||cy<0||cx>=W||cy>=H) continue;
+    const i=cy*W+cx;
+    if(pixels[i]!==target) continue;
+    applyPixel(cx,cy);
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
   }
 }
 
+/* ===== INPUT ===== */
 function pos(e){
   const r=canvas.getBoundingClientRect();
   return {
@@ -161,26 +213,19 @@ function pos(e){
   };
 }
 
-function drawPixel(x,y){
-  if(x<0||y<0||x>=W||y>=H) return;
-  const i=y*W+x;
-  if(pixels[i]===currentColor) return;
-  stroke.set(i,pixels[i]);
-  pixels[i]=currentColor;
-}
-
 canvas.onpointerdown=e=>{
   drawing=true;
   stroke=new Map();
-  const p=pos(e);
-  drawPixel(p.x,p.y);
+  start=pos(e);
+  if(tool==="pencil") applyPixel(start.x,start.y);
+  if(tool==="fill") floodFill(start.x,start.y,pixels[start.y*W+start.x]);
   render();
 };
 
 canvas.onpointermove=e=>{
   if(!drawing) return;
   const p=pos(e);
-  drawPixel(p.x,p.y);
+  if(tool==="pencil") applyPixel(p.x,p.y);
   render();
 };
 
@@ -189,98 +234,77 @@ window.onpointerup=()=>{
   drawing=false;
   if(stroke.size){
     undoStack.push(stroke);
-    redoStack=[];
+    redoStack.length=0;
   }
+  render();
 };
 
-undo.onclick=()=>{
-  const s=undoStack.pop();
-  if(!s) return;
+/* ===== UI ===== */
+document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("#tools button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    tool=b.dataset.tool;
+  };
+});
+
+mirrorXBtn.onclick=()=>{
+  mirrorXEnabled=!mirrorXEnabled;
+  mirrorXBtn.classList.toggle("active",mirrorXEnabled);
+};
+mirrorYBtn.onclick=()=>{
+  mirrorYEnabled=!mirrorYEnabled;
+  mirrorYBtn.classList.toggle("active",mirrorYEnabled);
+};
+
+zoomIn.onclick=()=>{pixelSize+=4;resize();};
+zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();};
+
+undoBtn.onclick=()=>{
+  const s=undoStack.pop(); if(!s)return;
   const r=new Map();
   s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
-  redoStack.push(r);
-  render();
+  redoStack.push(r); render();
 };
 
-redo.onclick=()=>{
-  const s=redoStack.pop();
-  if(!s) return;
+redoBtn.onclick=()=>{
+  const s=redoStack.pop(); if(!s)return;
   const r=new Map();
   s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
-  undoStack.push(r);
+  undoStack.push(r); render();
+};
+
+newBtn.onclick=()=>{
+  pixels=new Array(W*H).fill("#ffffff");
+  undoStack=[]; redoStack=[];
   render();
 };
 
-grid.onclick=()=>{
-  gridMode=(gridMode+1)%3;
-  grid.classList.toggle("active",gridMode>0);
-  render();
-};
-
-new.onclick=()=>{
-  init(+w.value,+h.value);
-};
-
-export.onclick=()=>{
+exportBtn.onclick=()=>{
   const a=document.createElement("a");
   a.href=canvas.toDataURL();
-  a.download="pixel.png";
+  a.download="pixolator.png";
   a.click();
 };
 
-import.onclick=()=>file.click();
-file.onchange=e=>{
-  const img=new Image();
-  img.onload=()=>{
-    init(W,H);
-    const c=document.createElement("canvas");
-    c.width=W;c.height=H;
-    const x=c.getContext("2d");
-    x.drawImage(img,0,0,W,H);
-    const d=x.getImageData(0,0,W,H).data;
-    for(let i=0;i<pixels.length;i++){
-      pixels[i]=`rgb(${d[i*4]},${d[i*4+1]},${d[i*4+2]})`;
-    }
-    render();
+/* ===== PALETTE ===== */
+const palette=document.getElementById("palette");
+["#000","#fff","#f00","#0f0","#00f","#ff0","#f0f","#0ff"].forEach((c,i)=>{
+  const d=document.createElement("div");
+  d.className="color";
+  d.style.background=c;
+  if(i===0)d.classList.add("active");
+  d.onclick=()=>{
+    document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
+    d.classList.add("active");
+    currentColor=c;
   };
-  img.src=URL.createObjectURL(e.target.files[0]);
-};
+  palette.appendChild(d);
+});
 
-function rebuildPalette(){
-  palette.innerHTML="";
-  paletteColors.forEach((c,i)=>{
-    const d=document.createElement("div");
-    d.className="color";
-    d.style.background=c;
-    if(c===currentColor) d.classList.add("active");
-    d.onclick=()=>{
-      document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
-      d.classList.add("active");
-      currentColor=c;
-    };
-    d.ondblclick=()=>{
-      const inp=document.createElement("input");
-      inp.type="color";
-      inp.value=c;
-      inp.oninput=e=>{
-        paletteColors[i]=e.target.value;
-        rebuildPalette();
-      };
-      inp.click();
-    };
-    palette.appendChild(d);
-  });
-  const add=document.createElement("button");
-  add.textContent="+";
-  add.onclick=()=>{
-    paletteColors.push("#888888");
-    rebuildPalette();
-  };
-  palette.appendChild(add);
-}
-
-init(W,H);
-rebuildPalette();
+/* START */
+resize();
+render();
 </script>
 
 </body>
