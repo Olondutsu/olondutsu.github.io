@@ -23,13 +23,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px;
-}
-
-button {
-  background: #333;
-  color: #eee;
-  border: 1px solid #555;
-  padding: 6px;
+  z-index: 5;
 }
 
 /* TOOLBOX */
@@ -47,6 +41,13 @@ button {
   z-index: 10;
 }
 
+button {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 6px;
+}
+
 button.active {
   background: #666;
 }
@@ -58,15 +59,18 @@ button.active {
   bottom: 60px;
   left: 0;
   right: 0;
-  overflow: auto;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: auto;
+  z-index: 1;
 }
 
 canvas {
+  background: #fff;
   image-rendering: pixelated;
   touch-action: none;
+  pointer-events: auto;
 }
 
 /* PALETTE */
@@ -81,6 +85,7 @@ canvas {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  z-index: 5;
 }
 
 .color {
@@ -98,19 +103,19 @@ canvas {
 <body>
 
 <div id="top">
-  <button id="new">New</button>
-  <button id="import">Import</button>
-  <button id="undo">Undo</button>
-  <button id="redo">Redo</button>
-  <button id="export">Export</button>
+  <button id="newBtn">New</button>
+  <button id="importBtn">Import</button>
+  <button id="undoBtn">Undo</button>
+  <button id="redoBtn">Redo</button>
+  <button id="exportBtn">Export</button>
 </div>
 
 <div id="tools">
   <button data-tool="pencil" class="active">✏️</button>
   <button data-tool="line">📏</button>
   <button data-tool="fill">🪣</button>
-  <button id="mirrorX">↔️</button>
-  <button id="mirrorY">↕️</button>
+  <button id="mirrorXBtn">↔️</button>
+  <button id="mirrorYBtn">↕️</button>
   <button id="zoomIn">＋</button>
   <button id="zoomOut">－</button>
 </div>
@@ -135,7 +140,8 @@ let pixels = new Array(W*H).fill("#ffffff");
 let currentColor = "#000000";
 
 let tool = "pencil";
-let mirrorX = false, mirrorY = false;
+let mirrorXEnabled = false;
+let mirrorYEnabled = false;
 
 let undoStack=[], redoStack=[], stroke=null;
 let drawing=false, start=null;
@@ -161,29 +167,30 @@ function render(preview=null){
   if(preview) preview();
 }
 
-/* ===== DRAW LOGIC ===== */
+/* ===== DRAW ===== */
 function canDraw(x,y){
-  if(mirrorX && x>=Math.floor(W/2)) return false;
-  if(mirrorY && y>=Math.floor(H/2)) return false;
+  if(mirrorXEnabled && x>=Math.floor(W/2)) return false;
+  if(mirrorYEnabled && y>=Math.floor(H/2)) return false;
   return true;
 }
 
 function applyPixel(x,y){
   if(x<0||y<0||x>=W||y>=H) return;
   if(!canDraw(x,y)) return;
+
   const i=y*W+x;
   if(pixels[i]===currentColor) return;
 
   stroke.set(i,pixels[i]);
   pixels[i]=currentColor;
 
-  if(mirrorX) pixels[y*W+(W-1-x)]=currentColor;
-  if(mirrorY) pixels[(H-1-y)*W+x]=currentColor;
-  if(mirrorX&&mirrorY)
-    pixels[(H-1-y)*W+(W-1-x)]=currentColor;
+  if(mirrorXEnabled) pixels[y*W+(W-1-x)] = currentColor;
+  if(mirrorYEnabled) pixels[(H-1-y)*W+x] = currentColor;
+  if(mirrorXEnabled && mirrorYEnabled)
+    pixels[(H-1-y)*W+(W-1-x)] = currentColor;
 }
 
-/* ===== FLOOD FILL ===== */
+/* ===== FILL ===== */
 function floodFill(x,y,target){
   if(target===currentColor) return;
   const stack=[[x,y]];
@@ -210,7 +217,6 @@ canvas.onpointerdown=e=>{
   drawing=true;
   stroke=new Map();
   start=pos(e);
-
   if(tool==="pencil") applyPixel(start.x,start.y);
   if(tool==="fill") floodFill(start.x,start.y,pixels[start.y*W+start.x]);
   render();
@@ -220,39 +226,18 @@ canvas.onpointermove=e=>{
   if(!drawing) return;
   const p=pos(e);
   if(tool==="pencil") applyPixel(p.x,p.y);
-  if(tool==="line"){
-    render(()=>drawLine(start,p,true));
-  } else render();
+  render();
 };
 
-window.onpointerup=e=>{
+window.onpointerup=()=>{
   if(!drawing) return;
   drawing=false;
-  if(tool==="line"){
-    drawLine(start,pos(e));
-  }
   if(stroke.size){
     undoStack.push(stroke);
     redoStack.length=0;
   }
   render();
 };
-
-/* ===== LINE ===== */
-function drawLine(a,b,preview=false){
-  let x0=a.x,y0=a.y,x1=b.x,y1=b.y;
-  let dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
-  let sx=x0<x1?1:-1,sy=y0<y1?1:-1;
-  let err=dx-dy;
-  while(true){
-    preview?ctx.fillRect(x0*pixelSize,y0*pixelSize,pixelSize,pixelSize)
-           :applyPixel(x0,y0);
-    if(x0===x1&&y0===y1)break;
-    let e2=2*err;
-    if(e2>-dy){err-=dy;x0+=sx;}
-    if(e2<dx){err+=dx;y0+=sy;}
-  }
-}
 
 /* ===== UI ===== */
 document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
@@ -263,57 +248,43 @@ document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
   };
 });
 
-mirrorX.onclick=()=>mirrorX.classList.toggle("active",mirrorX=!mirrorX);
-mirrorY.onclick=()=>mirrorY.classList.toggle("active",mirrorY=!mirrorY);
+mirrorXBtn.onclick=()=>{
+  mirrorXEnabled=!mirrorXEnabled;
+  mirrorXBtn.classList.toggle("active",mirrorXEnabled);
+};
+mirrorYBtn.onclick=()=>{
+  mirrorYEnabled=!mirrorYEnabled;
+  mirrorYBtn.classList.toggle("active",mirrorYEnabled);
+};
+
 zoomIn.onclick=()=>{pixelSize+=4;resize();};
 zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();};
 
-undo.onclick=()=>{
+undoBtn.onclick=()=>{
   const s=undoStack.pop(); if(!s)return;
   const r=new Map();
   s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
   redoStack.push(r); render();
 };
-redo.onclick=()=>{
+
+redoBtn.onclick=()=>{
   const s=redoStack.pop(); if(!s)return;
   const r=new Map();
   s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
   undoStack.push(r); render();
 };
 
-export.onclick=()=>{
-  const a=document.createElement("a");
-  a.href=canvas.toDataURL();
-  a.download="pixolator.png";
-  a.click();
-};
-
-new.onclick=()=>{
+newBtn.onclick=()=>{
   pixels=new Array(W*H).fill("#ffffff");
   undoStack=[]; redoStack=[];
   render();
 };
 
-import.onclick=()=>{
-  const i=document.createElement("input");
-  i.type="file";
-  i.accept="image/*";
-  i.onchange=e=>{
-    const img=new Image();
-    img.onload=()=>{
-      const c=document.createElement("canvas");
-      c.width=W;c.height=H;
-      const x=c.getContext("2d");
-      x.drawImage(img,0,0,W,H);
-      const d=x.getImageData(0,0,W,H).data;
-      for(let i=0;i<pixels.length;i++){
-        pixels[i]=`rgb(${d[i*4]},${d[i*4+1]},${d[i*4+2]})`;
-      }
-      render();
-    };
-    img.src=URL.createObjectURL(e.target.files[0]);
-  };
-  i.click();
+exportBtn.onclick=()=>{
+  const a=document.createElement("a");
+  a.href=canvas.toDataURL();
+  a.download="pixolator.png";
+  a.click();
 };
 
 /* ===== PALETTE ===== */
@@ -335,5 +306,6 @@ const palette=document.getElementById("palette");
 resize();
 render();
 </script>
+
 </body>
 </html>
