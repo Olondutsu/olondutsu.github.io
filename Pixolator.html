@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pix-o-lator</title>
+
+<style>
+body {
+  margin: 0;
+  background: #111;
+  color: #eee;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#top {
+  padding: 6px;
+  display: flex;
+  gap: 6px;
+  background: #222;
+  flex-wrap: wrap;
+}
+
+button, input {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+button.active {
+  background: #555;
+}
+
+#canvasContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+}
+
+canvas {
+  touch-action: none;
+  image-rendering: pixelated;
+  background: #000;
+}
+
+#palette {
+  display: flex;
+  gap: 4px;
+}
+
+.color {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #000;
+  cursor: pointer;
+}
+
+.color.active {
+  border-color: #fff;
+}
+</style>
+</head>
+
+<body>
+
+<div id="top">
+  <label>W <input id="w" type="number" value="16" min="1" max="128"></label>
+  <label>H <input id="h" type="number" value="16" min="1" max="128"></label>
+  <button id="new">New</button>
+
+  <div id="palette"></div>
+
+  <button id="undo">Undo</button>
+  <button id="redo">Redo</button>
+  <button id="grid">Grid</button>
+  <button id="export">Export</button>
+</div>
+
+<div id="canvasContainer">
+  <canvas id="canvas"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+let pixelSize = 24;
+let width = 16;
+let height = 16;
+let showGrid = false;
+
+let pixels = [];
+let undoStack = [];
+let redoStack = [];
+
+let drawing = false;
+let currentColor = "#ffffff";
+
+const paletteColors = [
+  "#000000","#ffffff","#ff0000","#00ff00",
+  "#0000ff","#ffff00","#ff00ff","#00ffff"
+];
+
+// ---------- INIT ----------
+function init(w, h) {
+  width = w;
+  height = h;
+  pixels = new Array(w * h).fill("#000000");
+  undoStack = [];
+  redoStack = [];
+  resizeCanvas();
+  render();
+}
+
+function resizeCanvas() {
+  canvas.width = width * pixelSize;
+  canvas.height = height * pixelSize;
+}
+
+// ---------- RENDER ----------
+function render() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      ctx.fillStyle = pixels[y * width + x];
+      ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+    }
+  }
+
+  if (showGrid) drawGrid();
+}
+
+function drawGrid() {
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= width; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * pixelSize, 0);
+    ctx.lineTo(x * pixelSize, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= height; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y * pixelSize);
+    ctx.lineTo(canvas.width, y * pixelSize);
+    ctx.stroke();
+  }
+}
+
+// ---------- DRAW ----------
+function drawPixel(x, y, color) {
+  const i = y * width + x;
+  if (pixels[i] === color) return;
+
+  undoStack.push({ index: i, old: pixels[i] });
+  pixels[i] = color;
+  redoStack.length = 0;
+  render();
+}
+
+function getPixelPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / pixelSize);
+  const y = Math.floor((e.clientY - rect.top) / pixelSize);
+  return { x, y };
+}
+
+// ---------- EVENTS ----------
+canvas.addEventListener("pointerdown", e => {
+  drawing = true;
+  const {x,y} = getPixelPos(e);
+  if (x>=0 && y>=0 && x<width && y<height)
+    drawPixel(x,y,currentColor);
+});
+
+canvas.addEventListener("pointermove", e => {
+  if (!drawing) return;
+  const {x,y} = getPixelPos(e);
+  if (x>=0 && y>=0 && x<width && y<height)
+    drawPixel(x,y,currentColor);
+});
+
+window.addEventListener("pointerup", () => drawing = false);
+
+// ---------- UNDO / REDO ----------
+document.getElementById("undo").onclick = () => {
+  const a = undoStack.pop();
+  if (!a) return;
+  redoStack.push({ index: a.index, old: pixels[a.index] });
+  pixels[a.index] = a.old;
+  render();
+};
+
+document.getElementById("redo").onclick = () => {
+  const a = redoStack.pop();
+  if (!a) return;
+  undoStack.push({ index: a.index, old: pixels[a.index] });
+  pixels[a.index] = a.old;
+  render();
+};
+
+// ---------- UI ----------
+document.getElementById("new").onclick = () => {
+  init(+w.value, +h.value);
+};
+
+document.getElementById("grid").onclick = e => {
+  showGrid = !showGrid;
+  e.target.classList.toggle("active", showGrid);
+  render();
+};
+
+document.getElementById("export").onclick = () => {
+  const link = document.createElement("a");
+  link.download = "pixel.png";
+  link.href = canvas.toDataURL();
+  link.click();
+};
+
+// ---------- PALETTE ----------
+const palette = document.getElementById("palette");
+paletteColors.forEach(c => {
+  const d = document.createElement("div");
+  d.className = "color";
+  d.style.background = c;
+  if (c === currentColor) d.classList.add("active");
+  d.onclick = () => {
+    document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
+    d.classList.add("active");
+    currentColor = c;
+  };
+  palette.appendChild(d);
+});
+
+// ---------- START ----------
+init(width, height);
+</script>
+
+</body>
+</html>
