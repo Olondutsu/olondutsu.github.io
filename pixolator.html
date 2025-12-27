@@ -22,6 +22,7 @@ body {
   gap: 6px;
   background: #222;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 button, input {
@@ -29,25 +30,24 @@ button, input {
   color: #eee;
   border: 1px solid #555;
   padding: 6px 10px;
-  font-size: 14px;
 }
 
 button.active {
-  background: #555;
+  background: #666;
 }
 
 #canvasContainer {
   flex: 1;
+  overflow: auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #000;
+  background: #333;
 }
 
 canvas {
   touch-action: none;
   image-rendering: pixelated;
-  background: #000;
 }
 
 #palette {
@@ -56,8 +56,8 @@ canvas {
 }
 
 .color {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: 2px solid #000;
   cursor: pointer;
 }
@@ -71,16 +71,23 @@ canvas {
 <body>
 
 <div id="top">
-  <label>W <input id="w" type="number" value="16" min="1" max="128"></label>
-  <label>H <input id="h" type="number" value="16" min="1" max="128"></label>
-  <button id="new">New</button>
+  <button id="tool-pencil" class="active">✏️</button>
+  <button id="tool-line">📏</button>
 
-  <div id="palette"></div>
+  <button id="mirror-x">↔️</button>
+  <button id="mirror-y">↕️</button>
+
+  <button id="zoom-in">＋</button>
+  <button id="zoom-out">－</button>
+
+  <button id="grid">Grid</button>
+  <input type="color" id="bgColor" value="#444444">
 
   <button id="undo">Undo</button>
   <button id="redo">Redo</button>
-  <button id="grid">Grid</button>
   <button id="export">Export</button>
+
+  <div id="palette"></div>
 </div>
 
 <div id="canvasContainer">
@@ -92,16 +99,21 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
+let width = 16, height = 16;
 let pixelSize = 24;
-let width = 16;
-let height = 16;
 let showGrid = false;
+let backgroundColor = "#444";
 
-let pixels = [];
-let undoStack = [];
-let redoStack = [];
+let mirrorX = false, mirrorY = false;
+let currentTool = "pencil";
 
+let pixels = new Array(width * height).fill("#000000");
+
+let undoStack = [], redoStack = [];
+let currentStroke = null;
 let drawing = false;
+let startPoint = null;
+
 let currentColor = "#ffffff";
 
 const paletteColors = [
@@ -110,139 +122,221 @@ const paletteColors = [
 ];
 
 // ---------- INIT ----------
-function init(w, h) {
-  width = w;
-  height = h;
-  pixels = new Array(w * h).fill("#000000");
-  undoStack = [];
-  redoStack = [];
-  resizeCanvas();
-  render();
-}
-
 function resizeCanvas() {
   canvas.width = width * pixelSize;
   canvas.height = height * pixelSize;
+  render();
 }
 
 // ---------- RENDER ----------
-function render() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+function render(preview=null) {
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      ctx.fillStyle = pixels[y * width + x];
-      ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+  for (let y=0;y<height;y++) {
+    for (let x=0;x<width;x++) {
+      ctx.fillStyle = pixels[y*width+x];
+      ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
   }
 
+  if (preview) preview();
   if (showGrid) drawGrid();
 }
 
 function drawGrid() {
-  ctx.strokeStyle = "#333";
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= width; x++) {
+  ctx.strokeStyle = "#222";
+  for (let x=0;x<=width;x++) {
     ctx.beginPath();
-    ctx.moveTo(x * pixelSize, 0);
-    ctx.lineTo(x * pixelSize, canvas.height);
+    ctx.moveTo(x*pixelSize,0);
+    ctx.lineTo(x*pixelSize,canvas.height);
     ctx.stroke();
   }
-  for (let y = 0; y <= height; y++) {
+  for (let y=0;y<=height;y++) {
     ctx.beginPath();
-    ctx.moveTo(0, y * pixelSize);
-    ctx.lineTo(canvas.width, y * pixelSize);
+    ctx.moveTo(0,y*pixelSize);
+    ctx.lineTo(canvas.width,y*pixelSize);
     ctx.stroke();
   }
 }
 
 // ---------- DRAW ----------
-function drawPixel(x, y, color) {
-  const i = y * width + x;
+function applyPixel(x,y,color) {
+  if (x<0||y<0||x>=width||y>=height) return;
+  const i = y*width+x;
   if (pixels[i] === color) return;
 
-  undoStack.push({ index: i, old: pixels[i] });
+  if (!currentStroke.has(i))
+    currentStroke.set(i, pixels[i]);
+
   pixels[i] = color;
-  redoStack.length = 0;
-  render();
 }
 
-function getPixelPos(e) {
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) / pixelSize);
-  const y = Math.floor((e.clientY - rect.top) / pixelSize);
-  return { x, y };
+function drawWithMirror(x,y) {
+  applyPixel(x,y,currentColor);
+  if (mirrorX) applyPixel(width-1-x,y,currentColor);
+  if (mirrorY) applyPixel(x,height-1-y,currentColor);
+  if (mirrorX && mirrorY)
+    applyPixel(width-1-x,height-1-y,currentColor);
 }
 
-// ---------- EVENTS ----------
-canvas.addEventListener("pointerdown", e => {
+// ---------- LINE ----------
+function drawLine(x0,y0,x1,y1,preview=false) {
+  const dx = Math.abs(x1-x0), dy = Math.abs(y1-y0);
+  const sx = x0<x1?1:-1, sy = y0<y1?1:-1;
+  let err = dx-dy;
+
+  while (true) {
+    preview ? ctx.fillRect(x0*pixelSize,y0*pixelSize,pixelSize,pixelSize)
+            : drawWithMirror(x0,y0);
+    if (x0===x1 && y0===y1) break;
+    const e2 = 2*err;
+    if (e2>-dy) { err-=dy; x0+=sx; }
+    if (e2<dx) { err+=dx; y0+=sy; }
+  }
+}
+
+// ---------- INPUT ----------
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: Math.floor((e.clientX-r.left)/pixelSize),
+    y: Math.floor((e.clientY-r.top)/pixelSize)
+  };
+}
+
+canvas.addEventListener("pointerdown", e=>{
   drawing = true;
-  const {x,y} = getPixelPos(e);
-  if (x>=0 && y>=0 && x<width && y<height)
-    drawPixel(x,y,currentColor);
+  currentStroke = new Map();
+  startPoint = getPos(e);
+  if (currentTool==="pencil")
+    drawWithMirror(startPoint.x,startPoint.y);
+  render();
 });
 
-canvas.addEventListener("pointermove", e => {
+canvas.addEventListener("pointermove", e=>{
   if (!drawing) return;
-  const {x,y} = getPixelPos(e);
-  if (x>=0 && y>=0 && x<width && y<height)
-    drawPixel(x,y,currentColor);
+  const p = getPos(e);
+
+  if (currentTool==="pencil") {
+    drawWithMirror(p.x,p.y);
+    render();
+  }
+  if (currentTool==="line") {
+    render(()=>{
+      ctx.fillStyle=currentColor;
+      drawLine(startPoint.x,startPoint.y,p.x,p.y,true);
+    });
+  }
 });
 
-window.addEventListener("pointerup", () => drawing = false);
+window.addEventListener("pointerup", ()=>{
+  if (!drawing) return;
+  drawing=false;
 
-// ---------- UNDO / REDO ----------
-document.getElementById("undo").onclick = () => {
-  const a = undoStack.pop();
-  if (!a) return;
-  redoStack.push({ index: a.index, old: pixels[a.index] });
-  pixels[a.index] = a.old;
-  render();
-};
+  if (currentTool==="line") {
+    drawLine(startPoint.x,startPoint.y,getPos(event).x,getPos(event).y);
+  }
 
-document.getElementById("redo").onclick = () => {
-  const a = redoStack.pop();
-  if (!a) return;
-  undoStack.push({ index: a.index, old: pixels[a.index] });
-  pixels[a.index] = a.old;
+  if (currentStroke.size>0) {
+    undoStack.push(currentStroke);
+    redoStack.length=0;
+  }
   render();
-};
+});
 
 // ---------- UI ----------
-document.getElementById("new").onclick = () => {
-  init(+w.value, +h.value);
+document.getElementById("tool-pencil").onclick=()=>setTool("pencil");
+document.getElementById("tool-line").onclick=()=>setTool("line");
+
+function setTool(t){
+  currentTool=t;
+  document.querySelectorAll("#tool-pencil,#tool-line")
+    .forEach(b=>b.classList.remove("active"));
+  document.getElementById("tool-"+t).classList.add("active");
+}
+
+document.getElementById("mirror-x").onclick=e=>{
+  mirrorX=!mirrorX; e.target.classList.toggle("active",mirrorX);
+};
+document.getElementById("mirror-y").onclick=e=>{
+  mirrorY=!mirrorY; e.target.classList.toggle("active",mirrorY);
 };
 
-document.getElementById("grid").onclick = e => {
-  showGrid = !showGrid;
-  e.target.classList.toggle("active", showGrid);
-  render();
+document.getElementById("zoom-in").onclick=()=>{
+  pixelSize=Math.min(64,pixelSize+4); resizeCanvas();
+};
+document.getElementById("zoom-out").onclick=()=>{
+  pixelSize=Math.max(4,pixelSize-4); resizeCanvas();
 };
 
-document.getElementById("export").onclick = () => {
-  const link = document.createElement("a");
-  link.download = "pixel.png";
-  link.href = canvas.toDataURL();
-  link.click();
+document.getElementById("grid").onclick=e=>{
+  showGrid=!showGrid; e.target.classList.toggle("active",showGrid); render();
+};
+
+document.getElementById("bgColor").oninput=e=>{
+  backgroundColor=e.target.value; render();
+};
+
+document.getElementById("undo").onclick=()=>{
+  const s=undoStack.pop(); if(!s)return;
+  const redo=new Map();
+  s.forEach((old,i)=>{ redo.set(i,pixels[i]); pixels[i]=old; });
+  redoStack.push(redo); render();
+};
+
+document.getElementById("redo").onclick=()=>{
+  const s=redoStack.pop(); if(!s)return;
+  const undo=new Map();
+  s.forEach((old,i)=>{ undo.set(i,pixels[i]); pixels[i]=old; });
+  undoStack.push(undo); render();
+};
+
+document.getElementById("export").onclick=()=>{
+  const a=document.createElement("a");
+  a.href=canvas.toDataURL();
+  a.download="pixolator.png";
+  a.click();
 };
 
 // ---------- PALETTE ----------
-const palette = document.getElementById("palette");
-paletteColors.forEach(c => {
-  const d = document.createElement("div");
-  d.className = "color";
-  d.style.background = c;
-  if (c === currentColor) d.classList.add("active");
-  d.onclick = () => {
+const palette=document.getElementById("palette");
+paletteColors.forEach((c,i)=>{
+  const d=document.createElement("div");
+  d.className="color";
+  d.style.background=c;
+  if(i===1)d.classList.add("active");
+
+  d.onclick=()=>{
     document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
     d.classList.add("active");
-    currentColor = c;
+    currentColor=d.style.background;
   };
+
+  d.ondblclick=()=>{
+    const input=document.createElement("input");
+    input.type="color";
+    input.value=rgbToHex(getComputedStyle(d).backgroundColor);
+    input.oninput=e=>{
+      d.style.background=e.target.value;
+      if(d.classList.contains("active"))
+        currentColor=e.target.value;
+    };
+    input.click();
+  };
+
   palette.appendChild(d);
 });
 
+// ---------- UTILS ----------
+function rgbToHex(rgb){
+  const m=rgb.match(/\d+/g).map(Number);
+  return "#"+m.map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+
 // ---------- START ----------
-init(width, height);
+resizeCanvas();
+render();
 </script>
 
 </body>
