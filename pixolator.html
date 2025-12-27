@@ -23,7 +23,6 @@ body{
   align-items:center;
   gap:6px;
   padding:4px;
-  z-index:5;
 }
 
 /* TOOLBOX */
@@ -80,7 +79,6 @@ canvas{
   align-items:center;
   justify-content:center;
   gap:6px;
-  z-index:5;
 }
 .color{
   width:32px;
@@ -88,6 +86,20 @@ canvas{
   border:2px solid #000;
 }
 .color.active{border-color:#fff;}
+
+/* RESIZE PANEL */
+#resizePanel{
+  position:fixed;
+  top:60px;
+  right:10px;
+  background:#222;
+  border:1px solid #555;
+  padding:10px;
+  display:none;
+}
+#resizePanel input{
+  width:60px;
+}
 </style>
 </head>
 
@@ -107,6 +119,7 @@ canvas{
   <button data-tool="pencil" class="active">✏️</button>
   <button data-tool="line">📏</button>
   <button data-tool="fill">🪣</button>
+  <button data-tool="picker">🧪</button>
   <button id="mirrorXBtn">↔️</button>
   <button id="mirrorYBtn">↕️</button>
   <button id="zoomIn">＋</button>
@@ -119,37 +132,36 @@ canvas{
 
 <div id="palette"></div>
 
+<div id="resizePanel">
+  W <input id="rw" type="number" min="1" max="256"><br>
+  H <input id="rh" type="number" min="1" max="256"><br><br>
+  <button id="resizeOk">OK</button>
+  <button id="resizeCancel">Cancel</button>
+</div>
+
 <input type="file" id="fileInput" accept="image/*" hidden>
 
 <script>
 /* ===== CORE ===== */
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
-ctx.imageSmoothingEnabled=false;
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
 
-let W=16,H=16;
-let pixelSize=24;
+let W=16,H=16,pixelSize=24;
 let bgColor="#ffffff";
-
-let pixels=[];
-let currentColor="#000000";
-
-let tool="pencil";
-let mirrorX=false, mirrorY=false;
-
-let undoStack=[], redoStack=[], stroke=null;
-let drawing=false, start=null;
-
+let pixels=[],currentColor="#000000";
+let tool="pencil",mirrorX=false,mirrorY=false;
+let undoStack=[],redoStack=[],stroke=null;
+let drawing=false,start=null;
 let gridMode=0;
 
 /* ===== INIT ===== */
 function init(w,h){
-  W=w; H=h;
+  W=w;H=h;
   pixels=new Array(W*H).fill(bgColor);
-  undoStack=[]; redoStack=[];
+  undoStack=[];redoStack=[];
   resize();
 }
-
 function resize(){
   canvas.width=W*pixelSize;
   canvas.height=H*pixelSize;
@@ -160,22 +172,18 @@ function resize(){
 function render(preview=null){
   ctx.fillStyle=bgColor;
   ctx.fillRect(0,0,canvas.width,canvas.height);
-
   for(let y=0;y<H;y++)
     for(let x=0;x<W;x++){
       ctx.fillStyle=pixels[y*W+x];
       ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
-
-  if(gridMode>0) drawGrid();
+  if(gridMode) drawGrid();
   if(preview) preview();
 }
 
 /* ===== GRID ===== */
 function drawGrid(){
-  ctx.strokeStyle="#888";
-  ctx.lineWidth=1;
-
+  ctx.strokeStyle="#555";
   for(let x=0;x<=W;x++){
     ctx.beginPath();
     ctx.moveTo(x*pixelSize,0);
@@ -188,28 +196,15 @@ function drawGrid(){
     ctx.lineTo(canvas.width,y*pixelSize);
     ctx.stroke();
   }
-
-  if(gridMode===2){
-    ctx.fillStyle="#aaa";
-    ctx.font="10px monospace";
-    for(let x=0;x<W;x++) ctx.fillText(x+1,x*pixelSize+2,10);
-    for(let y=0;y<H;y++) ctx.fillText(y+1,2,y*pixelSize+10);
-  }
 }
 
-/* ===== DRAW LOGIC ===== */
+/* ===== DRAW ===== */
 function pos(e){
   const r=canvas.getBoundingClientRect();
   return {
     x:Math.floor((e.clientX-r.left)/pixelSize),
     y:Math.floor((e.clientY-r.top)/pixelSize)
   };
-}
-
-function canDraw(x,y){
-  if(mirrorX && x>=Math.floor(W/2)) return false;
-  if(mirrorY && y>=Math.floor(H/2)) return false;
-  return true;
 }
 
 function setPixel(i,color){
@@ -219,52 +214,32 @@ function setPixel(i,color){
 
 function applyPixel(x,y){
   if(x<0||y<0||x>=W||y>=H) return;
-  if(!canDraw(x,y)) return;
-
   const i=y*W+x;
-  if(pixels[i]===currentColor) return;
-
   setPixel(i,currentColor);
   if(mirrorX) setPixel(y*W+(W-1-x),currentColor);
   if(mirrorY) setPixel((H-1-y)*W+x,currentColor);
-  if(mirrorX&&mirrorY)
-    setPixel((H-1-y)*W+(W-1-x),currentColor);
+  if(mirrorX&&mirrorY) setPixel((H-1-y)*W+(W-1-x),currentColor);
 }
 
-/* ===== LINE TOOL ===== */
-function drawLine(x0,y0,x1,y1){
-  let dx=Math.abs(x1-x0), dy=-Math.abs(y1-y0);
-  let sx=x0<x1?1:-1, sy=y0<y1?1:-1;
-  let err=dx+dy;
-  while(true){
-    applyPixel(x0,y0);
-    if(x0===x1 && y0===y1) break;
-    let e2=2*err;
-    if(e2>=dy){err+=dy;x0+=sx;}
-    if(e2<=dx){err+=dx;y0+=sy;}
-  }
-}
-
-/* ===== FILL ===== */
-function floodFill(x,y,target){
-  if(target===currentColor) return;
-  const stack=[[x,y]];
-  while(stack.length){
-    const [cx,cy]=stack.pop();
-    if(cx<0||cy<0||cx>=W||cy>=H) continue;
-    if(pixels[cy*W+cx]!==target) continue;
-    applyPixel(cx,cy);
-    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
-  }
-}
-
-/* ===== INPUT ===== */
+/* ===== TOOLS ===== */
 canvas.onpointerdown=e=>{
   drawing=true;
   stroke=new Map();
   start=pos(e);
+
+  if(tool==="picker"){
+    const c=pixels[start.y*W+start.x];
+    currentColor=c;
+    if(!paletteColors.includes(c)){
+      paletteColors.push(c);
+      rebuildPalette();
+    }
+    render();
+    drawing=false;
+    return;
+  }
+
   if(tool==="pencil") applyPixel(start.x,start.y);
-  if(tool==="fill") floodFill(start.x,start.y,pixels[start.y*W+start.x]);
   render();
 };
 
@@ -272,18 +247,12 @@ canvas.onpointermove=e=>{
   if(!drawing) return;
   const p=pos(e);
   if(tool==="pencil") applyPixel(p.x,p.y);
-  if(tool==="line"){
-    render(()=>drawLine(start.x,start.y,p.x,p.y));
-  } else render();
+  render();
 };
 
 window.onpointerup=()=>{
   if(!drawing) return;
   drawing=false;
-  if(tool==="line"){
-    const p=pos(event);
-    drawLine(start.x,start.y,p.x,p.y);
-  }
   if(stroke.size){
     undoStack.push(stroke);
     redoStack=[];
@@ -292,9 +261,9 @@ window.onpointerup=()=>{
 };
 
 /* ===== UI ===== */
-document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
+document.querySelectorAll("[data-tool]").forEach(b=>{
   b.onclick=()=>{
-    document.querySelectorAll("#tools button").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll("[data-tool]").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
     tool=b.dataset.tool;
   };
@@ -302,9 +271,9 @@ document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
 
 mirrorXBtn.onclick=()=>mirrorXBtn.classList.toggle("active",mirrorX=!mirrorX);
 mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
-
-zoomIn.onclick=()=>{pixelSize+=4;resize();};
-zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();};
+zoomIn.onclick=()=>{pixelSize+=4;resize();}
+zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
+gridBtn.onclick=()=>{gridMode=!gridMode;render();}
 
 undoBtn.onclick=()=>{
   const s=undoStack.pop(); if(!s)return;
@@ -312,7 +281,6 @@ undoBtn.onclick=()=>{
   s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
   redoStack.push(r); render();
 };
-
 redoBtn.onclick=()=>{
   const s=redoStack.pop(); if(!s)return;
   const r=new Map();
@@ -320,19 +288,16 @@ redoBtn.onclick=()=>{
   undoStack.push(r); render();
 };
 
-gridBtn.onclick=()=>{
-  gridMode=(gridMode+1)%3;
-  gridBtn.classList.toggle("active",gridMode>0);
-  render();
-};
-
-newBtn.onclick=()=>init(W,H);
-
 resizeBtn.onclick=()=>{
-  const w=parseInt(prompt("Width ?",W));
-  const h=parseInt(prompt("Height ?",H));
-  if(w>0&&h>0&&w<=128&&h<=128) init(w,h);
+  resizePanel.style.display="block";
+  rw.value=W; rh.value=H;
 };
+resizeOk.onclick=()=>{
+  const w=+rw.value,h=+rh.value;
+  if(w>0&&h>0&&w<=256&&h<=256) init(w,h);
+  resizePanel.style.display="none";
+};
+resizeCancel.onclick=()=>resizePanel.style.display="none";
 
 exportBtn.onclick=()=>{
   const a=document.createElement("a");
@@ -341,26 +306,9 @@ exportBtn.onclick=()=>{
   a.click();
 };
 
-/* ===== IMPORT ===== */
-importBtn.onclick=()=>fileInput.click();
-fileInput.onchange=e=>{
-  const img=new Image();
-  img.onload=()=>{
-    const c=document.createElement("canvas");
-    c.width=W; c.height=H;
-    const x=c.getContext("2d");
-    x.drawImage(img,0,0,W,H);
-    const d=x.getImageData(0,0,W,H).data;
-    for(let i=0;i<pixels.length;i++)
-      pixels[i]=`rgb(${d[i*4]},${d[i*4+1]},${d[i*4+2]})`;
-    render();
-  };
-  img.src=URL.createObjectURL(e.target.files[0]);
-};
-
 /* ===== PALETTE ===== */
 const palette=document.getElementById("palette");
-let paletteColors=["#000000","#ffffff","#ff0000","#00ff00","#0000ff"];
+let paletteColors=["#000","#fff","#f00","#0f0","#00f"];
 
 function rebuildPalette(){
   palette.innerHTML="";
@@ -370,9 +318,8 @@ function rebuildPalette(){
     d.style.background=c;
     if(c===currentColor)d.classList.add("active");
     d.onclick=()=>{
-      document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
-      d.classList.add("active");
       currentColor=c;
+      rebuildPalette();
     };
     d.ondblclick=()=>{
       const input=document.createElement("input");
@@ -386,13 +333,6 @@ function rebuildPalette(){
     };
     palette.appendChild(d);
   });
-  const add=document.createElement("button");
-  add.textContent="+";
-  add.onclick=()=>{
-    paletteColors.push("#888888");
-    rebuildPalette();
-  };
-  palette.appendChild(add);
 }
 
 /* START */
