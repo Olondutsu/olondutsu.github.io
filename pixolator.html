@@ -8,58 +8,85 @@
 <style>
 body {
   margin: 0;
-  background: #111;
+  background: #1a1a1a;
   color: #eee;
   font-family: sans-serif;
-  display: flex;
-  flex-direction: column;
   height: 100vh;
+  overflow: hidden;
 }
 
+/* TOP BAR */
 #top {
-  padding: 6px;
-  display: flex;
-  gap: 6px;
+  height: 44px;
   background: #222;
-  flex-wrap: wrap;
+  display: flex;
   align-items: center;
+  gap: 6px;
+  padding: 4px;
 }
 
-button, input {
+button {
   background: #333;
   color: #eee;
   border: 1px solid #555;
-  padding: 6px 10px;
+  padding: 6px;
+}
+
+/* TOOLBOX */
+#tools {
+  position: fixed;
+  left: 8px;
+  top: 60px;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
 }
 
 button.active {
   background: #666;
 }
 
+/* CANVAS */
 #canvasContainer {
-  flex: 1;
+  position: absolute;
+  top: 44px;
+  bottom: 60px;
+  left: 0;
+  right: 0;
   overflow: auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #333;
 }
 
 canvas {
-  touch-action: none;
   image-rendering: pixelated;
+  touch-action: none;
 }
 
+/* PALETTE */
 #palette {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #222;
   display: flex;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .color {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border: 2px solid #000;
-  cursor: pointer;
 }
 
 .color.active {
@@ -71,273 +98,242 @@ canvas {
 <body>
 
 <div id="top">
-  <button id="tool-pencil" class="active">✏️</button>
-  <button id="tool-line">📏</button>
-
-  <button id="mirror-x">↔️</button>
-  <button id="mirror-y">↕️</button>
-
-  <button id="zoom-in">＋</button>
-  <button id="zoom-out">－</button>
-
-  <button id="grid">Grid</button>
-  <input type="color" id="bgColor" value="#444444">
-
+  <button id="new">New</button>
+  <button id="import">Import</button>
   <button id="undo">Undo</button>
   <button id="redo">Redo</button>
   <button id="export">Export</button>
+</div>
 
-  <div id="palette"></div>
+<div id="tools">
+  <button data-tool="pencil" class="active">✏️</button>
+  <button data-tool="line">📏</button>
+  <button data-tool="fill">🪣</button>
+  <button id="mirrorX">↔️</button>
+  <button id="mirrorY">↕️</button>
+  <button id="zoomIn">＋</button>
+  <button id="zoomOut">－</button>
 </div>
 
 <div id="canvasContainer">
   <canvas id="canvas"></canvas>
 </div>
 
+<div id="palette"></div>
+
 <script>
+/* ===== CORE ===== */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
-let width = 16, height = 16;
+let W = 16, H = 16;
 let pixelSize = 24;
-let showGrid = false;
-let backgroundColor = "#444";
+let bgColor = "#ffffff";
 
+let pixels = new Array(W*H).fill("#ffffff");
+let currentColor = "#000000";
+
+let tool = "pencil";
 let mirrorX = false, mirrorY = false;
-let currentTool = "pencil";
 
-let pixels = new Array(width * height).fill("#000000");
+let undoStack=[], redoStack=[], stroke=null;
+let drawing=false, start=null;
 
-let undoStack = [], redoStack = [];
-let currentStroke = null;
-let drawing = false;
-let startPoint = null;
-
-let currentColor = "#ffffff";
-
-const paletteColors = [
-  "#000000","#ffffff","#ff0000","#00ff00",
-  "#0000ff","#ffff00","#ff00ff","#00ffff"
-];
-
-// ---------- INIT ----------
-function resizeCanvas() {
-  canvas.width = width * pixelSize;
-  canvas.height = height * pixelSize;
+/* ===== INIT ===== */
+function resize() {
+  canvas.width = W * pixelSize;
+  canvas.height = H * pixelSize;
   render();
 }
 
-// ---------- RENDER ----------
-function render(preview=null) {
-  ctx.fillStyle = backgroundColor;
+/* ===== RENDER ===== */
+function render(preview=null){
+  ctx.fillStyle = bgColor;
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  for (let y=0;y<height;y++) {
-    for (let x=0;x<width;x++) {
-      ctx.fillStyle = pixels[y*width+x];
+  for(let y=0;y<H;y++)
+    for(let x=0;x<W;x++){
+      ctx.fillStyle=pixels[y*W+x];
       ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
-  }
 
-  if (preview) preview();
-  if (showGrid) drawGrid();
+  if(preview) preview();
 }
 
-function drawGrid() {
-  ctx.strokeStyle = "#222";
-  for (let x=0;x<=width;x++) {
-    ctx.beginPath();
-    ctx.moveTo(x*pixelSize,0);
-    ctx.lineTo(x*pixelSize,canvas.height);
-    ctx.stroke();
-  }
-  for (let y=0;y<=height;y++) {
-    ctx.beginPath();
-    ctx.moveTo(0,y*pixelSize);
-    ctx.lineTo(canvas.width,y*pixelSize);
-    ctx.stroke();
-  }
+/* ===== DRAW LOGIC ===== */
+function canDraw(x,y){
+  if(mirrorX && x>=Math.floor(W/2)) return false;
+  if(mirrorY && y>=Math.floor(H/2)) return false;
+  return true;
 }
 
-// ---------- DRAW ----------
-function applyPixel(x,y,color) {
-  if (x<0||y<0||x>=width||y>=height) return;
-  const i = y*width+x;
-  if (pixels[i] === color) return;
+function applyPixel(x,y){
+  if(x<0||y<0||x>=W||y>=H) return;
+  if(!canDraw(x,y)) return;
+  const i=y*W+x;
+  if(pixels[i]===currentColor) return;
 
-  if (!currentStroke.has(i))
-    currentStroke.set(i, pixels[i]);
+  stroke.set(i,pixels[i]);
+  pixels[i]=currentColor;
 
-  pixels[i] = color;
+  if(mirrorX) pixels[y*W+(W-1-x)]=currentColor;
+  if(mirrorY) pixels[(H-1-y)*W+x]=currentColor;
+  if(mirrorX&&mirrorY)
+    pixels[(H-1-y)*W+(W-1-x)]=currentColor;
 }
 
-function drawWithMirror(x,y) {
-  applyPixel(x,y,currentColor);
-  if (mirrorX) applyPixel(width-1-x,y,currentColor);
-  if (mirrorY) applyPixel(x,height-1-y,currentColor);
-  if (mirrorX && mirrorY)
-    applyPixel(width-1-x,height-1-y,currentColor);
-}
-
-// ---------- LINE ----------
-function drawLine(x0,y0,x1,y1,preview=false) {
-  const dx = Math.abs(x1-x0), dy = Math.abs(y1-y0);
-  const sx = x0<x1?1:-1, sy = y0<y1?1:-1;
-  let err = dx-dy;
-
-  while (true) {
-    preview ? ctx.fillRect(x0*pixelSize,y0*pixelSize,pixelSize,pixelSize)
-            : drawWithMirror(x0,y0);
-    if (x0===x1 && y0===y1) break;
-    const e2 = 2*err;
-    if (e2>-dy) { err-=dy; x0+=sx; }
-    if (e2<dx) { err+=dx; y0+=sy; }
+/* ===== FLOOD FILL ===== */
+function floodFill(x,y,target){
+  if(target===currentColor) return;
+  const stack=[[x,y]];
+  while(stack.length){
+    const [cx,cy]=stack.pop();
+    if(cx<0||cy<0||cx>=W||cy>=H) continue;
+    const i=cy*W+cx;
+    if(pixels[i]!==target) continue;
+    applyPixel(cx,cy);
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
   }
 }
 
-// ---------- INPUT ----------
-function getPos(e) {
-  const r = canvas.getBoundingClientRect();
+/* ===== INPUT ===== */
+function pos(e){
+  const r=canvas.getBoundingClientRect();
   return {
-    x: Math.floor((e.clientX-r.left)/pixelSize),
-    y: Math.floor((e.clientY-r.top)/pixelSize)
+    x:Math.floor((e.clientX-r.left)/pixelSize),
+    y:Math.floor((e.clientY-r.top)/pixelSize)
   };
 }
 
-canvas.addEventListener("pointerdown", e=>{
-  drawing = true;
-  currentStroke = new Map();
-  startPoint = getPos(e);
-  if (currentTool==="pencil")
-    drawWithMirror(startPoint.x,startPoint.y);
+canvas.onpointerdown=e=>{
+  drawing=true;
+  stroke=new Map();
+  start=pos(e);
+
+  if(tool==="pencil") applyPixel(start.x,start.y);
+  if(tool==="fill") floodFill(start.x,start.y,pixels[start.y*W+start.x]);
   render();
-});
+};
 
-canvas.addEventListener("pointermove", e=>{
-  if (!drawing) return;
-  const p = getPos(e);
+canvas.onpointermove=e=>{
+  if(!drawing) return;
+  const p=pos(e);
+  if(tool==="pencil") applyPixel(p.x,p.y);
+  if(tool==="line"){
+    render(()=>drawLine(start,p,true));
+  } else render();
+};
 
-  if (currentTool==="pencil") {
-    drawWithMirror(p.x,p.y);
-    render();
-  }
-  if (currentTool==="line") {
-    render(()=>{
-      ctx.fillStyle=currentColor;
-      drawLine(startPoint.x,startPoint.y,p.x,p.y,true);
-    });
-  }
-});
-
-window.addEventListener("pointerup", ()=>{
-  if (!drawing) return;
+window.onpointerup=e=>{
+  if(!drawing) return;
   drawing=false;
-
-  if (currentTool==="line") {
-    drawLine(startPoint.x,startPoint.y,getPos(event).x,getPos(event).y);
+  if(tool==="line"){
+    drawLine(start,pos(e));
   }
-
-  if (currentStroke.size>0) {
-    undoStack.push(currentStroke);
+  if(stroke.size){
+    undoStack.push(stroke);
     redoStack.length=0;
   }
   render();
-});
+};
 
-// ---------- UI ----------
-document.getElementById("tool-pencil").onclick=()=>setTool("pencil");
-document.getElementById("tool-line").onclick=()=>setTool("line");
-
-function setTool(t){
-  currentTool=t;
-  document.querySelectorAll("#tool-pencil,#tool-line")
-    .forEach(b=>b.classList.remove("active"));
-  document.getElementById("tool-"+t).classList.add("active");
+/* ===== LINE ===== */
+function drawLine(a,b,preview=false){
+  let x0=a.x,y0=a.y,x1=b.x,y1=b.y;
+  let dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
+  let sx=x0<x1?1:-1,sy=y0<y1?1:-1;
+  let err=dx-dy;
+  while(true){
+    preview?ctx.fillRect(x0*pixelSize,y0*pixelSize,pixelSize,pixelSize)
+           :applyPixel(x0,y0);
+    if(x0===x1&&y0===y1)break;
+    let e2=2*err;
+    if(e2>-dy){err-=dy;x0+=sx;}
+    if(e2<dx){err+=dx;y0+=sy;}
+  }
 }
 
-document.getElementById("mirror-x").onclick=e=>{
-  mirrorX=!mirrorX; e.target.classList.toggle("active",mirrorX);
-};
-document.getElementById("mirror-y").onclick=e=>{
-  mirrorY=!mirrorY; e.target.classList.toggle("active",mirrorY);
-};
+/* ===== UI ===== */
+document.querySelectorAll("#tools button[data-tool]").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("#tools button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    tool=b.dataset.tool;
+  };
+});
 
-document.getElementById("zoom-in").onclick=()=>{
-  pixelSize=Math.min(64,pixelSize+4); resizeCanvas();
-};
-document.getElementById("zoom-out").onclick=()=>{
-  pixelSize=Math.max(4,pixelSize-4); resizeCanvas();
-};
+mirrorX.onclick=()=>mirrorX.classList.toggle("active",mirrorX=!mirrorX);
+mirrorY.onclick=()=>mirrorY.classList.toggle("active",mirrorY=!mirrorY);
+zoomIn.onclick=()=>{pixelSize+=4;resize();};
+zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();};
 
-document.getElementById("grid").onclick=e=>{
-  showGrid=!showGrid; e.target.classList.toggle("active",showGrid); render();
-};
-
-document.getElementById("bgColor").oninput=e=>{
-  backgroundColor=e.target.value; render();
-};
-
-document.getElementById("undo").onclick=()=>{
+undo.onclick=()=>{
   const s=undoStack.pop(); if(!s)return;
-  const redo=new Map();
-  s.forEach((old,i)=>{ redo.set(i,pixels[i]); pixels[i]=old; });
-  redoStack.push(redo); render();
+  const r=new Map();
+  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
+  redoStack.push(r); render();
 };
-
-document.getElementById("redo").onclick=()=>{
+redo.onclick=()=>{
   const s=redoStack.pop(); if(!s)return;
-  const undo=new Map();
-  s.forEach((old,i)=>{ undo.set(i,pixels[i]); pixels[i]=old; });
-  undoStack.push(undo); render();
+  const r=new Map();
+  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
+  undoStack.push(r); render();
 };
 
-document.getElementById("export").onclick=()=>{
+export.onclick=()=>{
   const a=document.createElement("a");
   a.href=canvas.toDataURL();
   a.download="pixolator.png";
   a.click();
 };
 
-// ---------- PALETTE ----------
+new.onclick=()=>{
+  pixels=new Array(W*H).fill("#ffffff");
+  undoStack=[]; redoStack=[];
+  render();
+};
+
+import.onclick=()=>{
+  const i=document.createElement("input");
+  i.type="file";
+  i.accept="image/*";
+  i.onchange=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement("canvas");
+      c.width=W;c.height=H;
+      const x=c.getContext("2d");
+      x.drawImage(img,0,0,W,H);
+      const d=x.getImageData(0,0,W,H).data;
+      for(let i=0;i<pixels.length;i++){
+        pixels[i]=`rgb(${d[i*4]},${d[i*4+1]},${d[i*4+2]})`;
+      }
+      render();
+    };
+    img.src=URL.createObjectURL(e.target.files[0]);
+  };
+  i.click();
+};
+
+/* ===== PALETTE ===== */
 const palette=document.getElementById("palette");
-paletteColors.forEach((c,i)=>{
+["#000","#fff","#f00","#0f0","#00f","#ff0","#f0f","#0ff"].forEach((c,i)=>{
   const d=document.createElement("div");
   d.className="color";
   d.style.background=c;
-  if(i===1)d.classList.add("active");
-
+  if(i===0)d.classList.add("active");
   d.onclick=()=>{
     document.querySelectorAll(".color").forEach(x=>x.classList.remove("active"));
     d.classList.add("active");
-    currentColor=d.style.background;
+    currentColor=c;
   };
-
-  d.ondblclick=()=>{
-    const input=document.createElement("input");
-    input.type="color";
-    input.value=rgbToHex(getComputedStyle(d).backgroundColor);
-    input.oninput=e=>{
-      d.style.background=e.target.value;
-      if(d.classList.contains("active"))
-        currentColor=e.target.value;
-    };
-    input.click();
-  };
-
   palette.appendChild(d);
 });
 
-// ---------- UTILS ----------
-function rgbToHex(rgb){
-  const m=rgb.match(/\d+/g).map(Number);
-  return "#"+m.map(x=>x.toString(16).padStart(2,"0")).join("");
-}
-
-// ---------- START ----------
-resizeCanvas();
+/* START */
+resize();
 render();
 </script>
-
 </body>
 </html>
