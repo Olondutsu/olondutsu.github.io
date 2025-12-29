@@ -61,10 +61,11 @@ button.active{background:#666;}
   overflow:auto;
   background:#000;
 }
+
 canvas{
   background:#fff;
   image-rendering:pixelated;
-  touch-action:none;
+  touch-action: pan-x pan-y; /* 👈 autorise le scroll tactile */
 }
 
 /* PALETTE */
@@ -97,9 +98,7 @@ canvas{
   padding:10px;
   display:none;
 }
-#resizePanel input{
-  width:60px;
-}
+#resizePanel input{width:60px;}
 </style>
 </head>
 
@@ -146,6 +145,7 @@ canvas{
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
+canvas.oncontextmenu = e => e.preventDefault();
 
 let W=16,H=16,pixelSize=24;
 let bgColor="#ffffff";
@@ -154,6 +154,11 @@ let tool="pencil",mirrorX=false,mirrorY=false;
 let undoStack=[],redoStack=[],stroke=null;
 let drawing=false,start=null;
 let gridMode=0;
+
+/* PAN */
+let panning=false;
+let panStart={x:0,y:0};
+let scrollStart={x:0,y:0};
 
 /* ===== INIT ===== */
 function init(w,h){
@@ -169,7 +174,7 @@ function resize(){
 }
 
 /* ===== RENDER ===== */
-function render(preview=null){
+function render(){
   ctx.fillStyle=bgColor;
   ctx.fillRect(0,0,canvas.width,canvas.height);
   for(let y=0;y<H;y++)
@@ -178,7 +183,6 @@ function render(preview=null){
       ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
   if(gridMode) drawGrid();
-  if(preview) preview();
 }
 
 /* ===== GRID ===== */
@@ -221,21 +225,30 @@ function applyPixel(x,y){
   if(mirrorX&&mirrorY) setPixel((H-1-y)*W+(W-1-x),currentColor);
 }
 
-/* ===== TOOLS ===== */
+/* ===== INPUT ===== */
 canvas.onpointerdown=e=>{
+  if(e.button===2||e.button===1){
+    panning=true;
+    panStart={x:e.clientX,y:e.clientY};
+    scrollStart={
+      x:canvasContainer.scrollLeft,
+      y:canvasContainer.scrollTop
+    };
+    return;
+  }
+
   drawing=true;
   stroke=new Map();
   start=pos(e);
 
   if(tool==="picker"){
-    const c=pixels[start.y*W+start.x];
-    currentColor=c;
-    if(!paletteColors.includes(c)){
-      paletteColors.push(c);
+    currentColor=pixels[start.y*W+start.x];
+    if(!paletteColors.includes(currentColor)){
+      paletteColors.push(currentColor);
       rebuildPalette();
     }
-    render();
     drawing=false;
+    render();
     return;
   }
 
@@ -244,6 +257,11 @@ canvas.onpointerdown=e=>{
 };
 
 canvas.onpointermove=e=>{
+  if(panning){
+    canvasContainer.scrollLeft=scrollStart.x+(panStart.x-e.clientX);
+    canvasContainer.scrollTop =scrollStart.y+(panStart.y-e.clientY);
+    return;
+  }
   if(!drawing) return;
   const p=pos(e);
   if(tool==="pencil") applyPixel(p.x,p.y);
@@ -251,6 +269,7 @@ canvas.onpointermove=e=>{
 };
 
 window.onpointerup=()=>{
+  panning=false;
   if(!drawing) return;
   drawing=false;
   if(stroke.size){
@@ -312,25 +331,12 @@ let paletteColors=["#000","#fff","#f00","#0f0","#00f"];
 
 function rebuildPalette(){
   palette.innerHTML="";
-  paletteColors.forEach((c,i)=>{
+  paletteColors.forEach(c=>{
     const d=document.createElement("div");
     d.className="color";
     d.style.background=c;
     if(c===currentColor)d.classList.add("active");
-    d.onclick=()=>{
-      currentColor=c;
-      rebuildPalette();
-    };
-    d.ondblclick=()=>{
-      const input=document.createElement("input");
-      input.type="color";
-      input.value=c;
-      input.oninput=e=>{
-        paletteColors[i]=e.target.value;
-        rebuildPalette();
-      };
-      input.click();
-    };
+    d.onclick=()=>{currentColor=c;rebuildPalette();}
     palette.appendChild(d);
   });
 }
