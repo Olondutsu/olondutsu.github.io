@@ -39,7 +39,6 @@ body{
   gap:6px;
   z-index:10;
 }
-
 button{
   background:#333;
   color:#eee;
@@ -85,6 +84,7 @@ canvas{
   width:32px;
   height:32px;
   border:2px solid #000;
+  border-radius:50%;
 }
 .color.active{border-color:#fff;}
 
@@ -113,17 +113,19 @@ canvas{
 #nav .empty{visibility:hidden;}
 </style>
 </head>
-
 <body>
 
 <div id="top">
-  <button id="newBtn">New</button>
-  <button id="resizeBtn">Resize</button>
-  <button id="exportBtn">Export</button>
+  <div id="fileMenu">
+    <button id="newBtn">New</button>
+    <button id="exportBtn">Export PNG</button>
+    <button id="saveJSON">Save JSON</button>
+    <button id="loadJSON">Load JSON</button>
+  </div>
   <button id="gridBtn">Grid</button>
   <button id="renderBtn">⬛</button>
-  <button id="undoBtn">Undo</button>
-  <button id="redoBtn">Redo</button>
+  <button id="undoBtn">↩</button>
+  <button id="redoBtn">↪</button>
 </div>
 
 <div id="tools">
@@ -135,6 +137,7 @@ canvas{
   <button id="mirrorYBtn">↕️</button>
   <button id="zoomIn">＋</button>
   <button id="zoomOut">－</button>
+  <button id="eyeBtn">👁️</button>
 </div>
 
 <div id="canvasContainer">
@@ -165,250 +168,80 @@ canvas{
   <div class="empty"></div>
 </div>
 
+<input type="file" id="fileInput" accept="application/json" hidden>
+
 <script>
 /* ===== CORE ===== */
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+ctx.imageSmoothingEnabled=false;
 
 let W=16,H=16,pixelSize=24;
 let bgColor="#ffffff";
 let pixels=[],currentColor="#000000";
 let tool="pencil",mirrorX=false,mirrorY=false;
 let undoStack=[],redoStack=[];
-let gridMode=false;
-let renderMode="pixel";
-
-/* multitouch */
-let activePointers=0;
-let snapshot=null;
+let gridMode=false,renderMode="pixel";
+let activePointers=0,snapshot=null;
 
 /* ===== INIT ===== */
-function init(w,h){
-  W=w;H=h;
-  pixels=new Array(W*H).fill(bgColor);
-  undoStack=[];redoStack=[];
-  resize();
-}
-// Sauvegarde automatique
-function saveCanvas(){
-  localStorage.setItem("pixolator_pixels", JSON.stringify({
-    W, H, pixels
-  }));
-}
-
-// Charger depuis le localStorage
-function loadCanvas(){
-  const data = localStorage.getItem("pixolator_pixels");
-  if(!data) return;
-  const obj = JSON.parse(data);
-  W = obj.W;
-  H = obj.H;
-  pixels = obj.pixels;
-  resize();
-}
-function resize(){
-  canvas.width=W*pixelSize;
-  canvas.height=H*pixelSize;
-  render();
-}
+function init(w,h){ W=w;H=h; pixels=new Array(W*H).fill(bgColor); undoStack=[];redoStack=[]; resize(); }
+function saveCanvas(){ localStorage.setItem("pixolator_pixels",JSON.stringify({W,H,pixels})); }
+function loadCanvas(){ const data=localStorage.getItem("pixolator_pixels"); if(!data) return; const obj=JSON.parse(data); W=obj.W; H=obj.H; pixels=obj.pixels; resize(); }
+function resize(){ canvas.width=W*pixelSize; canvas.height=H*pixelSize; render(); }
 
 /* ===== RENDER ===== */
-function drawPixel(x,y,c){
-  ctx.fillStyle=c;
-  ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
-}
-function drawCross(x,y,c){
-  const px=x*pixelSize, py=y*pixelSize;
-  const pad=pixelSize*0.2;
-  ctx.strokeStyle=c;
-  ctx.lineWidth=Math.max(1,pixelSize*0.15);
-  ctx.lineCap="round";
-  ctx.beginPath();
-  ctx.moveTo(px+pad,py+pad);
-  ctx.lineTo(px+pixelSize-pad,py+pixelSize-pad);
-  ctx.moveTo(px+pixelSize-pad,py+pad);
-  ctx.lineTo(px+pad,py+pixelSize-pad);
-  ctx.stroke();
-}
-function render(){
-  ctx.fillStyle=bgColor;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  for(let y=0;y<H;y++){
-    for(let x=0;x<W;x++){
-      const c=pixels[y*W+x];
-      renderMode==="pixel"?drawPixel(x,y,c):drawCross(x,y,c);
-    }
-  }
-  if(gridMode) drawGrid();
-}
-function drawGrid(){
-  ctx.strokeStyle="#555";
-  for(let x=0;x<=W;x++){
-    ctx.beginPath();
-    ctx.moveTo(x*pixelSize,0);
-    ctx.lineTo(x*pixelSize,canvas.height);
-    ctx.stroke();
-  }
-  for(let y=0;y<=H;y++){
-    ctx.beginPath();
-    ctx.moveTo(0,y*pixelSize);
-    ctx.lineTo(canvas.width,y*pixelSize);
-    ctx.stroke();
-  }
-}
+function drawPixel(x,y,c){ ctx.fillStyle=c; ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize); }
+function drawCross(x,y,c){ const px=x*pixelSize,py=y*pixelSize,pad=pixelSize*0.2; ctx.strokeStyle=c; ctx.lineWidth=Math.max(1,pixelSize*0.15); ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(px+pad,py+pad); ctx.lineTo(px+pixelSize-pad,py+pixelSize-pad); ctx.moveTo(px+pixelSize-pad,py+pad); ctx.lineTo(px+pad,py+pixelSize-pad); ctx.stroke(); }
+function render(){ ctx.fillStyle=bgColor; ctx.fillRect(0,0,canvas.width,canvas.height); for(let y=0;y<H;y++){ for(let x=0;x<W;x++){ const c=pixels[y*W+x]; renderMode==="pixel"?drawPixel(x,y,c):drawCross(x,y,c); } } if(gridMode) drawGrid(); }
+function drawGrid(){ ctx.strokeStyle="#555"; for(let x=0;x<=W;x++){ ctx.beginPath(); ctx.moveTo(x*pixelSize,0); ctx.lineTo(x*pixelSize,canvas.height); ctx.stroke(); } for(let y=0;y<=H;y++){ ctx.beginPath(); ctx.moveTo(0,y*pixelSize); ctx.lineTo(canvas.width,y*pixelSize); ctx.stroke(); } }
 
 /* ===== DRAW ===== */
-function pos(e){
-  const r=canvas.getBoundingClientRect();
-  return {
-    x:Math.floor((e.clientX-r.left)/pixelSize),
-    y:Math.floor((e.clientY-r.top)/pixelSize)
-  };
-}
-function applyPixel(x,y){
-  if(x<0||y<0||x>=W||y>=H) return;
-  pixels[y*W+x]=currentColor;
-  if(mirrorX) pixels[y*W+(W-1-x)] = currentColor;
-  if(mirrorY) pixels[(H-1-y)*W+x] = currentColor;
-  if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)] = currentColor;
-}
+function pos(e){ const r=canvas.getBoundingClientRect(); return {x:Math.floor((e.clientX-r.left)/pixelSize),y:Math.floor((e.clientY-r.top)/pixelSize)}; }
+function applyPixel(x,y){ if(x<0||y<0||x>=W||y>=H) return; pixels[y*W+x]=currentColor; if(mirrorX) pixels[y*W+(W-1-x)]=currentColor; if(mirrorY) pixels[(H-1-y)*W+x]=currentColor; if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)]=currentColor; }
 
-/* ===== POINTERS (FIX MULTITOUCH) ===== */
-canvas.onpointerdown=e=>{
-  canvas.setPointerCapture(e.pointerId);
-  if(activePointers===0) snapshot=pixels.slice();
-  activePointers++;
-
-  const p=pos(e);
-  if(tool==="picker"){
-    currentColor=pixels[p.y*W+p.x];
-    if(!paletteColors.includes(currentColor)){
-      paletteColors.push(currentColor);
-      rebuildPalette();
-    }
-    activePointers--;
-    return;
-  }
-  if(tool==="pencil") applyPixel(p.x,p.y);
-  render();
-};
-
-canvas.onpointermove=e=>{
-  if(activePointers<=0 || tool!=="pencil") return;
-  const p=pos(e);
-  applyPixel(p.x,p.y);
-  render();
-};
-
-function pointerEnd(e){
-  activePointers--;
-  if(activePointers<=0){
-    activePointers=0;
-    undoStack.push(snapshot);
-    redoStack=[];
-    saveCanvas();
-  }
-}
-canvas.onpointerup=pointerEnd;
-canvas.onpointercancel=pointerEnd;
+/* ===== POINTERS ===== */
+canvas.onpointerdown=e=>{ canvas.setPointerCapture(e.pointerId); if(activePointers===0)snapshot=pixels.slice(); activePointers++; const p=pos(e); if(tool==="picker"){ currentColor=pixels[p.y*W+p.x]; if(!paletteColors.includes(currentColor)){ paletteColors.push(currentColor); rebuildPalette(); } activePointers--; return; } if(tool==="pencil") applyPixel(p.x,p.y); render(); }
+canvas.onpointermove=e=>{ if(activePointers<=0 || tool!=="pencil") return; const p=pos(e); applyPixel(p.x,p.y); render(); }
+function pointerEnd(e){ activePointers--; if(activePointers<=0){ activePointers=0; undoStack.push(snapshot); redoStack=[]; saveCanvas(); } }
+canvas.onpointerup=pointerEnd; canvas.onpointercancel=pointerEnd;
 
 /* ===== UI ===== */
-document.querySelectorAll("[data-tool]").forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll("[data-tool]").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
-    tool=b.dataset.tool;
-  };
-});
+document.querySelectorAll("[data-tool]").forEach(b=>{ b.onclick=()=>{ document.querySelectorAll("[data-tool]").forEach(x=>x.classList.remove("active")); b.classList.add("active"); tool=b.dataset.tool; }; });
 mirrorXBtn.onclick=()=>mirrorXBtn.classList.toggle("active",mirrorX=!mirrorX);
 mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
 zoomIn.onclick=()=>{pixelSize+=4;resize();}
 zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
 gridBtn.onclick=()=>{gridMode=!gridMode;render();}
-
-renderBtn.onclick=()=>{
-  renderMode=renderMode==="pixel"?"cross":"pixel";
-  renderBtn.textContent=renderMode==="pixel"?"⬛":"✖️";
-  render();
-};
-
-undoBtn.onclick=()=>{
-  if(!undoStack.length) return;
-  redoStack.push(pixels.slice());
-  pixels=undoStack.pop();
-  render();
-};
-redoBtn.onclick=()=>{
-  if(!redoStack.length) return;
-  undoStack.push(pixels.slice());
-  pixels=redoStack.pop();
-  render();
-};
-
-resizeBtn.onclick=()=>{
-  resizePanel.style.display="block";
-  rw.value=W; rh.value=H;
-};
-resizeOk.onclick=()=>{
-  init(+rw.value,+rh.value);
-  resizePanel.style.display="none";
-};
+renderBtn.onclick=()=>{ renderMode=renderMode==="pixel"?"cross":"pixel"; renderBtn.textContent=renderMode==="pixel"?"⬛":"✖️"; render(); };
+undoBtn.onclick=()=>{ if(!undoStack.length)return; redoStack.push(pixels.slice()); pixels=undoStack.pop(); render(); };
+redoBtn.onclick=()=>{ if(!redoStack.length)return; undoStack.push(pixels.slice()); pixels=redoStack.pop(); render(); };
+resizeBtn.onclick=()=>{ resizePanel.style.display="block"; rw.value=W; rh.value=H; }
+resizeOk.onclick=()=>{ init(+rw.value,+rh.value); resizePanel.style.display="none"; }
 resizeCancel.onclick=()=>resizePanel.style.display="none";
+exportBtn.onclick=()=>{ const a=document.createElement("a"); a.href=canvas.toDataURL(); a.download="pixolator.png"; a.click(); };
 
-exportBtn.onclick=()=>{
-  const a=document.createElement("a");
-  a.href=canvas.toDataURL();
-  a.download="pixolator.png";
-  a.click();
-};
-
-/* ===== PALETTE (ORIGINALE, INTACTE) ===== */
+/* ===== PALETTE ===== */
 const palette=document.getElementById("palette");
 let paletteColors=["#000","#fff","#f00","#0f0","#00f"];
-
-function rebuildPalette(){
-  palette.innerHTML="";
-  paletteColors.forEach((c,i)=>{
-    const d=document.createElement("div");
-    d.className="color";
-    d.style.background=c;
-    if(c===currentColor)d.classList.add("active");
-    d.onclick=()=>{
-      currentColor=c;
-      rebuildPalette();
-    };
-    d.ondblclick=()=>{
-      const input=document.createElement("input");
-      input.type="color";
-      input.value=c;
-      input.oninput=e=>{
-        paletteColors[i]=e.target.value;
-        rebuildPalette();
-      };
-      input.click();
-    };
-    palette.appendChild(d);
-  });
-}
+function rebuildPalette(){ palette.innerHTML=""; paletteColors.forEach((c,i)=>{ const d=document.createElement("div"); d.className="color"; d.style.background=c; if(c===currentColor)d.classList.add("active"); d.onclick=()=>{ currentColor=c; rebuildPalette(); }; d.ondblclick=()=>{ const input=document.createElement("input"); input.type="color"; input.value=c; input.oninput=e=>{ paletteColors[i]=e.target.value; rebuildPalette(); }; input.click(); }; palette.appendChild(d); }); }
 
 /* ===== NAVIGATION ===== */
 const container=document.getElementById("canvasContainer");
-document.querySelectorAll("#nav button").forEach(b=>{
-  b.onclick=()=>{
-    const s=50;
-    if(b.dataset.dir==="up") container.scrollTop-=s;
-    if(b.dataset.dir==="down") container.scrollTop+=s;
-    if(b.dataset.dir==="left") container.scrollLeft-=s;
-    if(b.dataset.dir==="right") container.scrollLeft+=s;
-  };
-});
+document.querySelectorAll("#nav button").forEach(b=>{ b.onclick=()=>{ const s=50; if(b.dataset.dir==="up") container.scrollTop-=s; if(b.dataset.dir==="down") container.scrollTop+=s; if(b.dataset.dir==="left") container.scrollLeft-=s; if(b.dataset.dir==="right") container.scrollLeft+=s; }; });
+
+/* ===== SAVE / LOAD JSON ===== */
+document.getElementById("saveJSON").onclick=()=>{
+  const blob=new Blob([JSON.stringify({W,H,pixels})],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="pixolator.json"; a.click();
+};
+document.getElementById("loadJSON").onclick=()=>{ fileInput.click(); };
+fileInput.onchange=e=>{ const f=e.target.files[0]; const reader=new FileReader(); reader.onload=evt=>{ const obj=JSON.parse(evt.target.result); W=obj.W; H=obj.H; pixels=obj.pixels; resize(); }; reader.readAsText(f); };
 
 /* START */
 init(W,H);
 loadCanvas();
 rebuildPalette();
 </script>
-
 </body>
 </html>
