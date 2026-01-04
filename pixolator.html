@@ -118,8 +118,9 @@ canvas{
 
 <div id="top">
   <button id="newBtn">New</button>
+  <button id="importJSONBtn">Import JSON</button>
+  <button id="exportJSONBtn">Export JSON</button>
   <button id="resizeBtn">Resize</button>
-  <button id="exportBtn">Export</button>
   <button id="gridBtn">Grid</button>
   <button id="renderBtn">⬛</button>
   <button id="undoBtn">Undo</button>
@@ -436,6 +437,55 @@ document.querySelectorAll("#nav button").forEach(b=>{
     if(b.dataset.dir==="right") container.scrollLeft+=s;
   };
 });
+
+/* ===== JSON IMPORT / EXPORT ===== */
+function exportJSON() {
+    const data = { W, H, pixels };
+    const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pixolator.json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = event => {
+            try {
+                const obj = JSON.parse(event.target.result);
+                if(obj.W && obj.H && obj.pixels) {
+                    W = obj.W;
+                    H = obj.H;
+                    pixels = obj.pixels;
+                    undoStack = [];
+                    redoStack = [];
+                    resize();
+                    saveCanvas();
+                } else {
+                    alert("JSON invalide");
+                }
+            } catch(err) {
+                alert("Erreur lors de la lecture du JSON");
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+/* LIAISON BOUTONS JSON */
+document.getElementById("exportJSONBtn").onclick = exportJSON;
+document.getElementById("importJSONBtn").onclick = importJSON;
 
 /* START */
 init(W,H);
