@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Pix-o-lator</title>
 
 <style>
@@ -25,14 +25,6 @@ body{
   padding:4px;
 }
 
-button{
-  background:#333;
-  color:#eee;
-  border:1px solid #555;
-  padding:6px;
-}
-button.active{background:#666;}
-
 /* TOOLBOX */
 #tools{
   position:fixed;
@@ -48,6 +40,14 @@ button.active{background:#666;}
   z-index:10;
 }
 
+button{
+  background:#333;
+  color:#eee;
+  border:1px solid #555;
+  padding:6px;
+}
+button.active{background:#666;}
+
 /* CANVAS */
 #canvasContainer{
   position:absolute;
@@ -55,18 +55,16 @@ button.active{background:#666;}
   bottom:60px;
   left:0;
   right:0;
-  overflow:hidden;
-  background:#111;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:auto;
+  background:#000;
 }
-
-#stage{
-  transform-origin:0 0;
-  touch-action:none;
-}
-
 canvas{
   background:#fff;
   image-rendering:pixelated;
+  touch-action:none;
 }
 
 /* PALETTE */
@@ -82,15 +80,14 @@ canvas{
   justify-content:center;
   gap:6px;
 }
-
 .color{
   width:32px;
   height:32px;
   border:2px solid #000;
 }
-.color.active{border-color:#fff}
+.color.active{border-color:#fff;}
 
-/* RESIZE */
+/* RESIZE PANEL */
 #resizePanel{
   position:fixed;
   top:60px;
@@ -100,7 +97,9 @@ canvas{
   padding:10px;
   display:none;
 }
-#resizePanel input{width:60px;}
+#resizePanel input{
+  width:60px;
+}
 </style>
 </head>
 
@@ -109,6 +108,7 @@ canvas{
 <div id="top">
   <button id="newBtn">New</button>
   <button id="resizeBtn">Resize</button>
+  <button id="importBtn">Import</button>
   <button id="exportBtn">Export</button>
   <button id="gridBtn">Grid</button>
   <button id="undoBtn">Undo</button>
@@ -117,6 +117,7 @@ canvas{
 
 <div id="tools">
   <button data-tool="pencil" class="active">✏️</button>
+  <button data-tool="line">📏</button>
   <button data-tool="fill">🪣</button>
   <button data-tool="picker">🧪</button>
   <button id="mirrorXBtn">↔️</button>
@@ -126,9 +127,7 @@ canvas{
 </div>
 
 <div id="canvasContainer">
-  <div id="stage">
-    <canvas id="canvas"></canvas>
-  </div>
+  <canvas id="canvas"></canvas>
 </div>
 
 <div id="palette"></div>
@@ -140,49 +139,51 @@ canvas{
   <button id="resizeCancel">Cancel</button>
 </div>
 
+<input type="file" id="fileInput" accept="image/*" hidden>
+
 <script>
 /* ===== CORE ===== */
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
-ctx.imageSmoothingEnabled=false;
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
 
 let W=16,H=16,pixelSize=24;
-let pixels=[],bg="#fff";
-let currentColor="#000";
-let tool="pencil";
-let mirrorX=false,mirrorY=false;
-let drawing=false;
-let stroke=null;
-let undoStack=[],redoStack=[];
-let grid=false;
+let bgColor="#ffffff";
+let pixels=[],currentColor="#000000";
+let tool="pencil",mirrorX=false,mirrorY=false;
+let undoStack=[],redoStack=[],stroke=null;
+let drawing=false,start=null;
+let gridMode=0;
 
 /* ===== INIT ===== */
 function init(w,h){
   W=w;H=h;
-  pixels=new Array(W*H).fill(bg);
+  pixels=new Array(W*H).fill(bgColor);
   undoStack=[];redoStack=[];
-  resizeCanvas();
+  resize();
 }
-function resizeCanvas(){
+function resize(){
   canvas.width=W*pixelSize;
   canvas.height=H*pixelSize;
   render();
 }
 
 /* ===== RENDER ===== */
-function render(){
-  ctx.fillStyle=bg;
+function render(preview=null){
+  ctx.fillStyle=bgColor;
   ctx.fillRect(0,0,canvas.width,canvas.height);
   for(let y=0;y<H;y++)
     for(let x=0;x<W;x++){
       ctx.fillStyle=pixels[y*W+x];
       ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
     }
-  if(grid) drawGrid();
+  if(gridMode) drawGrid();
+  if(preview) preview();
 }
 
+/* ===== GRID ===== */
 function drawGrid(){
-  ctx.strokeStyle="#666";
+  ctx.strokeStyle="#555";
   for(let x=0;x<=W;x++){
     ctx.beginPath();
     ctx.moveTo(x*pixelSize,0);
@@ -197,7 +198,7 @@ function drawGrid(){
   }
 }
 
-/* ===== PIXELS ===== */
+/* ===== DRAW ===== */
 function pos(e){
   const r=canvas.getBoundingClientRect();
   return {
@@ -206,53 +207,58 @@ function pos(e){
   };
 }
 
-function setPixel(x,y,color){
-  if(x<0||y<0||x>=W||y>=H)return;
-  const i=y*W+x;
+function setPixel(i,color){
   if(!stroke.has(i)) stroke.set(i,pixels[i]);
   pixels[i]=color;
 }
 
-/* ===== DRAW ===== */
+function applyPixel(x,y){
+  if(x<0||y<0||x>=W||y>=H) return;
+  const i=y*W+x;
+  setPixel(i,currentColor);
+  if(mirrorX) setPixel(y*W+(W-1-x),currentColor);
+  if(mirrorY) setPixel((H-1-y)*W+x,currentColor);
+  if(mirrorX&&mirrorY) setPixel((H-1-y)*W+(W-1-x),currentColor);
+}
+
+/* ===== TOOLS ===== */
 canvas.onpointerdown=e=>{
   drawing=true;
   stroke=new Map();
-  const p=pos(e);
+  start=pos(e);
 
   if(tool==="picker"){
-    currentColor=pixels[p.y*W+p.x];
-    rebuildPalette();
+    const c=pixels[start.y*W+start.x];
+    currentColor=c;
+    if(!paletteColors.includes(c)){
+      paletteColors.push(c);
+      rebuildPalette();
+    }
+    render();
     drawing=false;
     return;
   }
 
-  paint(p.x,p.y);
+  if(tool==="pencil") applyPixel(start.x,start.y);
   render();
 };
 
 canvas.onpointermove=e=>{
-  if(!drawing)return;
+  if(!drawing) return;
   const p=pos(e);
-  paint(p.x,p.y);
+  if(tool==="pencil") applyPixel(p.x,p.y);
   render();
 };
 
 window.onpointerup=()=>{
-  if(!drawing)return;
+  if(!drawing) return;
   drawing=false;
   if(stroke.size){
     undoStack.push(stroke);
     redoStack=[];
   }
+  render();
 };
-
-/* ===== PAINT ===== */
-function paint(x,y){
-  setPixel(x,y,currentColor);
-  if(mirrorX) setPixel(W-1-x,y,currentColor);
-  if(mirrorY) setPixel(x,H-1-y,currentColor);
-  if(mirrorX&&mirrorY) setPixel(W-1-x,H-1-y,currentColor);
-}
 
 /* ===== UI ===== */
 document.querySelectorAll("[data-tool]").forEach(b=>{
@@ -265,18 +271,20 @@ document.querySelectorAll("[data-tool]").forEach(b=>{
 
 mirrorXBtn.onclick=()=>mirrorXBtn.classList.toggle("active",mirrorX=!mirrorX);
 mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
-gridBtn.onclick=()=>{grid=!grid;render();};
+zoomIn.onclick=()=>{pixelSize+=4;resize();}
+zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
+gridBtn.onclick=()=>{gridMode=!gridMode;render();}
 
 undoBtn.onclick=()=>{
   const s=undoStack.pop(); if(!s)return;
   const r=new Map();
-  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v});
+  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
   redoStack.push(r); render();
 };
 redoBtn.onclick=()=>{
   const s=redoStack.pop(); if(!s)return;
   const r=new Map();
-  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v});
+  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
   undoStack.push(r); render();
 };
 
@@ -285,7 +293,8 @@ resizeBtn.onclick=()=>{
   rw.value=W; rh.value=H;
 };
 resizeOk.onclick=()=>{
-  init(+rw.value,+rh.value);
+  const w=+rw.value,h=+rh.value;
+  if(w>0&&h>0&&w<=256&&h<=256) init(w,h);
   resizePanel.style.display="none";
 };
 resizeCancel.onclick=()=>resizePanel.style.display="none";
@@ -296,8 +305,6 @@ exportBtn.onclick=()=>{
   a.download="pixolator.png";
   a.click();
 };
-
-newBtn.onclick=()=>init(W,H);
 
 /* ===== PALETTE ===== */
 const palette=document.getElementById("palette");
@@ -310,76 +317,23 @@ function rebuildPalette(){
     d.className="color";
     d.style.background=c;
     if(c===currentColor)d.classList.add("active");
-    d.onclick=()=>{currentColor=c;rebuildPalette();}
+    d.onclick=()=>{
+      currentColor=c;
+      rebuildPalette();
+    };
     d.ondblclick=()=>{
-      const inp=document.createElement("input");
-      inp.type="color";
-      inp.value=c;
-      inp.oninput=e=>{
+      const input=document.createElement("input");
+      input.type="color";
+      input.value=c;
+      input.oninput=e=>{
         paletteColors[i]=e.target.value;
         rebuildPalette();
       };
-      inp.click();
+      input.click();
     };
     palette.appendChild(d);
   });
 }
-
-/* ===== PAN + PINCH ===== */
-const stage=document.getElementById("stage");
-let scale=1,ox=0,oy=0;
-let lastDist=null,lastMid=null;
-let pan=false,ps={x:0,y:0};
-
-function updateTransform(){
-  stage.style.transform=`translate(${ox}px,${oy}px) scale(${scale})`;
-}
-
-stage.addEventListener("touchstart",e=>{
-  if(e.touches.length===2){
-    drawing=false;
-    const[a,b]=e.touches;
-    lastDist=Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);
-    lastMid={x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};
-  }
-},{passive:false});
-
-stage.addEventListener("touchmove",e=>{
-  if(e.touches.length===2){
-    e.preventDefault();
-    const[a,b]=e.touches;
-    const d=Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);
-    scale*=d/lastDist;
-    scale=Math.max(0.5,Math.min(40,scale));
-    lastDist=d;
-
-    const m={x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};
-    ox+=m.x-lastMid.x;
-    oy+=m.y-lastMid.y;
-    lastMid=m;
-    updateTransform();
-  }
-},{passive:false});
-
-stage.addEventListener("mousedown",e=>{
-  if(e.button===2){
-    pan=true;
-    ps={x:e.clientX,y:e.clientY};
-  }
-});
-window.addEventListener("mousemove",e=>{
-  if(pan){
-    ox+=e.clientX-ps.x;
-    oy+=e.clientY-ps.y;
-    ps={x:e.clientX,y:e.clientY};
-    updateTransform();
-  }
-});
-window.addEventListener("mouseup",()=>pan=false);
-stage.oncontextmenu=e=>e.preventDefault();
-
-zoomIn.onclick=()=>{scale*=1.2;updateTransform();}
-zoomOut.onclick=()=>{scale/=1.2;updateTransform();}
 
 /* START */
 init(W,H);
