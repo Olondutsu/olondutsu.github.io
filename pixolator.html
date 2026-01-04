@@ -274,6 +274,30 @@ function applyPixel(x,y){
   if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)] = currentColor;
 }
 
+/* ===== FILL TOOL ===== */
+function floodFill(x, y, targetColor, replacementColor) {
+    if(targetColor === replacementColor) return;
+    const stack = [[x, y]];
+
+    while(stack.length) {
+        const [cx, cy] = stack.pop();
+        if(cx < 0 || cy < 0 || cx >= W || cy >= H) continue;
+        if(pixels[cy*W + cx] !== targetColor) continue;
+
+        pixels[cy*W + cx] = replacementColor;
+
+        // miroir
+        if(mirrorX) pixels[cy*W + (W-1-cx)] = replacementColor;
+        if(mirrorY) pixels[(H-1-cy)*W + cx] = replacementColor;
+        if(mirrorX && mirrorY) pixels[(H-1-cy)*W + (W-1-cx)] = replacementColor;
+
+        stack.push([cx+1, cy]);
+        stack.push([cx-1, cy]);
+        stack.push([cx, cy+1]);
+        stack.push([cx, cy-1]);
+    }
+}
+
 /* ===== POINTERS (FIX MULTITOUCH) ===== */
 canvas.onpointerdown=e=>{
   canvas.setPointerCapture(e.pointerId);
@@ -291,6 +315,15 @@ canvas.onpointerdown=e=>{
     return;
   }
   if(tool==="pencil") applyPixel(p.x,p.y);
+
+  if(tool==="fill"){
+      const startColor = pixels[p.y*W + p.x];
+      floodFill(p.x, p.y, startColor, currentColor);
+      render();
+      activePointers--;
+      return;
+  }
+
   render();
 };
 
