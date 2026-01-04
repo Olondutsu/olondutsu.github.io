@@ -151,9 +151,10 @@ let W=16,H=16,pixelSize=24;
 let bgColor="#ffffff";
 let pixels=[],currentColor="#000000";
 let tool="pencil",mirrorX=false,mirrorY=false;
-let undoStack=[],redoStack=[],stroke=null;
+let undoStack=[],redoStack=[];
 let drawing=false,start=null;
 let gridMode=0;
+let snapshot=null;
 
 /* ===== INIT ===== */
 function init(w,h){
@@ -207,35 +208,28 @@ function pos(e){
   };
 }
 
-function setPixel(i,color){
-  if(!stroke.has(i)) stroke.set(i,pixels[i]);
-  pixels[i]=color;
-}
-
 function applyPixel(x,y){
   if(x<0||y<0||x>=W||y>=H) return;
-  const i=y*W+x;
-  setPixel(i,currentColor);
-  if(mirrorX) setPixel(y*W+(W-1-x),currentColor);
-  if(mirrorY) setPixel((H-1-y)*W+x,currentColor);
-  if(mirrorX&&mirrorY) setPixel((H-1-y)*W+(W-1-x),currentColor);
+  pixels[y*W+x]=currentColor;
+  if(mirrorX) pixels[y*W+(W-1-x)] = currentColor;
+  if(mirrorY) pixels[(H-1-y)*W+x] = currentColor;
+  if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)] = currentColor;
 }
 
 /* ===== TOOLS ===== */
 canvas.onpointerdown=e=>{
   drawing=true;
-  stroke=new Map();
+  snapshot = pixels.slice();   // 📸 SNAPSHOT COMPLET
   start=pos(e);
 
   if(tool==="picker"){
-    const c=pixels[start.y*W+start.x];
-    currentColor=c;
-    if(!paletteColors.includes(c)){
-      paletteColors.push(c);
+    currentColor=pixels[start.y*W+start.x];
+    if(!paletteColors.includes(currentColor)){
+      paletteColors.push(currentColor);
       rebuildPalette();
     }
-    render();
     drawing=false;
+    render();
     return;
   }
 
@@ -253,11 +247,8 @@ canvas.onpointermove=e=>{
 window.onpointerup=()=>{
   if(!drawing) return;
   drawing=false;
-  if(stroke.size){
-    undoStack.push(stroke);
-    redoStack=[];
-  }
-  render();
+  undoStack.push(snapshot);
+  redoStack=[];
 };
 
 /* ===== UI ===== */
@@ -276,16 +267,17 @@ zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
 gridBtn.onclick=()=>{gridMode=!gridMode;render();}
 
 undoBtn.onclick=()=>{
-  const s=undoStack.pop(); if(!s)return;
-  const r=new Map();
-  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
-  redoStack.push(r); render();
+  if(!undoStack.length) return;
+  redoStack.push(pixels.slice());
+  pixels = undoStack.pop();
+  render();
 };
+
 redoBtn.onclick=()=>{
-  const s=redoStack.pop(); if(!s)return;
-  const r=new Map();
-  s.forEach((v,i)=>{r.set(i,pixels[i]);pixels[i]=v;});
-  undoStack.push(r); render();
+  if(!redoStack.length) return;
+  undoStack.push(pixels.slice());
+  pixels = redoStack.pop();
+  render();
 };
 
 resizeBtn.onclick=()=>{
@@ -312,25 +304,12 @@ let paletteColors=["#000","#fff","#f00","#0f0","#00f"];
 
 function rebuildPalette(){
   palette.innerHTML="";
-  paletteColors.forEach((c,i)=>{
+  paletteColors.forEach(c=>{
     const d=document.createElement("div");
     d.className="color";
     d.style.background=c;
     if(c===currentColor)d.classList.add("active");
-    d.onclick=()=>{
-      currentColor=c;
-      rebuildPalette();
-    };
-    d.ondblclick=()=>{
-      const input=document.createElement("input");
-      input.type="color";
-      input.value=c;
-      input.oninput=e=>{
-        paletteColors[i]=e.target.value;
-        rebuildPalette();
-      };
-      input.click();
-    };
+    d.onclick=()=>{currentColor=c;rebuildPalette();};
     palette.appendChild(d);
   });
 }
