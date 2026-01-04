@@ -25,43 +25,6 @@ body{
   padding:4px;
 }
 
-/* FILE MENU */
-.menu {
-  position: relative;
-}
-.menu button {
-  background:#333;
-  color:#eee;
-  border:1px solid #555;
-  padding:6px;
-  cursor:pointer;
-}
-.menu button:hover { background:#555; }
-.dropdown {
-  display: none;
-  position: absolute;
-  top:100%;
-  left:0;
-  background:#222;
-  border:1px solid #555;
-  border-radius:6px;
-  flex-direction: column;
-  padding:4px 0;
-  min-width:120px;
-  z-index:20;
-}
-.dropdown button {
-  width:100%;
-  text-align:left;
-  padding:6px 12px;
-  margin:0;
-  border:none;
-  background:#333;
-  color:#eee;
-}
-.dropdown button:hover { background:#555; }
-.menu.open .dropdown { display:flex; }
-
 /* TOOLBOX */
 #tools{
   position:fixed;
@@ -153,18 +116,11 @@ canvas{
 
 <body>
 
-<!-- TOP BAR AVEC MENU FILE -->
 <div id="top">
-  <div class="menu">
-    <button id="fileBtn">File ▾</button>
-    <div class="dropdown" id="fileMenu">
-      <button id="newBtn">New</button>
-      <button id="importJSONBtn">Import JSON</button>
-      <button id="exportJSONBtn">Export JSON</button>
-      <button id="resizeBtn">Resize</button>
-    </div>
-  </div>
-
+  <button id="newBtn">New</button>
+  <button id="importJSONBtn">Import JSON</button>
+  <button id="exportJSONBtn">Export JSON</button>
+  <button id="resizeBtn">Resize</button>
   <button id="gridBtn">Grid</button>
   <button id="renderBtn">⬛</button>
   <button id="undoBtn">Undo</button>
@@ -235,9 +191,14 @@ function init(w,h){
   undoStack=[];redoStack=[];
   resize();
 }
+// Sauvegarde automatique
 function saveCanvas(){
-  localStorage.setItem("pixolator_pixels", JSON.stringify({ W,H,pixels }));
+  localStorage.setItem("pixolator_pixels", JSON.stringify({
+    W, H, pixels
+  }));
 }
+
+// Charger depuis le localStorage
 function loadCanvas(){
   const data = localStorage.getItem("pixolator_pixels");
   if(!data) return;
@@ -301,7 +262,10 @@ function drawGrid(){
 /* ===== DRAW ===== */
 function pos(e){
   const r=canvas.getBoundingClientRect();
-  return { x:Math.floor((e.clientX-r.left)/pixelSize), y:Math.floor((e.clientY-r.top)/pixelSize) };
+  return {
+    x:Math.floor((e.clientX-r.left)/pixelSize),
+    y:Math.floor((e.clientY-r.top)/pixelSize)
+  };
 }
 function applyPixel(x,y){
   if(x<0||y<0||x>=W||y>=H) return;
@@ -315,14 +279,19 @@ function applyPixel(x,y){
 function floodFill(x, y, targetColor, replacementColor) {
     if(targetColor === replacementColor) return;
     const stack = [[x, y]];
+
     while(stack.length) {
         const [cx, cy] = stack.pop();
         if(cx < 0 || cy < 0 || cx >= W || cy >= H) continue;
         if(pixels[cy*W + cx] !== targetColor) continue;
+
         pixels[cy*W + cx] = replacementColor;
+
+        // miroir
         if(mirrorX) pixels[cy*W + (W-1-cx)] = replacementColor;
         if(mirrorY) pixels[(H-1-cy)*W + cx] = replacementColor;
         if(mirrorX && mirrorY) pixels[(H-1-cy)*W + (W-1-cx)] = replacementColor;
+
         stack.push([cx+1, cy]);
         stack.push([cx-1, cy]);
         stack.push([cx, cy+1]);
@@ -330,11 +299,12 @@ function floodFill(x, y, targetColor, replacementColor) {
     }
 }
 
-/* ===== POINTERS ===== */
+/* ===== POINTERS (FIX MULTITOUCH) ===== */
 canvas.onpointerdown=e=>{
   canvas.setPointerCapture(e.pointerId);
   if(activePointers===0) snapshot=pixels.slice();
   activePointers++;
+
   const p=pos(e);
   if(tool==="picker"){
     currentColor=pixels[p.y*W+p.x];
@@ -346,6 +316,7 @@ canvas.onpointerdown=e=>{
     return;
   }
   if(tool==="pencil") applyPixel(p.x,p.y);
+
   if(tool==="fill"){
       const startColor = pixels[p.y*W + p.x];
       floodFill(p.x, p.y, startColor, currentColor);
@@ -353,14 +324,17 @@ canvas.onpointerdown=e=>{
       activePointers--;
       return;
   }
+
   render();
 };
+
 canvas.onpointermove=e=>{
   if(activePointers<=0 || tool!=="pencil") return;
   const p=pos(e);
   applyPixel(p.x,p.y);
   render();
 };
+
 function pointerEnd(e){
   activePointers--;
   if(activePointers<=0){
@@ -386,11 +360,13 @@ mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
 zoomIn.onclick=()=>{pixelSize+=4;resize();}
 zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
 gridBtn.onclick=()=>{gridMode=!gridMode;render();}
+
 renderBtn.onclick=()=>{
   renderMode=renderMode==="pixel"?"cross":"pixel";
   renderBtn.textContent=renderMode==="pixel"?"⬛":"✖️";
   render();
 };
+
 undoBtn.onclick=()=>{
   if(!undoStack.length) return;
   redoStack.push(pixels.slice());
@@ -403,11 +379,17 @@ redoBtn.onclick=()=>{
   pixels=redoStack.pop();
   render();
 };
+
+resizeBtn.onclick=()=>{
+  resizePanel.style.display="block";
+  rw.value=W; rh.value=H;
+};
 resizeOk.onclick=()=>{
   init(+rw.value,+rh.value);
   resizePanel.style.display="none";
 };
 resizeCancel.onclick=()=>resizePanel.style.display="none";
+
 exportBtn.onclick=()=>{
   const a=document.createElement("a");
   a.href=canvas.toDataURL();
@@ -415,9 +397,10 @@ exportBtn.onclick=()=>{
   a.click();
 };
 
-/* ===== PALETTE ===== */
+/* ===== PALETTE (ORIGINALE, INTACTE) ===== */
 const palette=document.getElementById("palette");
 let paletteColors=["#000","#fff","#f00","#0f0","#00f"];
+
 function rebuildPalette(){
   palette.innerHTML="";
   paletteColors.forEach((c,i)=>{
@@ -457,55 +440,52 @@ document.querySelectorAll("#nav button").forEach(b=>{
 
 /* ===== JSON IMPORT / EXPORT ===== */
 function exportJSON() {
-    const data = { W,H,pixels };
-    const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
+    const data = { W, H, pixels };
+    const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;
-    a.download="pixolator.json";
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pixolator.json";
     a.click();
     URL.revokeObjectURL(url);
 }
+
 function importJSON() {
-    const input=document.createElement("input");
-    input.type="file";
-    input.accept=".json,application/json";
-    input.onchange=e=>{
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = e => {
         const file = e.target.files[0];
         if(!file) return;
+
         const reader = new FileReader();
-        reader.onload=event=>{
-            try{
-                const obj=JSON.parse(event.target.result);
-                if(obj.W && obj.H && obj.pixels){
-                    W=obj.W;
-                    H=obj.H;
-                    pixels=obj.pixels;
-                    undoStack=[];
-                    redoStack=[];
+        reader.onload = event => {
+            try {
+                const obj = JSON.parse(event.target.result);
+                if(obj.W && obj.H && obj.pixels) {
+                    W = obj.W;
+                    H = obj.H;
+                    pixels = obj.pixels;
+                    undoStack = [];
+                    redoStack = [];
                     resize();
                     saveCanvas();
-                } else { alert("JSON invalide"); }
-            } catch(err){ alert("Erreur lors de la lecture du JSON"); }
+                } else {
+                    alert("JSON invalide");
+                }
+            } catch(err) {
+                alert("Erreur lors de la lecture du JSON");
+            }
         };
         reader.readAsText(file);
     };
     input.click();
 }
 
-/* ===== MENU FILE ===== */
-const fileBtn=document.getElementById("fileBtn");
-const fileMenu=document.getElementById("fileMenu");
-fileBtn.onclick=()=>{ fileMenu.parentElement.classList.toggle("open"); };
-document.addEventListener("click",e=>{
-  if(!fileMenu.parentElement.contains(e.target)){
-    fileMenu.parentElement.classList.remove("open");
-  }
-});
-
 /* LIAISON BOUTONS JSON */
-document.getElementById("exportJSONBtn").onclick=exportJSON;
-document.getElementById("importJSONBtn").onclick=importJSON;
+document.getElementById("exportJSONBtn").onclick = exportJSON;
+document.getElementById("importJSONBtn").onclick = importJSON;
 
 /* START */
 init(W,H);
