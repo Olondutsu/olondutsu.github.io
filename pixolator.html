@@ -190,6 +190,23 @@ function init(w,h){
   undoStack=[];redoStack=[];
   resize();
 }
+// Sauvegarde automatique
+function saveCanvas(){
+  localStorage.setItem("pixolator_pixels", JSON.stringify({
+    W, H, pixels
+  }));
+}
+
+// Charger depuis le localStorage
+function loadCanvas(){
+  const data = localStorage.getItem("pixolator_pixels");
+  if(!data) return;
+  const obj = JSON.parse(data);
+  W = obj.W;
+  H = obj.H;
+  pixels = obj.pixels;
+  resize();
+}
 function resize(){
   canvas.width=W*pixelSize;
   canvas.height=H*pixelSize;
@@ -290,8 +307,8 @@ function pointerEnd(e){
     activePointers=0;
     undoStack.push(snapshot);
     redoStack=[];
+    saveCanvas();
   }
-  saveCanvas();
 }
 canvas.onpointerup=pointerEnd;
 canvas.onpointercancel=pointerEnd;
