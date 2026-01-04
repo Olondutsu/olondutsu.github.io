@@ -59,10 +59,9 @@ button.active{background:#666;}
   background:#000;
 }
 #canvasWrapper{
-  position:relative;
+  margin:40px;
   width:fit-content;
   height:fit-content;
-  margin:40px;
 }
 canvas{
   background:#fff;
@@ -90,6 +89,17 @@ canvas{
 }
 .color.active{border-color:#fff;}
 
+/* RESIZE PANEL */
+#resizePanel{
+  position:fixed;
+  top:60px;
+  right:10px;
+  background:#222;
+  border:1px solid #555;
+  padding:10px;
+  display:none;
+}
+
 /* NAV PAD */
 #nav{
   position:fixed;
@@ -100,9 +110,6 @@ canvas{
   grid-template-rows:40px 40px 40px;
   gap:4px;
 }
-#nav button{
-  font-size:16px;
-}
 #nav .empty{visibility:hidden;}
 </style>
 </head>
@@ -110,14 +117,24 @@ canvas{
 <body>
 
 <div id="top">
+  <button id="newBtn">New</button>
+  <button id="resizeBtn">Resize</button>
+  <button id="exportBtn">Export</button>
+  <button id="gridBtn">Grid</button>
+  <button id="renderBtn">⬛</button>
   <button id="undoBtn">Undo</button>
   <button id="redoBtn">Redo</button>
-  <button id="renderBtn">⬛</button>
 </div>
 
 <div id="tools">
   <button data-tool="pencil" class="active">✏️</button>
+  <button data-tool="line">📏</button>
+  <button data-tool="fill">🪣</button>
   <button data-tool="picker">🧪</button>
+  <button id="mirrorXBtn">↔️</button>
+  <button id="mirrorYBtn">↕️</button>
+  <button id="zoomIn">＋</button>
+  <button id="zoomOut">－</button>
 </div>
 
 <div id="canvasContainer">
@@ -128,7 +145,14 @@ canvas{
 
 <div id="palette"></div>
 
-<!-- NAVIGATION PAD -->
+<div id="resizePanel">
+  W <input id="rw" type="number" min="1" max="256"><br>
+  H <input id="rh" type="number" min="1" max="256"><br><br>
+  <button id="resizeOk">OK</button>
+  <button id="resizeCancel">Cancel</button>
+</div>
+
+<!-- NAV -->
 <div id="nav">
   <div class="empty"></div>
   <button data-dir="up">▲</button>
@@ -148,31 +172,35 @@ const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
 let W=16,H=16,pixelSize=24;
-let pixels=[];
-let currentColor="#000000";
+let pixels=[],bgColor="#fff";
+let currentColor="#000";
 let tool="pencil";
-let undoStack=[],redoStack=[];
+let mirrorX=false,mirrorY=false;
+let gridMode=false;
 let renderMode="pixel";
 
-/* multitouch */
-let activePointers=0;
+let undoStack=[],redoStack=[];
 let snapshot=null;
+let activePointers=0;
 
 /* ===== INIT ===== */
-function init(){
-  pixels=new Array(W*H).fill("#ffffff");
+function init(w,h){
+  W=w;H=h;
+  pixels=new Array(W*H).fill(bgColor);
+  undoStack=[];redoStack=[];
+  resize();
+}
+function resize(){
   canvas.width=W*pixelSize;
   canvas.height=H*pixelSize;
   render();
 }
-init();
 
-/* ===== RENDER ===== */
+/* ===== DRAW MODES ===== */
 function drawPixel(x,y,c){
   ctx.fillStyle=c;
   ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
 }
-
 function drawCross(x,y,c){
   const px=x*pixelSize, py=y*pixelSize;
   const pad=pixelSize*0.2;
@@ -187,19 +215,35 @@ function drawCross(x,y,c){
   ctx.stroke();
 }
 
+/* ===== RENDER ===== */
 function render(){
-  ctx.fillStyle="#fff";
+  ctx.fillStyle=bgColor;
   ctx.fillRect(0,0,canvas.width,canvas.height);
   for(let y=0;y<H;y++){
     for(let x=0;x<W;x++){
       const c=pixels[y*W+x];
-      if(renderMode==="pixel") drawPixel(x,y,c);
-      else drawCross(x,y,c);
+      renderMode==="pixel"?drawPixel(x,y,c):drawCross(x,y,c);
     }
+  }
+  if(gridMode) drawGrid();
+}
+function drawGrid(){
+  ctx.strokeStyle="#555";
+  for(let x=0;x<=W;x++){
+    ctx.beginPath();
+    ctx.moveTo(x*pixelSize,0);
+    ctx.lineTo(x*pixelSize,canvas.height);
+    ctx.stroke();
+  }
+  for(let y=0;y<=H;y++){
+    ctx.beginPath();
+    ctx.moveTo(0,y*pixelSize);
+    ctx.lineTo(canvas.width,y*pixelSize);
+    ctx.stroke();
   }
 }
 
-/* ===== DRAW ===== */
+/* ===== INPUT ===== */
 function pos(e){
   const r=canvas.getBoundingClientRect();
   return {
@@ -207,31 +251,33 @@ function pos(e){
     y:Math.floor((e.clientY-r.top)/pixelSize)
   };
 }
-
 function applyPixel(x,y){
   if(x<0||y<0||x>=W||y>=H) return;
   pixels[y*W+x]=currentColor;
+  if(mirrorX) pixels[y*W+(W-1-x)]=currentColor;
+  if(mirrorY) pixels[(H-1-y)*W+x]=currentColor;
+  if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)]=currentColor;
 }
 
+/* ===== POINTERS (MULTITOUCH FIX) ===== */
 canvas.onpointerdown=e=>{
   canvas.setPointerCapture(e.pointerId);
-  if(activePointers===0){
-    snapshot=pixels.slice(); // 📸 snapshot unique
-  }
+  if(activePointers===0) snapshot=pixels.slice();
   activePointers++;
-  const p=pos(e);
 
+  const p=pos(e);
   if(tool==="picker"){
     currentColor=pixels[p.y*W+p.x];
     activePointers--;
     return;
   }
-  applyPixel(p.x,p.y);
+  if(tool==="pencil") applyPixel(p.x,p.y);
   render();
 };
 
 canvas.onpointermove=e=>{
   if(activePointers<=0) return;
+  if(tool!=="pencil") return;
   const p=pos(e);
   applyPixel(p.x,p.y);
   render();
@@ -239,7 +285,6 @@ canvas.onpointermove=e=>{
 
 function pointerEnd(e){
   activePointers--;
-  canvas.releasePointerCapture(e.pointerId);
   if(activePointers<=0){
     activePointers=0;
     undoStack.push(snapshot);
@@ -257,6 +302,16 @@ document.querySelectorAll("[data-tool]").forEach(b=>{
     tool=b.dataset.tool;
   };
 });
+mirrorXBtn.onclick=()=>mirrorXBtn.classList.toggle("active",mirrorX=!mirrorX);
+mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
+zoomIn.onclick=()=>{pixelSize+=4;resize();}
+zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
+gridBtn.onclick=()=>{gridMode=!gridMode;render();}
+renderBtn.onclick=()=>{
+  renderMode=renderMode==="pixel"?"cross":"pixel";
+  renderBtn.textContent=renderMode==="pixel"?"⬛":"✖️";
+  render();
+};
 
 undoBtn.onclick=()=>{
   if(!undoStack.length) return;
@@ -271,35 +326,53 @@ redoBtn.onclick=()=>{
   render();
 };
 
-/* RENDER MODE SWITCH */
-renderBtn.onclick=()=>{
-  renderMode=renderMode==="pixel"?"cross":"pixel";
-  renderBtn.textContent=renderMode==="pixel"?"⬛":"✖️";
-  render();
+resizeBtn.onclick=()=>{
+  resizePanel.style.display="block";
+  rw.value=W; rh.value=H;
+};
+resizeOk.onclick=()=>{
+  init(+rw.value,+rh.value);
+  resizePanel.style.display="none";
+};
+resizeCancel.onclick=()=>resizePanel.style.display="none";
+
+exportBtn.onclick=()=>{
+  const a=document.createElement("a");
+  a.href=canvas.toDataURL();
+  a.download="pixolator.png";
+  a.click();
 };
 
-/* PALETTE */
+/* ===== PALETTE ===== */
 const palette=document.getElementById("palette");
-const paletteColors=["#000","#f00","#0f0","#00f","#fff"];
-paletteColors.forEach(c=>{
-  const d=document.createElement("div");
-  d.className="color";
-  d.style.background=c;
-  d.onclick=()=>currentColor=c;
-  palette.appendChild(d);
-});
+const paletteColors=["#000","#fff","#f00","#0f0","#00f"];
+function rebuildPalette(){
+  palette.innerHTML="";
+  paletteColors.forEach(c=>{
+    const d=document.createElement("div");
+    d.className="color";
+    d.style.background=c;
+    if(c===currentColor) d.classList.add("active");
+    d.onclick=()=>{currentColor=c;rebuildPalette();};
+    palette.appendChild(d);
+  });
+}
+rebuildPalette();
 
-/* NAVIGATION */
+/* ===== NAV ===== */
 const container=document.getElementById("canvasContainer");
 document.querySelectorAll("#nav button").forEach(b=>{
   b.onclick=()=>{
-    const step=50;
-    if(b.dataset.dir==="up") container.scrollTop-=step;
-    if(b.dataset.dir==="down") container.scrollTop+=step;
-    if(b.dataset.dir==="left") container.scrollLeft-=step;
-    if(b.dataset.dir==="right") container.scrollLeft+=step;
+    const s=50;
+    if(b.dataset.dir==="up") container.scrollTop-=s;
+    if(b.dataset.dir==="down") container.scrollTop+=s;
+    if(b.dataset.dir==="left") container.scrollLeft-=s;
+    if(b.dataset.dir==="right") container.scrollLeft+=s;
   };
 });
+
+/* START */
+init(W,H);
 </script>
 
 </body>
