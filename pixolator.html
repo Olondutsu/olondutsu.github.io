@@ -61,7 +61,6 @@ button.active{background:#666;}
 #canvasWrapper{
   margin:40px;
   width:fit-content;
-  height:fit-content;
 }
 canvas{
   background:#fff;
@@ -99,6 +98,7 @@ canvas{
   padding:10px;
   display:none;
 }
+#resizePanel input{width:60px;}
 
 /* NAV PAD */
 #nav{
@@ -152,7 +152,7 @@ canvas{
   <button id="resizeCancel">Cancel</button>
 </div>
 
-<!-- NAV -->
+<!-- NAVIGATION -->
 <div id="nav">
   <div class="empty"></div>
   <button data-dir="up">▲</button>
@@ -172,16 +172,16 @@ const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
 let W=16,H=16,pixelSize=24;
-let pixels=[],bgColor="#fff";
-let currentColor="#000";
-let tool="pencil";
-let mirrorX=false,mirrorY=false;
+let bgColor="#ffffff";
+let pixels=[],currentColor="#000000";
+let tool="pencil",mirrorX=false,mirrorY=false;
+let undoStack=[],redoStack=[];
 let gridMode=false;
 let renderMode="pixel";
 
-let undoStack=[],redoStack=[];
-let snapshot=null;
+/* multitouch */
 let activePointers=0;
+let snapshot=null;
 
 /* ===== INIT ===== */
 function init(w,h){
@@ -196,7 +196,7 @@ function resize(){
   render();
 }
 
-/* ===== DRAW MODES ===== */
+/* ===== RENDER ===== */
 function drawPixel(x,y,c){
   ctx.fillStyle=c;
   ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
@@ -214,8 +214,6 @@ function drawCross(x,y,c){
   ctx.lineTo(px+pad,py+pixelSize-pad);
   ctx.stroke();
 }
-
-/* ===== RENDER ===== */
 function render(){
   ctx.fillStyle=bgColor;
   ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -243,7 +241,7 @@ function drawGrid(){
   }
 }
 
-/* ===== INPUT ===== */
+/* ===== DRAW ===== */
 function pos(e){
   const r=canvas.getBoundingClientRect();
   return {
@@ -254,12 +252,12 @@ function pos(e){
 function applyPixel(x,y){
   if(x<0||y<0||x>=W||y>=H) return;
   pixels[y*W+x]=currentColor;
-  if(mirrorX) pixels[y*W+(W-1-x)]=currentColor;
-  if(mirrorY) pixels[(H-1-y)*W+x]=currentColor;
-  if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)]=currentColor;
+  if(mirrorX) pixels[y*W+(W-1-x)] = currentColor;
+  if(mirrorY) pixels[(H-1-y)*W+x] = currentColor;
+  if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)] = currentColor;
 }
 
-/* ===== POINTERS (MULTITOUCH FIX) ===== */
+/* ===== POINTERS (FIX MULTITOUCH) ===== */
 canvas.onpointerdown=e=>{
   canvas.setPointerCapture(e.pointerId);
   if(activePointers===0) snapshot=pixels.slice();
@@ -268,6 +266,10 @@ canvas.onpointerdown=e=>{
   const p=pos(e);
   if(tool==="picker"){
     currentColor=pixels[p.y*W+p.x];
+    if(!paletteColors.includes(currentColor)){
+      paletteColors.push(currentColor);
+      rebuildPalette();
+    }
     activePointers--;
     return;
   }
@@ -276,8 +278,7 @@ canvas.onpointerdown=e=>{
 };
 
 canvas.onpointermove=e=>{
-  if(activePointers<=0) return;
-  if(tool!=="pencil") return;
+  if(activePointers<=0 || tool!=="pencil") return;
   const p=pos(e);
   applyPixel(p.x,p.y);
   render();
@@ -307,6 +308,7 @@ mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
 zoomIn.onclick=()=>{pixelSize+=4;resize();}
 zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
 gridBtn.onclick=()=>{gridMode=!gridMode;render();}
+
 renderBtn.onclick=()=>{
   renderMode=renderMode==="pixel"?"cross":"pixel";
   renderBtn.textContent=renderMode==="pixel"?"⬛":"✖️";
@@ -343,23 +345,36 @@ exportBtn.onclick=()=>{
   a.click();
 };
 
-/* ===== PALETTE ===== */
+/* ===== PALETTE (ORIGINALE, INTACTE) ===== */
 const palette=document.getElementById("palette");
-const paletteColors=["#000","#fff","#f00","#0f0","#00f"];
+let paletteColors=["#000","#fff","#f00","#0f0","#00f"];
+
 function rebuildPalette(){
   palette.innerHTML="";
-  paletteColors.forEach(c=>{
+  paletteColors.forEach((c,i)=>{
     const d=document.createElement("div");
     d.className="color";
     d.style.background=c;
-    if(c===currentColor) d.classList.add("active");
-    d.onclick=()=>{currentColor=c;rebuildPalette();};
+    if(c===currentColor)d.classList.add("active");
+    d.onclick=()=>{
+      currentColor=c;
+      rebuildPalette();
+    };
+    d.ondblclick=()=>{
+      const input=document.createElement("input");
+      input.type="color";
+      input.value=c;
+      input.oninput=e=>{
+        paletteColors[i]=e.target.value;
+        rebuildPalette();
+      };
+      input.click();
+    };
     palette.appendChild(d);
   });
 }
-rebuildPalette();
 
-/* ===== NAV ===== */
+/* ===== NAVIGATION ===== */
 const container=document.getElementById("canvasContainer");
 document.querySelectorAll("#nav button").forEach(b=>{
   b.onclick=()=>{
@@ -373,6 +388,7 @@ document.querySelectorAll("#nav button").forEach(b=>{
 
 /* START */
 init(W,H);
+rebuildPalette();
 </script>
 
 </body>
