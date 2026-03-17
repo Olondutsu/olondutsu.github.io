@@ -3,16 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carousel Cards</title>
+  <title>Carousel Moderne</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      background: #111;
+      font-family: Arial, sans-serif;
+      background: #0f0f0f;
       color: white;
-    }
-
-    .carousel-container {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -20,23 +17,38 @@
       overflow: hidden;
     }
 
+    .carousel-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      overflow: hidden;
+    }
+
     .carousel {
       display: flex;
-      transition: transform 0.4s ease;
+      transition: transform 0.5s ease;
     }
 
     .card {
-      min-width: 300px;
-      margin: 0 10px;
-      background: #222;
-      border-radius: 12px;
+      min-width: 70%;
+      margin: 0 5%;
+      background: #1c1c1c;
+      border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      transform: scale(0.85);
+      opacity: 0.5;
+      transition: all 0.4s ease;
+    }
+
+    .card.active {
+      transform: scale(1);
+      opacity: 1;
     }
 
     .card img {
       width: 100%;
-      height: 200px;
+      height: 250px;
       object-fit: cover;
     }
 
@@ -61,9 +73,15 @@
       transform: translateY(-50%);
       font-size: 30px;
       cursor: pointer;
-      padding: 10px;
-      background: rgba(0,0,0,0.5);
+      padding: 12px;
+      background: rgba(0,0,0,0.6);
       border-radius: 50%;
+      z-index: 10;
+      user-select: none;
+    }
+
+    .nav:hover {
+      background: rgba(255,255,255,0.2);
     }
 
     .left { left: 10px; }
@@ -72,10 +90,10 @@
 </head>
 <body>
 
-<div class="carousel-container">
+<div class="carousel-wrapper">
   <div class="nav left" onclick="move(-1)">&#10094;</div>
-  <div class="carousel" id="carousel"></div>
   <div class="nav right" onclick="move(1)">&#10095;</div>
+  <div class="carousel" id="carousel"></div>
 </div>
 
 <script>
@@ -106,9 +124,10 @@ const data = [
 const carousel = document.getElementById("carousel");
 let index = 0;
 
-function createCard(item) {
+function createCard(item, i) {
   const card = document.createElement("div");
   card.className = "card";
+  if (i === index) card.classList.add("active");
 
   card.innerHTML = `
     <img src="${item.image}" alt="${item.title}">
@@ -127,16 +146,22 @@ function createCard(item) {
 
 function render() {
   carousel.innerHTML = "";
-  data.forEach(item => carousel.appendChild(createCard(item)));
+  data.forEach((item, i) => {
+    const card = createCard(item, i);
+    carousel.appendChild(card);
+  });
+
+  const offset = index * (carousel.offsetWidth * 0.8);
+  carousel.style.transform = `translateX(-${offset}px)`;
 }
 
 function move(direction) {
   index += direction;
+
   if (index < 0) index = 0;
   if (index > data.length - 1) index = data.length - 1;
 
-  const offset = index * 320;
-  carousel.style.transform = `translateX(-${offset}px)`;
+  render();
 }
 
 render();
