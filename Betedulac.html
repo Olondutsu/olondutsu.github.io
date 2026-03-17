@@ -208,11 +208,11 @@ function createCriteriaHTML(c) {
 
   const html = `
     <div class="criteria">
-      <div>🏊 Baignade: ${getEmoji('✅','⛔', c.baigade ?? false)}</div>
-      <div>🏕️ Camping: ${getEmoji('✅','⛔', c.camping ?? false)}</div>
-      <div>🔥 Feu: ${getEmoji('✅','⛔', c.feu ?? false)}</div>
-      <div>🎣 Pêche: ${getEmoji('✅','⛔', c.peche ?? false)}</div>
-      <div>🥷 ${(() => {
+      <div>🏊: ${getEmoji('✅','⛔', c.baigade ?? false)}</div>
+      <div>🏕️: ${getEmoji('✅','⛔', c.camping ?? false)}</div>
+      <div>🔥: ${getEmoji('✅','⛔', c.feu ?? false)}</div>
+      <div>🎣: ${getEmoji('✅','⛔', c.peche ?? false)}</div>
+      <div>👮 ${(() => {
         let bars = '';
         for (let i = 1; i <= 5; i++) {
           if (i <= c.discretion) {
