@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choix de Lacs</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f0f;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  overflow: hidden;
+}
+.carousel-wrapper { position: relative; width: 100%; max-width: 900px; overflow: hidden; }
+.carousel { display: flex; transition: transform 0.5s ease; }
+.card {
+  min-width: 70%;
+  margin: 0 5%;
+  background: #1c1c1c;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  transform: scale(0.85);
+  opacity: 0.5;
+  transition: all 0.4s ease;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #aaa;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+.card.active { transform: scale(1); opacity: 1; }
+.card img { width: 100%; height: 250px; object-fit: cover; }
+.card-content { padding: 15px; }
+.card h3 { margin: 0 0 10px; }
+.links a { display: inline-block; margin-right: 10px; font-size: 20px; text-decoration: none; }
+.criteria { margin-top: 10px; font-size: 24px; }
+.criteria .discretion { font-size: 18px; }
+.bar { display: inline-block; width: 15px; height: 10px; margin-right: 3px; background: gray; border-radius: 2px; }
+.bar.active { background: limegreen; }
+.bar.active-red { background: red; }
+.nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 30px; cursor: pointer; padding: 12px; background: rgba(0,0,0,0.6); border-radius: 50%; z-index: 10; }
+.left { left: 10px; }
+.right { right: 10px; }
+</style>
+</head>
+<body>
+
+<div class="carousel-wrapper">
+  <div class="nav left" onclick="move(-1)">❮</div>
+  <div class="nav right" onclick="move(1)">❯</div>
+  <div class="carousel" id="carousel"></div>
+</div>
+
+<script>
+let data = [];
+
+fetch('lakes.json')
+  .then(response => response.json())
+  .then(json => {
+    data = json;
+    render(); 
+  })
+  .catch(err => console.error("Erreur chargement JSON :", err));
+
+
+const carousel = document.getElementById("carousel");
+let index = 0;
+
+function createCriteriaHTML(c) {
+  const getEmoji = (okEmoji, falseEmoji, value) => value ? okEmoji : falseEmoji;
+
+  const html = `
+    <div class="criteria">
+      <div>🏊: ${getEmoji('✅','⛔', c.baigade ?? false)}</div>
+      <div>🏕️: ${getEmoji('✅','⛔', c.camping ?? false)}</div>
+      <div>🔥: ${getEmoji('✅','⛔', c.feu ?? false)}</div>
+      <div>🎣: ${getEmoji('✅','⛔', c.peche ?? false)}</div>
+      <div>👮 ${(() => {
+        let bars = '';
+        for (let i = 1; i <= 5; i++) {
+          if (i <= c.discretion) {
+            const colorClass = i <= 3 ? 'active' : 'active-red';
+            bars += `<span class="bar ${colorClass}"></span>`;
+          } else {
+            bars += `<span class="bar"></span>`;
+          }
+        }
+        return bars;
+      })()}</div>
+    </div>
+  `;
+  return html;
+}
+
+function createCard(item, i) {
+  const card = document.createElement("div");
+  card.className = "card";
+  if (i === index) card.classList.add("active");
+
+  card.innerHTML = `
+  <img src="${item.image}" alt="${item.title}">
+  <div class="subtitle">${item.city ?? ''}, ${item.region ?? ''}</div>
+  <div class="card-content">
+    <h3>${item.title}</h3>
+    <div class="links">
+      <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">📍</a>
+      <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">🌍</a>
+      <a href="${item.wiki}" target="_blank">📚</a>
+      <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
+    </div>
+    ${createCriteriaHTML(item.criteria)}
+  </div>
+`;
+  return card;
+}
+
+function render() {
+  carousel.innerHTML = "";
+  data.forEach((item, i) => {
+    const card = createCard(item, i);
+    carousel.appendChild(card);
+  });
+
+  const offset = index * (carousel.offsetWidth * 0.8);
+  carousel.style.transform = `translateX(-${offset}px)`;
+}
+
+function move(direction) {
+  index += direction;
+  if (index < 0) index = 0;
+  if (index > data.length - 1) index = data.length - 1;
+  render();
+}
+
+render();
+</script>
+
+</body>
+</html>
