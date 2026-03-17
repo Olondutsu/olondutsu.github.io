@@ -109,7 +109,9 @@ function createCard(item, i) {
   card.innerHTML = `
   <img src="${item.image}" alt="${item.title}">
   <div class="subtitle">${item.city ?? ''}, ${item.region ?? ''}</div>
-  <div class="card-content">
+
+    ${createCriteriaHTML(item.criteria)}
+    <div class="card-content">
     <h3>${item.title}</h3>
     <div class="links">
 
@@ -131,7 +133,6 @@ function createCard(item, i) {
 
 
     </div>
-    ${createCriteriaHTML(item.criteria)}
   </div>
 `;
   return card;
