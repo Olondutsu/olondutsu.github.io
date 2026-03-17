@@ -11,7 +11,7 @@
   },
   {
     "title": "Lac de Vassivière",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Lac_de_Vassivi%C3%A8re%2C_depuis_l%27%C3%Ele.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Lac_de_Vassivi%C3%A8re%2C_depuis_l%27%C3%AEle.jpg",
     "city": "Peyrat-le-Château",
     "region": "Nouvelle-Aquitaine",
     "lat": 45.7925,
@@ -41,7 +41,7 @@
   },
   {
     "title": "Lac de Saint-Point",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Lac_de_Saint-Point.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Lac_Saint_Point_-_vue_a%C3%A9rienne_3.jpg",
     "city": "Saint-Point",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.82,
@@ -51,27 +51,27 @@
   },
   {
     "title": "Lac de la Triouzoune",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/1/10/Lac_de_la_Triouzoune.JPG",
     "city": "Neuvic",
     "region": "Nouvelle-Aquitaine",
     "lat": 45.45,
     "lng": 2.1,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_de_la_Triouzoune",
-    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 4, "peche": true }
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 2, "peche": true }
   },
   {
     "title": "Lac d'Ilay",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/6/65/La_Chaux-du-dombief%2C_le_Grand_Maclu_et_le_lac_d%27Ilay.jpg",
     "city": "La Chaux-du-Dombief",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.7,
     "lng": 5.7,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_d%27Ilay",
-    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 5, "peche": true }
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 3, "peche": true }
   },
   {
     "title": "Lac de Darbon",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/4/41/LacDarbon.jpg",
     "city": "Vacheresse",
     "region": "Auvergne-Rhône-Alpes",
     "lat": 45.9,
@@ -81,7 +81,7 @@
   },
   {
     "title": "Lac de Serre-Ponçon",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/0/05/Lac_Serre_Poncon_-_Belv%C3%A9d%C3%A8re_Pierre_Arnoux.jpg",
     "city": "Embrun",
     "region": "Provence-Alpes-Côte d'Azur",
     "lat": 44.5,
@@ -91,7 +91,7 @@
   },
   {
     "title": "Petit Lac Maclu",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/4/44/Lac_du_Petit_Maclu.JPG",
     "city": "Le Frasnois",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.67,
@@ -101,7 +101,7 @@
   },
   {
     "title": "Étang de la Gruère",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/8/87/%C3%89tang_de_la_Gru%C3%A8re.jpg",
     "city": "Saignelégier",
     "region": "Jura (Suisse)",
     "lat": 46.73,
@@ -111,17 +111,17 @@
   },
   {
     "title": "Lacs de Clairvaux-les-Lacs",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/d/db/Clairvaux_ULM_2.jpg",
     "city": "Clairvaux-les-Lacs",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.67,
     "lng": 5.63,
-    "wiki": "https://fr.wikipedia.org/wiki/Lacs_de_Clairvaux-les-Lacs",
+    "wiki": "https://fr.wikipedia.org/wiki/Grand_Lac_de_Clairvaux",
     "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 2, "peche": true }
   },
   {
     "title": "Lac du Vernois",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/7/7f/Lac_du_Vernois_-_Jura.JPG",
     "city": "Vernois",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.55,
@@ -131,7 +131,7 @@
   },
   {
     "title": "Lac des Rousses",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/9/99/Lac_des_Rousses_Panorama.jpg",
     "city": "Les Rousses",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.43,
