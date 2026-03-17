@@ -140,18 +140,8 @@
     "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
   },
   {
-    "title": "Lac de Bienne",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    "city": "Bienne",
-    "region": "Canton de Berne (Suisse)",
-    "lat": 47.2,
-    "lng": 7.2,
-    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Bienne",
-    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 3, "peche": true }
-  },
-  {
     "title": "Lac de Bonlieu",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/2/28/Lac_de_Bonlieu_%28vue_d%27ensemble%29.JPG",
     "city": "Bonlieu",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.45,
@@ -161,7 +151,7 @@
   },
   {
     "title": "Lac de Vouglans",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/0/05/Aerial_image_of_Lac_de_Vouglans_%28view_from_the_southwest%29.jpg",
     "city": "Moirans-en-Montagne",
     "region": "Bourgogne-Franche-Comté",
     "lat": 46.6,
@@ -171,7 +161,7 @@
   },
     {
     "title": "Lac d'Allos",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/4/42/Mont_Pelat_%2B_Lake_Allos_tour_24.jpg",
     "city": "Saint-Lary-Soulan",
     "region": "Occitanie",
     "lat": 42.819,
