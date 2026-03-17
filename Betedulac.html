@@ -1,277 +1,144 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Choix de Lacs</title>
-<style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f0f0f;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  overflow: hidden;
-}
-.carousel-wrapper { position: relative; width: 100%; max-width: 900px; overflow: hidden; }
-.carousel { display: flex; transition: transform 0.5s ease; }
-.card {
-  min-width: 70%;
-  margin: 0 5%;
-  background: #1c1c1c;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-  transform: scale(0.85);
-  opacity: 0.5;
-  transition: all 0.4s ease;
-}
+salut je texplique je fais un plan bivouac autour d'un lac avec une dizaine de potes, je me demandais si tu pouvais completer mon json en te basant sur le tourisme pour la discretion et autorisation de baignade, peche, camping, etc
 
-.subtitle {
-  text-align: center;
-  font-size: 14px;
-  color: #aaa;
-  margin-top: -10px;
-  margin-bottom: 10px;
-}
-.card.active { transform: scale(1); opacity: 1; }
-.card img { width: 100%; height: 250px; object-fit: cover; }
-.card-content { padding: 15px; }
-.card h3 { margin: 0 0 10px; }
-.links a { display: inline-block; margin-right: 10px; font-size: 20px; text-decoration: none; }
-.criteria { margin-top: 10px; font-size: 24px; }
-.criteria .discretion { font-size: 18px; }
-.bar { display: inline-block; width: 15px; height: 10px; margin-right: 3px; background: gray; border-radius: 2px; }
-.bar.active { background: limegreen; }
-.bar.active-red { background: red; }
-.nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 30px; cursor: pointer; padding: 12px; background: rgba(0,0,0,0.6); border-radius: 50%; z-index: 10; }
-.left { left: 10px; }
-.right { right: 10px; }
-</style>
-</head>
-<body>
+si tu peux aussi completer avec des liens vers es iamges fonctinnelles, les villes/régions etc latitude longitude c'est parfait
 
-<div class="carousel-wrapper">
-  <div class="nav left" onclick="move(-1)">❮</div>
-  <div class="nav right" onclick="move(1)">❯</div>
-  <div class="carousel" id="carousel"></div>
-</div>
-
-<script>
-const data = [
+[
   {
-    title: "Lac d'Oule",
-    image: "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
-    lat: 42.819,
-    lng: 0.181,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
-    criteria: { camping: true, baignade: false, feu: true, discretion: 2 }
+    "title": "Lac d'Oule",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "city" : "",
+    "region" : "",
+    "lat": 42.819,
+    "lng": 0.181,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "criteria": { "camping": true, "baignade": false, "feu": true, "discretion": 2 }
   },
   {
-    title: "Lac de Vassivière",
-    image: "https://upload.wikimedia.org/wikipedia/commons/c/ca/Lac_de_Vassivi%C3%A8re%2C_depuis_l%27%C3%AEle.jpg",
-    lat: 45.7925,
-    lng: 1.8861,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Vassivi%C3%A8re",
-    criteria: { camping: false, baignade: true, feu: false, discretion: 3 }
+    "title": "Lac de Vassivière",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Lac_de_Vassivi%C3%A8re%2C_depuis_l%27%C3%AEle.jpg",
+    "lat": 45.7925,
+    "lng": 1.8861,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Vassivi%C3%A8re",
+    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 3 }
   },
   {
-    title: "Lac des Pises",
-    image: "https://upload.wikimedia.org/wikipedia/commons/f/f3/Lac_des_Pises.jpg",
-    lat: 44.167,
-    lng: 3.5,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_des_Pises",
-    criteria: { camping: false, baignade: false, feu: true, discretion: 1 }
+    "title": "Lac des Pises",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Lac_des_Pises.jpg",
+    "lat": 44.167,
+    "lng": 3.5,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_des_Pises",
+    "criteria": { "camping": false, "baignade": false, "feu": true, "discretion": 1 }
   },
   {
-    title: "Lac de Chalain",
-    image: "https://upload.wikimedia.org/wikipedia/commons/7/7e/Ulm_143.jpg",
-    lat: 46.667,
-    lng: 5.78,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Chalain",
-    criteria: { camping: true, baignade: true, feu: false, discretion: 3 }
+    "title": "Lac de Chalain",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Ulm_143.jpg",
+    "lat": 46.667,
+    "lng": 5.78,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Chalain",
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 3 }
   },
   {
-    title: "Lac de Saint-Point",
-    image: "https://upload.wikimedia.org/wikipedia/commons/9/9e/Lac_de_Saint-Point.jpg",
-    lat: 46.82,
-    lng: 6.33,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Saint-Point",
-    criteria: { camping: true, baignade: true, feu: true, discretion: 3 }
+    "title": "Lac de Saint-Point",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Lac_de_Saint-Point.jpg",
+    "lat": 46.82,
+    "lng": 6.33,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Saint-Point",
+    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 3 }
   },
   {
-    title: "Lac de la Triouzoune",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 45.45,
-    lng: 2.1,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_la_Triouzoune",
-    criteria: { camping: true, baignade: true, feu: false, discretion: 4 }
+    "title": "Lac de la Triouzoune",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 45.45,
+    "lng": 2.1,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_la_Triouzoune",
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 4 }
   },
   {
-    title: "Lac d'Ilay",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.7,
-    lng: 5.7,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_d%27Ilay",
-    criteria: { camping: true, baignade: true, feu: true, discretion: 3 }
+    "title": "Lac d'Ilay",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.7,
+    "lng": 5.7,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_d%27Ilay",
+    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 3 }
   },
   {
-    title: "Lac de Darbon",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 45.9,
-    lng: 5.6,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Darbon",
-    criteria: { camping: false, baignade: false, feu: false, discretion: 2 }
+    "title": "Lac de Darbon",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 45.9,
+    "lng": 5.6,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Darbon",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 2 }
   },
   {
-    title: "Lac de Serre-Ponçon",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 44.5,
-    lng: 6.6,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Serre-Pon%C3%A7on",
-    criteria: { camping: false, baignade: true, feu: true, discretion: 1 }
+    "title": "Lac de Serre-Ponçon",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 44.5,
+    "lng": 6.6,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Serre-Pon%C3%A7on",
+    "criteria": { "camping": false, "baignade": true, "feu": true, "discretion": 1 }
   },
   {
-    title: "Petit Lac Maclu",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.67,
-    lng: 5.78,
-    wiki: "https://fr.wikipedia.org/wiki/Petit_Lac_Maclu",
-    criteria: { camping: true, baignade: false, feu: false, discretion: 3 }
+    "title": "Petit Lac Maclu",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.67,
+    "lng": 5.78,
+    "wiki": "https://fr.wikipedia.org/wiki/Petit_Lac_Maclu",
+    "criteria": { "camping": true, "baignade": false, "feu": false, "discretion": 3 }
   },
   {
-    title: "Étang de la Gruère",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.73,
-    lng: 6.2,
-    wiki: "https://fr.wikipedia.org/wiki/%C3%89tang_de_la_Gru%C3%A8re",
-    criteria: { camping: false, baignade: false, feu: false, discretion: 5 }
+    "title": "Étang de la Gruère",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.73,
+    "lng": 6.2,
+    "wiki": "https://fr.wikipedia.org/wiki/%C3%89tang_de_la_Gru%C3%A8re",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 5 }
   },
   {
-    title: "Lacs de Clairvaux-les-Lacs",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.67,
-    lng: 5.63,
-    wiki: "https://fr.wikipedia.org/wiki/Lacs_de_Clairvaux-les-Lacs",
-    criteria: { camping: true, baignade: true, feu: true, discretion: 2 }
+    "title": "Lacs de Clairvaux-les-Lacs",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.67,
+    "lng": 5.63,
+    "wiki": "https://fr.wikipedia.org/wiki/Lacs_de_Clairvaux-les-Lacs",
+    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 2 }
   },
   {
-    title: "Lac du Vernois",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.55,
-    lng: 5.3,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_du_Vernois",
-    criteria: { camping: false, baignade: false, feu: true, discretion: 3 }
+    "title": "Lac du Vernois",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.55,
+    "lng": 5.3,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_du_Vernois",
+    "criteria": { "camping": false, "baignade": false, "feu": true, "discretion": 3 }
   },
   {
-    title: "Lac des Rousses",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.43,
-    lng: 6.0,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_des_Rousses",
-    criteria: { camping: true, baignade: true, feu: false, discretion: 4 }
+    "title": "Lac des Rousses",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.43,
+    "lng": 6.0,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_des_Rousses",
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 4 }
   },
   {
-    title: "Lac de Bienne",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 47.2,
-    lng: 7.2,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Bienne",
-    criteria: { camping: true, baignade: true, feu: true, discretion: 3 }
+    "title": "Lac de Bienne",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 47.2,
+    "lng": 7.2,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Bienne",
+    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 3 }
   },
   {
-    title: "Lac de Bonlieu",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.45,
-    lng: 5.85,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Bonlieu",
-    criteria: { camping: true, baignade: false, feu: false, discretion: 2 }
+    "title": "Lac de Bonlieu",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.45,
+    "lng": 5.85,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Bonlieu",
+    "criteria": { "camping": true, "baignade": false, "feu": false, "discretion": 2 }
   },
   {
-    title: "Lac de Vouglans",
-    image: "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
-    lat: 46.6,
-    lng: 5.5,
-    wiki: "https://fr.wikipedia.org/wiki/Lac_de_Vouglans",
-    criteria: { camping: true, baignade: true, feu: true, discretion: 3 }
+    "title": "Lac de Vouglans",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "lat": 46.6,
+    "lng": 5.5,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Vouglans",
+    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 3 }
   }
-];
-
-const carousel = document.getElementById("carousel");
-let index = 0;
-
-function createCriteriaHTML(c) {
-  const getEmoji = (okEmoji, falseEmoji, value) => value ? okEmoji : falseEmoji;
-
-  const html = `
-    <div class="criteria">
-      <div>🏊: ${getEmoji('✅','⛔', c.baigade ?? false)}</div>
-      <div>🏕️: ${getEmoji('✅','⛔', c.camping ?? false)}</div>
-      <div>🔥: ${getEmoji('✅','⛔', c.feu ?? false)}</div>
-      <div>🎣: ${getEmoji('✅','⛔', c.peche ?? false)}</div>
-      <div>👮 ${(() => {
-        let bars = '';
-        for (let i = 1; i <= 5; i++) {
-          if (i <= c.discretion) {
-            // jusqu'à 3 vert, au-delà rouge
-            const colorClass = i <= 3 ? 'active' : 'active-red';
-            bars += `<span class="bar ${colorClass}"></span>`;
-          } else {
-            bars += `<span class="bar"></span>`;
-          }
-        }
-        return bars;
-      })()}</div>
-    </div>
-  `;
-  return html;
-}
-
-function createCard(item, i) {
-  const card = document.createElement("div");
-  card.className = "card";
-  if (i === index) card.classList.add("active");
-
-  card.innerHTML = `
-  <img src="${item.image}" alt="${item.title}">
-  <div class="subtitle">${item.city ?? ''}, ${item.region ?? ''}</div>
-  <div class="card-content">
-    <h3>${item.title}</h3>
-    <div class="links">
-      <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">📍</a>
-      <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">🌍</a>
-      <a href="${item.wiki}" target="_blank">📚</a>
-      <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
-    </div>
-    ${createCriteriaHTML(item.criteria)}
-  </div>
-`;
-  return card;
-}
-
-function render() {
-  carousel.innerHTML = "";
-  data.forEach((item, i) => {
-    const card = createCard(item, i);
-    carousel.appendChild(card);
-  });
-
-  const offset = index * (carousel.offsetWidth * 0.8);
-  carousel.style.transform = `translateX(-${offset}px)`;
-}
-
-function move(direction) {
-  index += direction;
-  if (index < 0) index = 0;
-  if (index > data.length - 1) index = data.length - 1;
-  render();
-}
-
-render();
-</script>
-
-</body>
-</html>
+]
