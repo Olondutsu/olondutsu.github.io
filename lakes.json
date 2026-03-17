@@ -1,0 +1,172 @@
+[
+  {
+    "title": "Lac d'Oule",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "city": "Saint-Lary-Soulan",
+    "region": "Occitanie",
+    "lat": 42.819,
+    "lng": 0.181,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+  {
+    "title": "Lac de Vassivière",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Lac_de_Vassivi%C3%A8re%2C_depuis_l%27%C3%Ele.jpg",
+    "city": "Peyrat-le-Château",
+    "region": "Nouvelle-Aquitaine",
+    "lat": 45.7925,
+    "lng": 1.8861,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Vassivi%C3%A8re",
+    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 3, "peche": true }
+  },
+  {
+    "title": "Lac des Pises",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Lac_des_Pises.jpg",
+    "city": "Dourbies",
+    "region": "Occitanie",
+    "lat": 44.167,
+    "lng": 3.5,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_des_Pises",
+    "criteria": { "camping": true, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+  {
+    "title": "Lac de Chalain",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Ulm_143.jpg",
+    "city": "Doucier",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.667,
+    "lng": 5.78,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Chalain",
+    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 2, "peche": true }
+  },
+  {
+    "title": "Lac de Saint-Point",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Lac_de_Saint-Point.jpg",
+    "city": "Saint-Point",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.82,
+    "lng": 6.33,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Saint-Point",
+    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 3, "peche": true }
+  },
+  {
+    "title": "Lac de la Triouzoune",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Neuvic",
+    "region": "Nouvelle-Aquitaine",
+    "lat": 45.45,
+    "lng": 2.1,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_la_Triouzoune",
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 4, "peche": true }
+  },
+  {
+    "title": "Lac d'Ilay",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "La Chaux-du-Dombief",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.7,
+    "lng": 5.7,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_d%27Ilay",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 5, "peche": true }
+  },
+  {
+    "title": "Lac de Darbon",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Vacheresse",
+    "region": "Auvergne-Rhône-Alpes",
+    "lat": 45.9,
+    "lng": 5.6,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Darbon",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 3, "peche": true }
+  },
+  {
+    "title": "Lac de Serre-Ponçon",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Embrun",
+    "region": "Provence-Alpes-Côte d'Azur",
+    "lat": 44.5,
+    "lng": 6.6,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Serre-Pon%C3%A7on",
+    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 1, "peche": true }
+  },
+  {
+    "title": "Petit Lac Maclu",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Le Frasnois",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.67,
+    "lng": 5.78,
+    "wiki": "https://fr.wikipedia.org/wiki/Petit_Lac_Maclu",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+  {
+    "title": "Étang de la Gruère",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Saignelégier",
+    "region": "Jura (Suisse)",
+    "lat": 46.73,
+    "lng": 6.2,
+    "wiki": "https://fr.wikipedia.org/wiki/%C3%89tang_de_la_Gru%C3%A8re",
+    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 2, "peche": true }
+  },
+  {
+    "title": "Lacs de Clairvaux-les-Lacs",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Clairvaux-les-Lacs",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.67,
+    "lng": 5.63,
+    "wiki": "https://fr.wikipedia.org/wiki/Lacs_de_Clairvaux-les-Lacs",
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 2, "peche": true }
+  },
+  {
+    "title": "Lac du Vernois",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Vernois",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.55,
+    "lng": 5.3,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_du_Vernois",
+    "criteria": { "camping": false, "baignade": false, "feu": true, "discretion": 3, "peche": true }
+  },
+  {
+    "title": "Lac des Rousses",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Les Rousses",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.43,
+    "lng": 6.0,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_des_Rousses",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+  {
+    "title": "Lac de Bienne",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Bienne",
+    "region": "Canton de Berne (Suisse)",
+    "lat": 47.2,
+    "lng": 7.2,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Bienne",
+    "criteria": { "camping": true, "baignade": true, "feu": true, "discretion": 3, "peche": true }
+  },
+  {
+    "title": "Lac de Bonlieu",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Bonlieu",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.45,
+    "lng": 5.85,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Bonlieu",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 3, "peche": true }
+  },
+  {
+    "title": "Lac de Vouglans",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/placeholder.jpg",
+    "city": "Moirans-en-Montagne",
+    "region": "Bourgogne-Franche-Comté",
+    "lat": 46.6,
+    "lng": 5.5,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Vouglans",
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 3, "peche": true }
+  }
+]
