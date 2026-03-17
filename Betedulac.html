@@ -30,21 +30,6 @@ body {
   transition: all 0.4s ease;
 }
 
-card.innerHTML =
-  '<img src="' + item.image + '" alt="' + item.title + '">' +
-  '<div class="subtitle">' + (item.city || '') + ', ' + (item.region || '') + '</div>' +
-  '<div class="card-content">' +
-    '<h3>' + item.title + '</h3>' +
-    '<div class="links">' +
-      '<a href="https://www.google.com/maps?q=' + item.lat + ',' + item.lng + '" target="_blank">📍</a>' +
-      '<a href="https://earth.google.com/web/@' + item.lat + ',' + item.lng + '" target="_blank">🌍</a>' +
-      '<a href="' + item.wiki + '" target="_blank">📚</a>' +
-      '<a href="https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(item.title) + '" target="_blank">🖼️</a>' +
-    '</div>' +
-    createCriteriaHTML(item.criteria) +
-  '</div>';
-  
-
 .subtitle {
   text-align: center;
   font-size: 14px;
@@ -61,6 +46,7 @@ card.innerHTML =
 .criteria .discretion { font-size: 18px; }
 .bar { display: inline-block; width: 15px; height: 10px; margin-right: 3px; background: gray; border-radius: 2px; }
 .bar.active { background: limegreen; }
+.bar.active-red { background: red; }
 .nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 30px; cursor: pointer; padding: 12px; background: rgba(0,0,0,0.6); border-radius: 50%; z-index: 10; }
 .left { left: 10px; }
 .right { right: 10px; }
@@ -250,18 +236,19 @@ function createCard(item, i) {
   if (i === index) card.classList.add("active");
 
   card.innerHTML = `
-    <img src="${item.image}" alt="${item.title}">
-    <div class="card-content">
-      <h3>${item.title}</h3>
-      <div class="links">
-        <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">📍</a>
-        <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">🌍</a>
-        <a href="${item.wiki}" target="_blank">📚</a>
-        <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
-      </div>
-      ${createCriteriaHTML(item.criteria)}
+  <img src="${item.image}" alt="${item.title}">
+  <div class="subtitle">${item.city ?? ''}, ${item.region ?? ''}</div>
+  <div class="card-content">
+    <h3>${item.title}</h3>
+    <div class="links">
+      <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">📍</a>
+      <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">🌍</a>
+      <a href="${item.wiki}" target="_blank">📚</a>
+      <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
     </div>
-  `;
+    ${createCriteriaHTML(item.criteria)}
+  </div>
+`;
   return card;
 }
 
