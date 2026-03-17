@@ -109,11 +109,12 @@ function createCard(item, i) {
   card.innerHTML = `
   <img src="${item.image}" alt="${item.title}">
   <div class="subtitle">${item.city ?? ''}, ${item.region ?? ''}</div>
-
-    ${createCriteriaHTML(item.criteria)}
-    <div class="card-content">
+  <div class="card-content">
     <h3>${item.title}</h3>
-    <div class="links">
+   
+    ${createCriteriaHTML(item.criteria)}
+  </div>
+   <div class="links">
 
       <div>Google Map 
         <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">📍</a>
@@ -133,7 +134,6 @@ function createCard(item, i) {
 
 
     </div>
-  </div>
 `;
   return card;
 }
