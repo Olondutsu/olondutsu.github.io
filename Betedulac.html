@@ -29,6 +29,27 @@ body {
   opacity: 0.5;
   transition: all 0.4s ease;
 }
+card.innerHTML = `
+  <img src="${item.image}" alt="${item.title}">
+  <div class="subtitle">${item.city ?? ''}, ${item.region ?? ''}</div>
+  <div class="card-content">
+    <h3>${item.title}</h3>
+    <div class="links">
+      <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">📍</a>
+      <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">🌍</a>
+      <a href="${item.wiki}" target="_blank">📚</a>
+      <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
+    </div>
+    ${createCriteriaHTML(item.criteria)}
+  </div>
+`;
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #aaa;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
 .card.active { transform: scale(1); opacity: 1; }
 .card img { width: 100%; height: 250px; object-fit: cover; }
 .card-content { padding: 15px; }
@@ -195,28 +216,25 @@ const carousel = document.getElementById("carousel");
 let index = 0;
 
 function createCriteriaHTML(c) {
-  // Liste des critères à afficher ligne par ligne
-  const crits = [
-    { name: 'Baignade', value: c.baigade ?? false },
-    { name: 'Camping', value: c.camping ?? false },
-    { name: 'Feu', value: c.feu ?? false },
-    { name: 'Pêche', value: c.peche ?? false },
-  ];
+  // On définit les emojis OK / interdits
+  const getEmoji = (okEmoji, falseEmoji, value) => value ? okEmoji : falseEmoji;
 
-  // Discrétion sur une ligne séparée
-  let discretionHTML = '';
-  for (let i = 1; i <= 5; i++) {
-    discretionHTML += `<span class="bar ${i <= c.discretion ? 'active' : ''}"></span>`;
-  }
-
-  // Génération HTML ligne par ligne
-  let html = '<div class="criteria">';
-  crits.forEach(cr => {
-    html += `<div>${cr.name}: ${cr.value}</div>`;
-  });
-  html += `<div>Discrétion 🥷 ${discretionHTML}</div>`;
-  html += '</div>';
-
+  // Chaque critère sur sa ligne
+  const html = `
+    <div class="criteria">
+      <div>🏊 Baignade: ${getEmoji('✅','⛔', c.baigade ?? false)}</div>
+      <div>🏕️ Camping: ${getEmoji('✅','⛔', c.camping ?? false)}</div>
+      <div>🔥 Feu: ${getEmoji('✅','⛔', c.feu ?? false)}</div>
+      <div>🎣 Pêche: ${getEmoji('✅','⛔', c.peche ?? false)}</div>
+      <div>🥷 Discrétion: ${(() => {
+        let bars = '';
+        for (let i = 1; i <= 5; i++) {
+          bars += `<span class="bar ${i <= c.discretion ? 'active' : ''}"></span>`;
+        }
+        return bars;
+      })()}</div>
+    </div>
+  `;
   return html;
 }
 
