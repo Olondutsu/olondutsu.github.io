@@ -29,20 +29,22 @@ body {
   opacity: 0.5;
   transition: all 0.4s ease;
 }
-card.innerHTML = `
-  <img src="${item.image}" alt="${item.title}">
-  <div class="subtitle">${item.city ?? ''}, ${item.region ?? ''}</div>
-  <div class="card-content">
-    <h3>${item.title}</h3>
-    <div class="links">
-      <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">📍</a>
-      <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">🌍</a>
-      <a href="${item.wiki}" target="_blank">📚</a>
-      <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
-    </div>
-    ${createCriteriaHTML(item.criteria)}
-  </div>
-`;
+
+card.innerHTML =
+  '<img src="' + item.image + '" alt="' + item.title + '">' +
+  '<div class="subtitle">' + (item.city || '') + ', ' + (item.region || '') + '</div>' +
+  '<div class="card-content">' +
+    '<h3>' + item.title + '</h3>' +
+    '<div class="links">' +
+      '<a href="https://www.google.com/maps?q=' + item.lat + ',' + item.lng + '" target="_blank">📍</a>' +
+      '<a href="https://earth.google.com/web/@' + item.lat + ',' + item.lng + '" target="_blank">🌍</a>' +
+      '<a href="' + item.wiki + '" target="_blank">📚</a>' +
+      '<a href="https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(item.title) + '" target="_blank">🖼️</a>' +
+    '</div>' +
+    createCriteriaHTML(item.criteria) +
+  '</div>';
+  
+
 .subtitle {
   text-align: center;
   font-size: 14px;
@@ -216,20 +218,24 @@ const carousel = document.getElementById("carousel");
 let index = 0;
 
 function createCriteriaHTML(c) {
-  // On définit les emojis OK / interdits
   const getEmoji = (okEmoji, falseEmoji, value) => value ? okEmoji : falseEmoji;
 
-  // Chaque critère sur sa ligne
   const html = `
     <div class="criteria">
       <div>🏊 Baignade: ${getEmoji('✅','⛔', c.baigade ?? false)}</div>
       <div>🏕️ Camping: ${getEmoji('✅','⛔', c.camping ?? false)}</div>
       <div>🔥 Feu: ${getEmoji('✅','⛔', c.feu ?? false)}</div>
       <div>🎣 Pêche: ${getEmoji('✅','⛔', c.peche ?? false)}</div>
-      <div>🥷 Discrétion: ${(() => {
+      <div>🥷 ${(() => {
         let bars = '';
         for (let i = 1; i <= 5; i++) {
-          bars += `<span class="bar ${i <= c.discretion ? 'active' : ''}"></span>`;
+          if (i <= c.discretion) {
+            // jusqu'à 3 vert, au-delà rouge
+            const colorClass = i <= 3 ? 'active' : 'active-red';
+            bars += `<span class="bar ${colorClass}"></span>`;
+          } else {
+            bars += `<span class="bar"></span>`;
+          }
         }
         return bars;
       })()}</div>
