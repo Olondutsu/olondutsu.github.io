@@ -195,14 +195,29 @@ const carousel = document.getElementById("carousel");
 let index = 0;
 
 function createCriteriaHTML(c) {
-  const campingIcon = c.camping ? '🏕️' : '⛔';
-  const baignadeIcon = c.baigade ? '🏊' : '⛔';
-  const feuIcon = c.feu ? '🔥' : '⛔';
+  // Liste des critères à afficher ligne par ligne
+  const crits = [
+    { name: 'Baignade', value: c.baigade ?? false },
+    { name: 'Camping', value: c.camping ?? false },
+    { name: 'Feu', value: c.feu ?? false },
+    { name: 'Pêche', value: c.peche ?? false },
+  ];
+
+  // Discrétion sur une ligne séparée
   let discretionHTML = '';
   for (let i = 1; i <= 5; i++) {
     discretionHTML += `<span class="bar ${i <= c.discretion ? 'active' : ''}"></span>`;
   }
-  return `<div class="criteria">${campingIcon} ${baignadeIcon} ${feuIcon} <span class="discretion">🥷 ${discretionHTML}</span></div>`;
+
+  // Génération HTML ligne par ligne
+  let html = '<div class="criteria">';
+  crits.forEach(cr => {
+    html += `<div>${cr.name}: ${cr.value}</div>`;
+  });
+  html += `<div>Discrétion 🥷 ${discretionHTML}</div>`;
+  html += '</div>';
+
+  return html;
 }
 
 function createCard(item, i) {
