@@ -120,14 +120,15 @@ function createCard(item, i) {
       <div>Google Earth 
         <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">🌍</a>
       </div>
+      
+      <div>Google Images 
+        <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
+      </div>
 
       <div>Wikipedia 
         <a href="${item.wiki}" target="_blank">📚</a>
       </div>
 
-      <div>Images 
-        <a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.title)}" target="_blank">🖼️</a>
-      </div>
 
     </div>
     ${createCriteriaHTML(item.criteria)}
