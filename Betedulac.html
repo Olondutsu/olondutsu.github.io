@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carousel Cards</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #111;
+      color: white;
+    }
+
+    .carousel-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .carousel {
+      display: flex;
+      transition: transform 0.4s ease;
+    }
+
+    .card {
+      min-width: 300px;
+      margin: 0 10px;
+      background: #222;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    .card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+
+    .card-content {
+      padding: 15px;
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+    }
+
+    .links a {
+      display: block;
+      color: #4da6ff;
+      text-decoration: none;
+      margin-top: 5px;
+    }
+
+    .nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 30px;
+      cursor: pointer;
+      padding: 10px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 50%;
+    }
+
+    .left { left: 10px; }
+    .right { right: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="carousel-container">
+  <div class="nav left" onclick="move(-1)">&#10094;</div>
+  <div class="carousel" id="carousel"></div>
+  <div class="nav right" onclick="move(1)">&#10095;</div>
+</div>
+
+<script>
+const data = [
+  {
+    title: "Tour Eiffel",
+    image: "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg",
+    lat: 48.8584,
+    lng: 2.2945,
+    wiki: "https://fr.wikipedia.org/wiki/Tour_Eiffel"
+  },
+  {
+    title: "Colisée",
+    image: "https://upload.wikimedia.org/wikipedia/commons/d/d5/Colosseo_2020.jpg",
+    lat: 41.8902,
+    lng: 12.4922,
+    wiki: "https://fr.wikipedia.org/wiki/Colis%C3%A9e"
+  },
+  {
+    title: "Statue de la Liberté",
+    image: "https://upload.wikimedia.org/wikipedia/commons/a/a1/Statue_of_Liberty_7.jpg",
+    lat: 40.6892,
+    lng: -74.0445,
+    wiki: "https://fr.wikipedia.org/wiki/Statue_de_la_Libert%C3%A9"
+  }
+];
+
+const carousel = document.getElementById("carousel");
+let index = 0;
+
+function createCard(item) {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  card.innerHTML = `
+    <img src="${item.image}" alt="${item.title}">
+    <div class="card-content">
+      <h3>${item.title}</h3>
+      <div class="links">
+        <a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank">Google Maps</a>
+        <a href="https://earth.google.com/web/@${item.lat},${item.lng}" target="_blank">Google Earth</a>
+        <a href="${item.wiki}" target="_blank">Wikipedia</a>
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
+function render() {
+  carousel.innerHTML = "";
+  data.forEach(item => carousel.appendChild(createCard(item)));
+}
+
+function move(direction) {
+  index += direction;
+  if (index < 0) index = 0;
+  if (index > data.length - 1) index = data.length - 1;
+
+  const offset = index * 320;
+  carousel.style.transform = `translateX(-${offset}px)`;
+}
+
+render();
+</script>
+
+</body>
+</html>
