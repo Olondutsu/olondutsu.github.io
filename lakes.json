@@ -182,7 +182,7 @@
       {
     "title": "Lacs de Madamète",
     "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
-    "city": "Saint-Lary-Soulan",
+    "city": " Barèges",
     "region": "Occitanie",
     "lat": 42.819,
     "lng": 0.181,
@@ -191,32 +191,32 @@
   },
       {
     "title": "Lac de la Tempête",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
-    "city": "Saint-Lary-Soulan",
-    "region": "Occitanie",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/2/27/Lacs_de_la_Temp%C3%AAte1.jpg",
+    "city": "Cevins",
+    "region": "Beaufortain",
     "lat": 42.819,
     "lng": 0.181,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
     "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
   },
       {
-    "title": "Lacs des 5 Lacs au Ballon d'Alsace",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
-    "city": "Saint-Lary-Soulan",
-    "region": "Occitanie",
+    "title": "Lac de Longemer",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/2/23/Longemer3.jpg",
+    "city": "Xonrupt-Longemer",
+    "region": "Vosges",
     "lat": 42.819,
     "lng": 0.181,
-    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Longemer",
     "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
   },
       {
     "title": "Plateau d'Emparis",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
-    "city": "Saint-Lary-Soulan",
-    "region": "Occitanie",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Tour_de_l%27_Oisans_10.jpg",
+    "city": "jcpfrere",
+    "region": "Hautes-Alpes",
     "lat": 42.819,
     "lng": 0.181,
-    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "wiki": "https://fr.wikipedia.org/wiki/Plateau_d%27Emparis",
     "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
   }
 ]
