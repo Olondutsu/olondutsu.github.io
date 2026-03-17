@@ -7,7 +7,7 @@
     "lat": 42.819,
     "lng": 0.181,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
-    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 3, "peche": true }
   },
   {
     "title": "Lac de Vassivière",
@@ -17,7 +17,7 @@
     "lat": 45.7925,
     "lng": 1.8861,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Vassivi%C3%A8re",
-    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 3, "peche": true }
+    "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 5, "peche": true }
   },
   {
     "title": "Lac des Pises",
@@ -27,7 +27,7 @@
     "lat": 44.167,
     "lng": 3.5,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_des_Pises",
-    "criteria": { "camping": true, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 2, "peche": true }
   },
   {
     "title": "Lac de Chalain",
@@ -37,7 +37,7 @@
     "lat": 46.667,
     "lng": 5.78,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Chalain",
-    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 2, "peche": true }
+    "criteria": { "camping": false, "baignade": true, "feu": false, "discretion": 4, "peche": true }
   },
   {
     "title": "Lac de Saint-Point",
@@ -168,5 +168,55 @@
     "lng": 5.5,
     "wiki": "https://fr.wikipedia.org/wiki/Lac_de_Vouglans",
     "criteria": { "camping": true, "baignade": true, "feu": false, "discretion": 3, "peche": true }
+  },
+    {
+    "title": "Lac d'Allos",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "city": "Saint-Lary-Soulan",
+    "region": "Occitanie",
+    "lat": 42.819,
+    "lng": 0.181,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+      {
+    "title": "Lacs de Madamète",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "city": "Saint-Lary-Soulan",
+    "region": "Occitanie",
+    "lat": 42.819,
+    "lng": 0.181,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+      {
+    "title": "Lac de la Tempête",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "city": "Saint-Lary-Soulan",
+    "region": "Occitanie",
+    "lat": 42.819,
+    "lng": 0.181,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+      {
+    "title": "Lacs des 5 Lacs au Ballon d'Alsace",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "city": "Saint-Lary-Soulan",
+    "region": "Occitanie",
+    "lat": 42.819,
+    "lng": 0.181,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
+  },
+      {
+    "title": "Plateau d'Emparis",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Lac_de_l%27oule_5CIMG7452.JPG",
+    "city": "Saint-Lary-Soulan",
+    "region": "Occitanie",
+    "lat": 42.819,
+    "lng": 0.181,
+    "wiki": "https://fr.wikipedia.org/wiki/Lac_de_l%27Oule",
+    "criteria": { "camping": false, "baignade": false, "feu": false, "discretion": 4, "peche": true }
   }
 ]
