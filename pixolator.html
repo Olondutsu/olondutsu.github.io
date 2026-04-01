@@ -306,4 +306,122 @@ container.addEventListener('touchend', () => { isPanning = false; });
 
 /** PANEL DRAG (MOBILE & DESKTOP) **/
 document.querySelectorAll('.panel').forEach(p => {
-    const header
+    const header = p.querySelector('.panel-header');
+    let ox, oy, isMoving = false;
+    
+    const start = (e) => {
+        isMoving = true;
+        const ev = e.touches ? e.touches[0] : e;
+        ox = ev.clientX - p.offsetLeft; oy = ev.clientY - p.offsetTop;
+    };
+    const move = (e) => {
+        if (!isMoving) return;
+        const ev = e.touches ? e.touches[0] : e;
+        p.style.left = (ev.clientX - ox) + "px";
+        p.style.top = (ev.clientY - oy) + "px";
+        p.style.transform = "none";
+    };
+    header.addEventListener('mousedown', start);
+    header.addEventListener('touchstart', start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move, {passive:false});
+    window.addEventListener('mouseup', () => isMoving = false);
+    window.addEventListener('touchend', () => isMoving = false);
+});
+
+/** UTILS **/
+function setTool(t) { tool = t; document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === t)); }
+function showPanel(id) { hidePanels(); document.getElementById(id).style.display = "block"; }
+function hidePanels() { document.querySelectorAll('.panel').forEach(p => p.style.display = 'none'); }
+
+function toggleMX(v) { mirrorX = v; refresh(); }
+function toggleMY(v) { mirrorY = v; refresh(); }
+function toggleRadial(v) { mirrorRadial = v; refresh(); }
+function updateMX(v) { mX = parseFloat(v); refresh(); }
+function updateMY(v) { mY = parseFloat(v); refresh(); }
+function updateLines() {
+    const lx = document.getElementById("mirrorLineX"), ly = document.getElementById("mirrorLineY");
+    lx.style.display = mirrorX ? "block" : "none"; lx.style.left = (mX * pixelSize + pixelSize/2) + "px";
+    ly.style.display = mirrorY ? "block" : "none"; ly.style.top = (mY * pixelSize + pixelSize/2) + "px";
+}
+
+function rebuildPalette() {
+    const cont = document.getElementById("colorContainer"); cont.innerHTML = "";
+    paletteColors.forEach((c, idx) => {
+        const wrap = document.createElement("div"); wrap.className = "color-wrapper";
+        const d = document.createElement("div"); d.className = "color" + (c === currentColor ? " active" : "");
+        d.style.background = c;
+        d.onclick = () => { currentColor = c; rebuildPalette(); };
+        const del = document.createElement("div"); del.className = "del-color"; del.innerText = "✕";
+        del.onclick = (e) => { e.stopPropagation(); paletteColors.splice(idx,1); rebuildPalette(); };
+        wrap.append(d, del); cont.appendChild(wrap);
+    });
+}
+
+function addNewColor() {
+    let i = document.createElement("input"); i.type="color";
+    i.onchange = () => { paletteColors.push(i.value); currentColor = i.value; rebuildPalette(); };
+    i.click();
+}
+
+function changeBG() {
+    let i = document.createElement("input"); i.type="color"; i.value = bgDefault;
+    i.onchange = () => { bgDefault = i.value; refresh(); }; i.click();
+}
+
+function floodFill(x, y, target, replacement) {
+    if (target === replacement) return;
+    let stack = [[x, y]], diag = document.getElementById("fillDiag").checked;
+    while(stack.length) {
+        let [cx, cy] = stack.pop();
+        if(cx<0||cy<0||cx>=W||cy>=H||pixels[cy*W+cx]!==target) continue;
+        pixels[cy*W+cx] = replacement;
+        stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+        if(diag) stack.push([cx+1,cy+1],[cx-1,cy-1],[cx+1,cy-1],[cx-1,cy+1]);
+    }
+}
+
+function undo() { if(undoStack.length) { redoStack.push(JSON.stringify(pixels)); pixels = JSON.parse(undoStack.pop()); refresh(); } }
+function redo() { if(redoStack.length) { undoStack.push(JSON.stringify(pixels)); pixels = JSON.parse(redoStack.pop()); refresh(); } }
+function saveState() { undoStack.push(JSON.stringify(pixels)); if(undoStack.length>30) undoStack.shift(); redoStack = []; }
+
+function exportPNG(trans) {
+    const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
+    const tCtx = tmp.getContext('2d');
+    for(let i=0; i<pixels.length; i++) {
+        if(trans && pixels[i] === bgDefault) continue;
+        tCtx.fillStyle = pixels[i]; tCtx.fillRect(i%W, Math.floor(i/W), 1, 1);
+    }
+    const a = document.createElement('a'); a.download = 'pixelart.png'; a.href = tmp.toDataURL(); a.click();
+}
+
+function saveJSON() {
+    const blob = new Blob([JSON.stringify({W, H, pixels, paletteColors})], {type:"application/json"});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "draw.json"; a.click();
+}
+
+function loadJSON() {
+    let i = document.createElement('input'); i.type="file";
+    i.onchange = e => {
+        let r = new FileReader();
+        r.onload = () => { let d = JSON.parse(r.target.result); init(d.W, d.H, d.pixels); paletteColors = d.paletteColors; rebuildPalette(); };
+        r.readAsText(e.target.files[0]);
+    }; i.click();
+}
+
+function copySelection() { if(sel) clipboard = { w: Math.abs(sel.x1-sel.x2)+1, h: Math.abs(sel.y1-sel.y2)+1, data: [] }; // logic simplifiée }
+function pasteSelection() { alert("Paste active at selection origin"); }
+function toggleGrid() { gridMode = !gridMode; render(); }
+function toggleRender() { renderMode = renderMode === "pixel" ? "cross" : "pixel"; refresh(); }
+function saveLocal() { localStorage.setItem("pix_pro_v4", JSON.stringify({W,H,pixels,paletteColors})); }
+
+/** START **/
+const saved = localStorage.getItem("pix_pro_v4");
+if(saved) {
+    const s = JSON.parse(saved); paletteColors = s.paletteColors; init(s.W, s.H, s.pixels);
+} else { init(32, 32); }
+rebuildPalette();
+</script>
+
+</body>
+</html>
