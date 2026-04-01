@@ -188,12 +188,16 @@ let paletteColors = ["#000000", "#ffffff", "#be0000", "#ffcc00", "#1a5e1a", "#2a
 let tool = "pencil", brushSize = 1;
 let mirrorX = false, mirrorY = false, mirrorRadial = false, mX = 15.5, mY = 15.5;
 let undoStack = [], redoStack = [];
-let gridMode = true, renderMode = "pixel", isDrawing = false, isPanning = false;
+let gridMode = true, renderMode = "pixel", isDrawing = false;
 let sel = null, clipboard = null, lastRulePoint = null;
 
 // Touch Management
 let initialPinchDist = null;
 let lastTouchPos = null;
+let isPanning = false;
+let lastPinchDist = 0;
+let lastTouchX = 0;
+let lastTouchY = 0;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -207,8 +211,11 @@ function init(w, h, data = null) {
     document.getElementById("mXSlider").max = W - 1;
     document.getElementById("mYSlider").max = H - 1;
     refresh();
-    container.scrollLeft = 2000 + (W * pixelSize / 2) - (container.clientWidth / 2);
-    container.scrollTop = 2000 + (H * pixelSize / 2) - (container.clientHeight / 2);
+    // Centrage initial amélioré
+    setTimeout(() => {
+        container.scrollLeft = 2000 + (W * pixelSize / 2) - (container.clientWidth / 2);
+        container.scrollTop = 2000 + (H * pixelSize / 2) - (container.clientHeight / 2);
+    }, 10);
 }
 
 function refresh() {
@@ -250,6 +257,75 @@ function render() {
     updateStats();
 }
 
+/** TOUCH & ZOOM LOGIC (FLUID VERSION) **/
+
+function getDistance(t1, t2) {
+    return Math.hypot(t1.pageX - t2.pageX, t1.pageY - t2.pageY);
+}
+
+function getMidpoint(t1, t2) {
+    return { x: (t1.pageX + t2.pageX) / 2, y: (t1.pageY + t2.pageY) / 2 };
+}
+
+container.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        isPanning = true;
+        isDrawing = false;
+        lastPinchDist = getDistance(e.touches[0], e.touches[1]);
+    } else if (e.touches.length === 1) {
+        lastTouchX = e.touches[0].pageX;
+        lastTouchY = e.touches[0].pageY;
+        // On ne met isPanning à true ici que si on veut scroller à un doigt (ex: sur les bords)
+    }
+}, { passive: false });
+
+container.addEventListener('touchmove', e => {
+    e.preventDefault(); // Empêche le rebond Safari/Chrome
+
+    if (e.touches.length === 2 && isPanning) {
+        // --- ZOOM FLUIDE ---
+        const currentDist = getDistance(e.touches[0], e.touches[1]);
+        const mid = getMidpoint(e.touches[0], e.touches[1]);
+        
+        // Facteur multiplicateur sensible
+        const zoomFactor = currentDist / lastPinchDist;
+        const oldSize = pixelSize;
+        
+        // Limites de zoom
+        pixelSize = Math.max(2, Math.min(100, pixelSize * zoomFactor));
+        
+        if (pixelSize !== oldSize) {
+            refresh();
+            // Ajustement du scroll pour zoomer vers le centre des doigts
+            const rect = container.getBoundingClientRect();
+            const offsetX = mid.clientX - rect.left;
+            const offsetY = mid.clientY - rect.top;
+            
+            container.scrollLeft = (container.scrollLeft + offsetX) * (pixelSize / oldSize) - offsetX;
+            container.scrollTop = (container.scrollTop + offsetY) * (pixelSize / oldSize) - offsetY;
+        }
+        lastPinchDist = currentDist;
+
+    } else if (e.touches.length === 1 && isPanning) {
+        // --- PANNING FLUIDE (si activé) ---
+        const dx = e.touches[0].pageX - lastTouchX;
+        const dy = e.touches[0].pageY - lastTouchY;
+        container.scrollLeft -= dx;
+        container.scrollTop -= dy;
+    }
+    
+    if (e.touches.length > 0) {
+        lastTouchX = e.touches[0].pageX;
+        lastTouchY = e.touches[0].pageY;
+    }
+}, { passive: false });
+
+container.addEventListener('touchend', e => {
+    if (e.touches.length < 2) {
+        isPanning = false;
+        lastPinchDist = 0;
+    }
+});
 /** CORE DRAWING **/
 function setPix(x, y, col) {
     if (x < 0 || y < 0 || x >= W || y >= H) return;
