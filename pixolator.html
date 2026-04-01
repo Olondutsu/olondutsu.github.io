@@ -5,62 +5,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Pix-o-lator Pro | INTEGRAL EDITION</title>
     <style>
-        body { margin: 0; background: #1a1a1a; color: #eee; font-family: sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        #top { height: 44px; background: #222; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-bottom: 1px solid #444; z-index: 100; overflow-x: auto; }
-        #tools { position: fixed; left: 10px; top: 60px; background: #222; border: 1px solid #555; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
-        button { background: #333; color: #eee; border: 1px solid #555; padding: 8px; cursor: pointer; border-radius: 4px; white-space: nowrap; font-size: 1.1em; }
-        button.active { background: #007bff; border-color: #00bfff; }
+        :root { --bg: #1a1a1a; --panel: #2a2a2a; --accent: #007bff; --border: #444; }
+        body { margin: 0; background: var(--bg); color: #eee; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
-        #canvasContainer { flex: 1; position: relative; overflow: auto; background: #0b0b0b; display: block; }
+        /* Barre supérieure */
+        #top { height: 50px; background: #222; display: flex; align-items: center; gap: 10px; padding: 0 15px; border-bottom: 1px solid var(--border); z-index: 100; overflow-x: auto; }
+        
+        /* Barre d'outils latérale - MODIFIÉE POUR LE SCROLL */
+        #tools { 
+            position: fixed; left: 15px; top: 70px; 
+            max-height: calc(100vh - 170px); overflow-y: auto; 
+            background: var(--panel); border: 1px solid #555; border-radius: 12px; padding: 10px; 
+            display: flex; flex-direction: column; gap: 12px; z-index: 50; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 130px;
+        }
+        
+        .tool-group { display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid #444; padding-bottom: 8px; }
+        .tool-group:last-child { border: none; }
+
+        button { background: #333; color: #eee; border: 1px solid #555; padding: 8px; cursor: pointer; border-radius: 6px; transition: 0.2s; display: flex; align-items: center; gap: 8px; font-size: 0.9em; }
+        button:hover { background: #444; }
+        button.active { background: var(--accent); border-color: #00bfff; }
+
+        /* Settings Brush */
+        .brush-size { font-size: 0.8em; color: #aaa; text-align: center; }
+
+        /* Zone de travail */
+        #canvasContainer { flex: 1; position: relative; overflow: auto; background: #0b0b0b; display: block; scroll-behavior: auto; }
         #canvasWrapper { position: relative; margin: 2000px; background: #111; width: fit-content; height: fit-content; }
-        canvas { image-rendering: pixelated; touch-action: none; background: #111; display: block; box-shadow: 0 0 20px rgba(0,0,0,0.5); cursor: crosshair; }
+        canvas { image-rendering: pixelated; touch-action: none; background: #111; display: block; box-shadow: 0 0 30px rgba(0,0,0,0.8); cursor: crosshair; }
         
+        /* Miroirs et Selection */
         .mirror-line { position: absolute; pointer-events: none; z-index: 10; display: none; }
         #mirrorLineX { width: 2px; height: 100%; background: rgba(255, 0, 234, 0.4); border-left: 1px dashed #ff00ea; top: 0; transform: translateX(-1px); }
         #mirrorLineY { height: 2px; width: 100%; background: rgba(255, 0, 234, 0.4); border-top: 1px dashed #ff00ea; left: 0; transform: translateY(-1px); }
-        #selectionBox { border: 1px dashed #fff; position: absolute; pointer-events: none; display: none; background: rgba(255,255,255,0.1); z-index: 11; }
         
-        #palette { height: 64px; background: #222; border-top: 1px solid #444; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .color { width: 34px; height: 34px; border: 2px solid #000; border-radius: 4px; cursor: pointer; }
-        .color.active { border-color: #fff; transform: scale(1.1); }
+        /* Palette */
+        #palette { height: 75px; background: #222; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 15px; padding: 0 20px; z-index: 110; }
+        .color-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
+        .color { width: 38px; height: 38px; border: 2px solid #000; border-radius: 6px; cursor: pointer; position: relative; z-index: 1; }
+        .color.active { border-color: #fff; transform: scale(1.1); z-index: 2; }
         
-        .panel { position: fixed; top: 60px; right: 20px; background: #222; border: 1px solid #555; padding: 15px; display: none; z-index: 200; border-radius: 8px; }
-        .slider-box { display: none; flex-direction: column; position: absolute; left: 55px; background: #222; padding: 10px; border: 1px solid #555; border-radius: 5px; min-width: 140px; }
-        #addColorBtn { width: 34px; height: 34px; line-height: 30px; text-align: center; border: 1px dashed #555; cursor: pointer; font-weight: bold; }
+        /* MODIFIÉ : Z-INDEX CROIX */
+        .del-color { position: absolute; top: -5px; right: -5px; background: red; color: white; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; line-height: 18px; text-align: center; cursor: pointer; border: 1px solid #000; display: none; z-index: 10; font-weight: bold; }
+        .color-wrapper:hover .del-color { display: block; }
+        
+        #bgColorBtn { width: 38px; height: 38px; border: 1px solid #777; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7em; flex-direction: column; background: #111; }
+        #addColorBtn { width: 38px; height: 38px; line-height: 34px; text-align: center; border: 2px dashed #555; border-radius: 6px; cursor: pointer; font-size: 1.5em; }
+
+        /* Panels */
+        .panel { position: fixed; top: 65px; right: 20px; background: var(--panel); border: 1px solid #555; padding: 20px; display: none; z-index: 200; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+        .slider-box { display: none; flex-direction: column; position: absolute; left: 135px; top: 0; background: var(--panel); padding: 12px; border: 1px solid #555; border-radius: 8px; min-width: 150px; box-shadow: 5px 5px 15px rgba(0,0,0,0.3); z-index: 1000; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        input[type="number"] { background: #333; border: 1px solid #555; color: white; padding: 5px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <div id="top">
-    <button id="newBtn">New</button>
-    <button id="resizeBtn">Canvas Size</button>
-    <button id="saveJsonBtn">Save JSON</button>
-    <button id="loadJsonBtn">Open JSON</button>
-    <button id="exportBtn">Export PNG</button>
-    <button id="undoBtn">Undo</button>
-    <button id="redoBtn">Redo</button>
-    <button id="copyBtn">Copy</button>
-    <button id="pasteBtn">Paste</button>
+    <div class="tool-group" style="flex-direction:row; border:none; padding:0;">
+        <button id="newBtn">📄 New</button>
+        <button id="resizeBtn">📏 Size</button>
+    </div>
+    <div style="width:1px; height:30px; background:#444; margin:0 5px;"></div>
+    <button id="saveJsonBtn">💾 JSON</button>
+    <button id="loadJsonBtn">📁 Open</button>
+    <button id="exportBtn" style="background:#28a745">🖼️ Export PNG</button>
+    <div style="width:1px; height:30px; background:#444; margin:0 5px;"></div>
+    <button id="undoBtn">↩️ Undo</button>
+    <button id="redoBtn">↪️ Redo</button>
+    <div style="width:1px; height:30px; background:#444; margin:0 5px;"></div>
+    <button id="copyBtn">📄 Copy</button>
+    <button id="pasteBtn">📋 Paste</button>
 </div>
 
 <div id="tools">
-    <button data-tool="pencil" class="active" title="Pencil">✏️</button>
-    <button data-tool="eraser" title="Eraser">🧽</button>
-    <button data-tool="fill" title="Fill">🪣</button>
-    <button data-tool="picker" title="Picker">🧪</button>
-    <button data-tool="select" title="Select">✂️</button>
-    <div style="position:relative">
-        <button id="mirrorXBtn">↔️</button>
-        <div id="sliderXBox" class="slider-box"><label>Axe X (0.5 = entre)</label><input type="range" id="mirrorXSlider" step="0.5"></div>
+    <div class="tool-group">
+        <button data-tool="pencil" class="active">✏️ Pencil</button>
+        <button data-tool="eraser">🧽 Eraser</button>
+        <div class="brush-size">Size: <span id="sizeVal">1</span>px</div>
+        <input type="range" id="brushSlider" min="1" max="5" value="1" step="1">
     </div>
-    <div style="position:relative">
-        <button id="mirrorYBtn">↕️</button>
-        <div id="sliderYBox" class="slider-box"><label>Axe Y (0.5 = entre)</label><input type="range" id="mirrorYSlider" step="0.5"></div>
+    
+    <div class="tool-group">
+        <button data-tool="fill">🪣 Fill</button>
+        <button data-tool="picker">🧪 Picker</button>
+        <button data-tool="select">✂️ Select</button>
     </div>
-    <button id="gridBtn">#</button>
-    <button id="renderBtn">⬛</button>
-    <button id="zoomIn">＋</button>
-    <button id="zoomOut">－</button>
+
+    <div class="tool-group">
+        <div style="position:relative">
+            <button id="mirrorXBtn">↔️ Mirror X</button>
+            <div id="sliderXBox" class="slider-box"><label>Axe X</label><input type="range" id="mirrorXSlider" step="0.5"></div>
+        </div>
+        <div style="position:relative">
+            <button id="mirrorYBtn">↕️ Mirror Y</button>
+            <div id="sliderYBox" class="slider-box"><label>Axe Y</label><input type="range" id="mirrorYSlider" step="0.5"></div>
+        </div>
+    </div>
+
+    <div class="tool-group">
+        <button id="gridBtn"># Grid</button>
+        <button id="renderBtn">⬛ Mode</button>
+        <button id="zoomIn">＋ In</button>
+        <button id="zoomOut">－ Out</button>
+    </div>
 </div>
 
 <div id="canvasContainer">
@@ -68,32 +117,35 @@
         <canvas id="canvas"></canvas>
         <div id="mirrorLineX" class="mirror-line"></div>
         <div id="mirrorLineY" class="mirror-line"></div>
-        <div id="selectionBox"></div>
     </div>
 </div>
 
 <div id="palette">
-    <div id="colorContainer" style="display:flex; gap:8px;"></div>
-    <div id="addColorBtn" title="Ajouter une couleur">+</div>
+    <div id="bgColorBtn" title="Changer le fond"><span>BG</span></div>
+    <div style="width:1px; height:40px; background:#444;"></div>
+    <div id="colorContainer" style="display:flex; gap:10px;"></div>
+    <div id="addColorBtn" title="Ajouter">+</div>
 </div>
 
 <div id="resizePanel" class="panel">
-    <strong>Dimensions</strong><br><br>
-    W <input id="rw" type="number" style="width:50px"> H <input id="rh" type="number" style="width:50px"><br><br>
-    <button id="resizeOk">OK</button> <button id="resizeCancel">Annuler</button>
+    <strong>Dimensions du Canevas</strong><br><br>
+    Largeur <input id="rw" type="number" value="32"><br>
+    Hauteur <input id="rh" type="number" value="32"><br><br>
+    <button id="resizeOk">Appliquer</button> <button id="resizeCancel" style="background:#666">Annuler</button>
 </div>
 
 <script>
 let W = 32, H = 32, pixelSize = 25;
 let pixels = [];
 let currentColor = "#ffffff";
+let bgDefault = "#111111";
 let paletteColors = ["#000000", "#ffffff", "#be0000", "#ffcc00", "#1a5e1a", "#2a2aff"];
-let tool = "pencil", mirrorX = false, mirrorY = false, mX = 15.5, mY = 15.5;
+let tool = "pencil", brushSize = 1;
+let mirrorX = false, mirrorY = false, mX = 15.5, mY = 15.5;
 let undoStack = [], redoStack = [];
 let gridMode = true, renderMode = "pixel", isDrawing = false;
 let sel = null, clipboard = null, floatingLayer = null;
 
-// Navigation (Pan)
 let isPanning = false, startX, startY, scrollLeft, scrollTop;
 
 const container = document.getElementById("canvasContainer");
@@ -102,7 +154,7 @@ const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
 function init(w, h, data = null) {
     W = w; H = h;
-    pixels = data ? [...data] : new Array(W * H).fill("#111111");
+    pixels = data ? [...data] : new Array(W * H).fill(bgDefault);
     
     mX = (W - 1) / 2; mY = (H - 1) / 2;
     const sx = document.getElementById("mirrorXSlider");
@@ -122,64 +174,20 @@ function refresh() {
     updateUI();
 }
 
-/* --- NAVIGATION & ZOOM --- */
-container.addEventListener('wheel', e => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -2 : 2;
-    applyZoom(delta, e.clientX, e.clientY);
-}, { passive: false });
+/* --- LOGIQUE DESSIN --- */
+function setPix(x, y, c, saveManual = false) {
+    let radius = Math.floor(brushSize / 2);
+    let col = (tool === "eraser") ? bgDefault : c;
 
-function applyZoom(delta, mouseX = null, mouseY = null) {
-    const oldSize = pixelSize;
-    pixelSize = Math.max(2, Math.min(100, pixelSize + delta));
-    if (oldSize !== pixelSize) {
-        if (mouseX !== null) {
-            const rect = canvas.getBoundingClientRect();
-            const x = mouseX - rect.left;
-            const y = mouseY - rect.top;
-            const ratio = pixelSize / oldSize;
-            refresh();
-            container.scrollLeft += x * (ratio - 1);
-            container.scrollTop += y * (ratio - 1);
-        } else {
-            refresh();
+    for (let i = -radius; i <= (brushSize % 2 === 0 ? radius - 1 : radius); i++) {
+        for (let j = -radius; j <= (brushSize % 2 === 0 ? radius - 1 : radius); j++) {
+            drawSinglePix(x + i, y + j, col);
         }
     }
 }
 
-container.addEventListener('mousedown', e => {
-    // Bouton molette (1) OU Espace + Clic Gauche si tu veux
-    if (e.button === 1) { 
-        isPanning = true;
-        container.style.cursor = 'grabbing';
-        // On prend la position de la souris RELATIVE au container
-        startX = e.clientX; 
-        startY = e.clientY;
-        scrollLeft = container.scrollLeft;
-        scrollTop = container.scrollTop;
-        e.preventDefault();
-    }
-});
-
-window.addEventListener('mousemove', e => {
-    if (!isPanning) return;
-    // On calcule la distance parcourue par la souris
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    // On applique cette distance au scroll existant
-    container.scrollLeft = scrollLeft - dx;
-    container.scrollTop = scrollTop - dy;
-});
-
-window.addEventListener('mouseup', () => { 
-    isPanning = false; 
-    container.style.cursor = 'default'; 
-});
-
-/* --- LOGIQUE DESSIN & SYMETRIE --- */
-function setPix(x, y, c) {
+function drawSinglePix(x, y, col) {
     if (x < 0 || y < 0 || x >= W || y >= H) return;
-    let col = (tool === "eraser") ? "#111111" : c;
     pixels[y * W + x] = col;
 
     let sx = Math.round(mX * 2 - x);
@@ -192,20 +200,13 @@ function setPix(x, y, c) {
     }
 }
 
-function getCoord(e) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-        x: Math.floor((e.clientX - rect.left) / (rect.width / W)),
-        y: Math.floor((e.clientY - rect.top) / (rect.height / H))
-    };
-}
-
 function render() {
-    ctx.fillStyle = "#111111";
+    ctx.fillStyle = bgDefault;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     for (let i = 0; i < pixels.length; i++) {
         let x = i % W, y = Math.floor(i / W);
-        if (pixels[i] === "#111111") continue;
+        if (pixels[i] === bgDefault) continue;
         ctx.fillStyle = pixels[i];
         if (renderMode === "pixel") {
             ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
@@ -217,94 +218,77 @@ function render() {
         }
     }
 
-    // Dessin du groupe collé (Floating Layer)
     if (floatingLayer) {
         ctx.globalAlpha = 0.7;
         for (let j = 0; j < floatingLayer.h; j++) {
             for (let i = 0; i < floatingLayer.w; i++) {
                 let col = floatingLayer.data[j * floatingLayer.w + i];
-                if (col === "#111111") continue;
+                if (col === bgDefault) continue;
                 ctx.fillStyle = col;
                 ctx.fillRect((floatingLayer.x + i) * pixelSize, (floatingLayer.y + j) * pixelSize, pixelSize, pixelSize);
             }
         }
         ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 2;
+        ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 3;
         ctx.strokeRect(floatingLayer.x * pixelSize, floatingLayer.y * pixelSize, floatingLayer.w * pixelSize, floatingLayer.h * pixelSize);
     }
 
     if (gridMode) {
-        ctx.strokeStyle = "#333"; ctx.lineWidth = 0.5;
+        ctx.strokeStyle = "rgba(100,100,100,0.2)"; ctx.lineWidth = 0.5;
         for(let i=0; i<=W; i++){ ctx.beginPath(); ctx.moveTo(i*pixelSize,0); ctx.lineTo(i*pixelSize,canvas.height); ctx.stroke(); }
         for(let i=0; i<=H; i++){ ctx.beginPath(); ctx.moveTo(0,i*pixelSize); ctx.lineTo(canvas.width,i*pixelSize); ctx.stroke(); }
     }
-}
 
-function updateUI() {
-    const lx = document.getElementById("mirrorLineX"), ly = document.getElementById("mirrorLineY");
-    lx.style.display = mirrorX ? "block" : "none";
-    lx.style.left = (mX * pixelSize + pixelSize / 2) + "px";
-    ly.style.display = mirrorY ? "block" : "none";
-    ly.style.top = (mY * pixelSize + pixelSize / 2) + "px";
-    
-    const b = document.getElementById("selectionBox");
-    if(!sel || tool !== "select") { b.style.display="none"; } 
-    else {
-        const x = Math.min(sel.x1, sel.x2), y = Math.min(sel.y1, sel.y2);
+    if(sel && tool === "select") {
+        const xMin = Math.min(sel.x1, sel.x2), yMin = Math.min(sel.y1, sel.y2);
         const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
-        b.style.display = "block";
-        b.style.left = (x * pixelSize) + "px"; b.style.top = (y * pixelSize) + "px";
-        b.style.width = (w * pixelSize) + "px"; b.style.height = (h * pixelSize) + "px";
-    }
-}
-
-function confirmPaste() {
-    if (!floatingLayer) return;
-    saveState();
-    for (let j = 0; j < floatingLayer.h; j++) {
-        for (let i = 0; i < floatingLayer.w; i++) {
-            let tx = floatingLayer.x + i;
-            let ty = floatingLayer.y + j;
-            let col = floatingLayer.data[j * floatingLayer.w + i];
-            if (tx >= 0 && tx < W && ty >= 0 && ty < H && col !== "#111111") {
-                setPix(tx, ty, col);
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(xMin * pixelSize, yMin * pixelSize, w * pixelSize, h * pixelSize);
+        ctx.setLineDash([]);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1;
+        for(let j=0; j<h; j++) {
+            for(let i=0; i<w; i++) {
+                ctx.strokeRect((xMin+i)*pixelSize, (yMin+j)*pixelSize, pixelSize, pixelSize);
             }
         }
     }
-    floatingLayer = null;
-    refresh();
 }
 
-/* --- ACTIONS SOURIS --- */
+/* --- TOOLS --- */
 canvas.onpointerdown = e => {
     if (e.button !== 0) return;
     const p = getCoord(e);
-
     if (floatingLayer) {
-        // Si clic hors du bloc vert, on valide le collage
-        if (p.x < floatingLayer.x || p.x >= floatingLayer.x + floatingLayer.w || 
-            p.y < floatingLayer.y || p.y >= floatingLayer.y + floatingLayer.h) {
-            confirmPaste();
-        } else {
-            isDrawing = true; // On commence le drag
-        }
+        if (p.x < floatingLayer.x || p.x >= floatingLayer.x + floatingLayer.w || p.y < floatingLayer.y || p.y >= floatingLayer.y + floatingLayer.h) confirmPaste();
+        else isDrawing = true;
         return;
     }
-
     canvas.setPointerCapture(e.pointerId);
     saveState(); isDrawing = true;
     if(tool === "select") { sel = {x1: p.x, y1: p.y, x2: p.x, y2: p.y}; }
-    else if(tool === "picker") { currentColor = pixels[p.y*W+p.x]; rebuildPalette(); isDrawing = false; }
+    else if(tool === "picker") { 
+        let picked = pixels[p.y*W+p.x];
+        let idx = paletteColors.indexOf(currentColor);
+        if(idx !== -1) paletteColors[idx] = picked; 
+        currentColor = picked;
+        rebuildPalette(); isDrawing = false; 
+    }
     else if(tool === "fill") {
         let target = pixels[p.y*W+p.x];
-        let fillCol = (tool === "eraser") ? "#111111" : currentColor;
+        let fillCol = (tool === "eraser") ? bgDefault : currentColor;
         if(target !== fillCol) {
             let s = [[p.x, p.y]];
             while(s.length){
                 let [cx, cy] = s.pop();
                 if(cx>=0&&cy>=0&&cx<W&&cy<H && pixels[cy*W+cx]===target){
-                    setPix(cx, cy, fillCol);
-                    s.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+                    pixels[cy*W+cx] = fillCol;
+                    for(let dy=-1; dy<=1; dy++){
+                        for(let dx=-1; dx<=1; dx++){
+                            if(dx===0 && dy===0) continue;
+                            s.push([cx+dx, cy+dy]);
+                        }
+                    }
                 }
             }
         }
@@ -325,13 +309,69 @@ canvas.onpointermove = e => {
     refresh();
 };
 
-canvas.onpointerup = () => { 
-    isDrawing = false; 
-    localStorage.setItem("pix_save", JSON.stringify({W,H,pixels})); 
+canvas.onpointerup = () => { isDrawing = false; saveLocal(); };
+
+/* --- UI HELPERS --- */
+function getCoord(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: Math.floor((e.clientX - rect.left) / (rect.width / W)),
+        y: Math.floor((e.clientY - rect.top) / (rect.height / H))
+    };
+}
+
+function rebuildPalette() {
+    const c = document.getElementById("colorContainer"); c.innerHTML = "";
+    paletteColors.forEach((col, idx) => {
+        const wrap = document.createElement("div"); wrap.className = "color-wrapper";
+        const d = document.createElement("div"); 
+        d.className = "color" + (col===currentColor?" active":"");
+        d.style.background = col;
+        d.onclick = () => { currentColor = col; rebuildPalette(); };
+        
+        /* MODIFIÉ : DOUBLE CLIC POUR MODIFIER */
+        d.ondblclick = () => {
+            const i = document.createElement("input"); i.type="color"; i.value = col;
+            i.onchange = () => { paletteColors[idx] = i.value; currentColor = i.value; rebuildPalette(); refresh(); };
+            i.click();
+        };
+        
+        const del = document.createElement("div");
+        del.className = "del-color"; del.innerHTML = "✕";
+        del.onclick = (e) => { e.stopPropagation(); paletteColors.splice(idx, 1); rebuildPalette(); };
+        
+        wrap.appendChild(d); wrap.appendChild(del);
+        c.appendChild(wrap);
+    });
+    document.getElementById("bgColorBtn").style.background = bgDefault;
+}
+
+document.getElementById("bgColorBtn").onclick = () => {
+    const i = document.createElement("input"); i.type="color"; i.value = bgDefault;
+    i.onchange = () => { 
+        let oldBg = bgDefault;
+        bgDefault = i.value;
+        pixels = pixels.map(p => p === oldBg ? bgDefault : p);
+        rebuildPalette(); refresh(); 
+    }; i.click();
 };
 
-/* --- FONCTIONS BOUTONS --- */
-function saveState() { undoStack.push(JSON.stringify(pixels)); if(undoStack.length>50) undoStack.shift(); redoStack=[]; }
+document.getElementById("brushSlider").oninput = function() {
+    brushSize = parseInt(this.value);
+    document.getElementById("sizeVal").innerText = brushSize;
+};
+
+/* --- BOUTONS CORE --- */
+function updateUI() {
+    const lx = document.getElementById("mirrorLineX"), ly = document.getElementById("mirrorLineY");
+    lx.style.display = mirrorX ? "block" : "none";
+    lx.style.left = (mX * pixelSize + pixelSize / 2) + "px";
+    ly.style.display = mirrorY ? "block" : "none";
+    ly.style.top = (mY * pixelSize + pixelSize / 2) + "px";
+}
+
+function saveState() { undoStack.push(JSON.stringify({pixels, bgDefault})); if(undoStack.length>50) undoStack.shift(); redoStack=[]; }
+function saveLocal() { localStorage.setItem("pix_save_pro", JSON.stringify({W,H,pixels,bgDefault,paletteColors})); }
 
 document.querySelectorAll("[data-tool]").forEach(b => {
     b.onclick = () => {
@@ -341,64 +381,58 @@ document.querySelectorAll("[data-tool]").forEach(b => {
     };
 });
 
+document.getElementById("undoBtn").onclick = () => { if(undoStack.length){ redoStack.push(JSON.stringify({pixels, bgDefault})); let s = JSON.parse(undoStack.pop()); pixels=s.pixels; bgDefault=s.bgDefault; refresh(); rebuildPalette(); }};
+document.getElementById("redoBtn").onclick = () => { if(redoStack.length){ undoStack.push(JSON.stringify({pixels, bgDefault})); let s = JSON.parse(redoStack.pop()); pixels=s.pixels; bgDefault=s.bgDefault; refresh(); rebuildPalette(); }};
+
 document.getElementById("mirrorXBtn").onclick = function() { mirrorX = !mirrorX; this.classList.toggle("active"); document.getElementById("sliderXBox").style.display = mirrorX ? "flex" : "none"; refresh(); };
 document.getElementById("mirrorYBtn").onclick = function() { mirrorY = !mirrorY; this.classList.toggle("active"); document.getElementById("sliderYBox").style.display = mirrorY ? "flex" : "none"; refresh(); };
 document.getElementById("mirrorXSlider").oninput = function() { mX = parseFloat(this.value); refresh(); };
 document.getElementById("mirrorYSlider").oninput = function() { mY = parseFloat(this.value); refresh(); };
 
-document.getElementById("undoBtn").onclick = () => { if(undoStack.length){ redoStack.push(JSON.stringify(pixels)); pixels=JSON.parse(undoStack.pop()); refresh(); }};
-document.getElementById("redoBtn").onclick = () => { if(redoStack.length){ undoStack.push(JSON.stringify(pixels)); pixels=JSON.parse(redoStack.pop()); refresh(); }};
-
-document.getElementById("zoomIn").onclick = () => applyZoom(5);
-document.getElementById("zoomOut").onclick = () => applyZoom(-5);
+document.getElementById("zoomIn").onclick = () => { pixelSize = Math.min(100, pixelSize+5); refresh(); };
+document.getElementById("zoomOut").onclick = () => { pixelSize = Math.max(2, pixelSize-5); refresh(); };
 document.getElementById("gridBtn").onclick = () => { gridMode=!gridMode; render(); };
 document.getElementById("renderBtn").onclick = () => { renderMode = (renderMode==="pixel"?"cross":"pixel"); refresh(); };
 
-// COPIER / COLLER
 document.getElementById("copyBtn").onclick = () => {
     if(!sel) return;
     const x = Math.min(sel.x1, sel.x2), y = Math.min(sel.y1, sel.y2);
     const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
     clipboard = { w, h, data: [] };
-    for(let j=0; j<h; j++){
-        for(let i=0; i<w; i++){ clipboard.data.push(pixels[(y+j)*W + (x+i)]); }
-    }
-    alert("Copié ! Utilisez 'Coller' pour déplacer.");
+    for(let j=0; j<h; j++) for(let i=0; i<w; i++) clipboard.data.push(pixels[(y+j)*W + (x+i)]);
 };
 
 document.getElementById("pasteBtn").onclick = () => {
     if(!clipboard) return;
     if(floatingLayer) confirmPaste();
-    floatingLayer = { 
-        w: clipboard.w, h: clipboard.h, data: [...clipboard.data], 
-        x: Math.floor(W/2 - clipboard.w/2), y: Math.floor(H/2 - clipboard.h/2) 
-    };
+    floatingLayer = { w: clipboard.w, h: clipboard.h, data: [...clipboard.data], x: Math.floor(W/2 - clipboard.w/2), y: Math.floor(H/2 - clipboard.h/2) };
     refresh();
 };
 
-// TAILLE & FICHIERS
-document.getElementById("resizeBtn").onclick = () => {
-    document.getElementById("resizePanel").style.display="block";
-    document.getElementById("rw").value = W; document.getElementById("rh").value = H;
-};
-document.getElementById("resizeOk").onclick = () => {
+function confirmPaste() {
+    if (!floatingLayer) return;
     saveState();
-    const nW = parseInt(document.getElementById("rw").value);
-    const nH = parseInt(document.getElementById("rh").value);
-    let newP = new Array(nW * nH).fill("#111111");
-    for(let y=0; y<Math.min(H, nH); y++){
-        for(let x=0; x<Math.min(W, nW); x++){ newP[y * nW + x] = pixels[y * W + x]; }
+    for (let j = 0; j < floatingLayer.h; j++) {
+        for (let i = 0; i < floatingLayer.w; i++) {
+            let tx = floatingLayer.x + i, ty = floatingLayer.y + j;
+            let col = floatingLayer.data[j * floatingLayer.w + i];
+            if (tx >= 0 && tx < W && ty >= 0 && ty < H && col !== bgDefault) pixels[ty * W + tx] = col;
+        }
     }
-    W = nW; H = nH; pixels = newP;
-    document.getElementById("resizePanel").style.display="none";
-    init(W, H, pixels);
+    floatingLayer = null; refresh();
+}
+
+document.getElementById("exportBtn").onclick = () => {
+    const oldGrid = gridMode; gridMode = false; render();
+    const link = document.createElement('a'); link.download = 'pixel-art-pro.png';
+    link.href = canvas.toDataURL(); link.click();
+    gridMode = oldGrid; render();
 };
-document.getElementById("resizeCancel").onclick = () => document.getElementById("resizePanel").style.display="none";
 
 document.getElementById("saveJsonBtn").onclick = () => {
-    const blob = new Blob([JSON.stringify({W, H, pixels, paletteColors})], {type:"application/json"});
+    const blob = new Blob([JSON.stringify({W, H, pixels, bgDefault, paletteColors})], {type:"application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = "pixel-design.json"; a.click();
+    a.download = "design.json"; a.click();
 };
 
 document.getElementById("loadJsonBtn").onclick = () => {
@@ -407,39 +441,53 @@ document.getElementById("loadJsonBtn").onclick = () => {
         const reader = new FileReader();
         reader.onload = r => {
             const d = JSON.parse(r.target.result);
-            if(d.paletteColors) paletteColors = d.paletteColors;
-            init(d.W, d.H, d.pixels); rebuildPalette();
+            W = d.W; H = d.H; pixels = d.pixels; bgDefault = d.bgDefault || "#111111"; paletteColors = d.paletteColors;
+            init(W, H, pixels); rebuildPalette();
         };
         reader.readAsText(e.target.files[0]);
     }; i.click();
 };
 
-document.getElementById("exportBtn").onclick = () => {
-    const link = document.createElement('a'); link.download = 'pixel-art.png';
-    const oldGrid = gridMode; gridMode = false; render();
-    link.href = canvas.toDataURL(); link.click();
-    gridMode = oldGrid; render();
+document.getElementById("newBtn").onclick = () => { if(confirm("Nouveau projet ?")) init(32, 32); };
+document.getElementById("resizeBtn").onclick = () => { document.getElementById("resizePanel").style.display="block"; };
+document.getElementById("resizeCancel").onclick = () => document.getElementById("resizePanel").style.display="none";
+document.getElementById("resizeOk").onclick = () => {
+    saveState();
+    const nW = parseInt(document.getElementById("rw").value), nH = parseInt(document.getElementById("rh").value);
+    let newP = new Array(nW * nH).fill(bgDefault);
+    for(let y=0; y<Math.min(H, nH); y++) for(let x=0; x<Math.min(W, nW); x++) newP[y * nW + x] = pixels[y * W + x];
+    W = nW; H = nH; pixels = newP;
+    document.getElementById("resizePanel").style.display="none";
+    init(W, H, pixels);
 };
 
-document.getElementById("newBtn").onclick = () => { if(confirm("Nouveau projet ?")) init(32, 32); };
-
-/* --- PALETTE --- */
-function rebuildPalette() {
-    const c = document.getElementById("colorContainer"); c.innerHTML = "";
-    paletteColors.forEach(col => {
-        const d = document.createElement("div"); d.className = "color" + (col===currentColor?" active":"");
-        d.style.background = col; d.onclick = () => { currentColor = col; rebuildPalette(); };
-        c.appendChild(d);
-    });
-}
 document.getElementById("addColorBtn").onclick = () => {
     const i = document.createElement("input"); i.type="color";
     i.onchange = () => { paletteColors.push(i.value); currentColor=i.value; rebuildPalette(); }; i.click();
 };
 
-// Start
-const saved = localStorage.getItem("pix_save");
-if(saved) { const s = JSON.parse(saved); init(s.W, s.H, s.pixels); } else { init(32, 32); }
+container.addEventListener('wheel', e => { e.preventDefault(); applyZoom(e.deltaY > 0 ? -2 : 2, e.clientX, e.clientY); }, { passive: false });
+function applyZoom(delta, mouseX = null, mouseY = null) {
+    const oldSize = pixelSize; pixelSize = Math.max(2, Math.min(100, pixelSize + delta));
+    if (oldSize !== pixelSize && mouseX !== null) {
+        const rect = canvas.getBoundingClientRect();
+        const x = mouseX - rect.left, y = mouseY - rect.top, ratio = pixelSize / oldSize;
+        refresh();
+        container.scrollLeft += x * (ratio - 1); container.scrollTop += y * (ratio - 1);
+    } else { refresh(); }
+}
+
+container.onmousedown = e => { if (e.button === 1) { isPanning = true; startX = e.clientX; startY = e.clientY; scrollLeft = container.scrollLeft; scrollTop = container.scrollTop; e.preventDefault(); }};
+window.onmousemove = e => { if (isPanning) { container.scrollLeft = scrollLeft - (e.clientX - startX); container.scrollTop = scrollTop - (e.clientY - startY); }};
+window.onmouseup = () => { isPanning = false; };
+
+const saved = localStorage.getItem("pix_save_pro");
+if(saved) { 
+    const s = JSON.parse(saved); 
+    bgDefault = s.bgDefault || "#111111";
+    paletteColors = s.paletteColors || paletteColors;
+    init(s.W, s.H, s.pixels); 
+} else { init(32, 32); }
 rebuildPalette();
 </script>
 </body>
