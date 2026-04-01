@@ -1,447 +1,446 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Pix-o-lator</title>
-
-<style>
-body{
-  margin:0;
-  background:#1a1a1a;
-  color:#eee;
-  font-family:sans-serif;
-  height:100vh;
-  overflow:hidden;
-}
-
-/* TOP BAR */
-#top{
-  height:44px;
-  background:#222;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  padding:4px;
-}
-
-/* TOOLBOX */
-#tools{
-  position:fixed;
-  left:8px;
-  top:60px;
-  background:#222;
-  border:1px solid #555;
-  border-radius:10px;
-  padding:6px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  z-index:10;
-}
-
-button{
-  background:#333;
-  color:#eee;
-  border:1px solid #555;
-  padding:6px;
-}
-button.active{background:#666;}
-
-/* CANVAS */
-#canvasContainer{
-  position:absolute;
-  top:44px;
-  bottom:60px;
-  left:0;
-  right:0;
-  overflow:auto;
-  background:#000;
-}
-#canvasWrapper{
-  margin:40px;
-  width:fit-content;
-}
-canvas{
-  background:#fff;
-  image-rendering:pixelated;
-  touch-action:none;
-}
-
-/* PALETTE */
-#palette{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:60px;
-  background:#222;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:6px;
-}
-.color{
-  width:32px;
-  height:32px;
-  border:2px solid #000;
-}
-.color.active{border-color:#fff;}
-
-/* RESIZE PANEL */
-#resizePanel{
-  position:fixed;
-  top:60px;
-  right:10px;
-  background:#222;
-  border:1px solid #555;
-  padding:10px;
-  display:none;
-}
-#resizePanel input{width:60px;}
-
-/* NAV PAD */
-#nav{
-  position:fixed;
-  right:10px;
-  bottom:70px;
-  display:grid;
-  grid-template-columns:40px 40px 40px;
-  grid-template-rows:40px 40px 40px;
-  gap:4px;
-}
-#nav .empty{visibility:hidden;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pix-o-lator Pro | INTEGRAL EDITION</title>
+    <style>
+        body { margin: 0; background: #1a1a1a; color: #eee; font-family: sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        #top { height: 44px; background: #222; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-bottom: 1px solid #444; z-index: 100; overflow-x: auto; }
+        #tools { position: fixed; left: 10px; top: 60px; background: #222; border: 1px solid #555; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
+        button { background: #333; color: #eee; border: 1px solid #555; padding: 8px; cursor: pointer; border-radius: 4px; white-space: nowrap; font-size: 1.1em; }
+        button.active { background: #007bff; border-color: #00bfff; }
+        
+        #canvasContainer { flex: 1; position: relative; overflow: auto; background: #0b0b0b; display: block; }
+        #canvasWrapper { position: relative; margin: 2000px; background: #111; width: fit-content; height: fit-content; }
+        canvas { image-rendering: pixelated; touch-action: none; background: #111; display: block; box-shadow: 0 0 20px rgba(0,0,0,0.5); cursor: crosshair; }
+        
+        .mirror-line { position: absolute; pointer-events: none; z-index: 10; display: none; }
+        #mirrorLineX { width: 2px; height: 100%; background: rgba(255, 0, 234, 0.4); border-left: 1px dashed #ff00ea; top: 0; transform: translateX(-1px); }
+        #mirrorLineY { height: 2px; width: 100%; background: rgba(255, 0, 234, 0.4); border-top: 1px dashed #ff00ea; left: 0; transform: translateY(-1px); }
+        #selectionBox { border: 1px dashed #fff; position: absolute; pointer-events: none; display: none; background: rgba(255,255,255,0.1); z-index: 11; }
+        
+        #palette { height: 64px; background: #222; border-top: 1px solid #444; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .color { width: 34px; height: 34px; border: 2px solid #000; border-radius: 4px; cursor: pointer; }
+        .color.active { border-color: #fff; transform: scale(1.1); }
+        
+        .panel { position: fixed; top: 60px; right: 20px; background: #222; border: 1px solid #555; padding: 15px; display: none; z-index: 200; border-radius: 8px; }
+        .slider-box { display: none; flex-direction: column; position: absolute; left: 55px; background: #222; padding: 10px; border: 1px solid #555; border-radius: 5px; min-width: 140px; }
+        #addColorBtn { width: 34px; height: 34px; line-height: 30px; text-align: center; border: 1px dashed #555; cursor: pointer; font-weight: bold; }
+    </style>
 </head>
-
 <body>
 
 <div id="top">
-  <button id="newBtn">New</button>
-  <button id="resizeBtn">Resize</button>
-  <button id="exportBtn">Export</button>
-  <button id="gridBtn">Grid</button>
-  <button id="renderBtn">⬛</button>
-  <button id="undoBtn">Undo</button>
-  <button id="redoBtn">Redo</button>
+    <button id="newBtn">Nouveau</button>
+    <button id="resizeBtn">Taille</button>
+    <button id="saveJsonBtn">Sauver JSON</button>
+    <button id="loadJsonBtn">Ouvrir</button>
+    <button id="exportBtn">Export PNG</button>
+    <button id="undoBtn">Undo</button>
+    <button id="redoBtn">Redo</button>
+    <button id="copyBtn">Copier</button>
+    <button id="pasteBtn">Coller</button>
 </div>
 
 <div id="tools">
-  <button data-tool="pencil" class="active">✏️</button>
-  <button data-tool="line">📏</button>
-  <button data-tool="fill">🪣</button>
-  <button data-tool="picker">🧪</button>
-  <button id="mirrorXBtn">↔️</button>
-  <button id="mirrorYBtn">↕️</button>
-  <button id="zoomIn">＋</button>
-  <button id="zoomOut">－</button>
+    <button data-tool="pencil" class="active" title="Crayon">✏️</button>
+    <button data-tool="eraser" title="Gomme">🧽</button>
+    <button data-tool="fill" title="Remplissage">🪣</button>
+    <button data-tool="picker" title="Pipette">🧪</button>
+    <button data-tool="select" title="Sélection">✂️</button>
+    <div style="position:relative">
+        <button id="mirrorXBtn">↔️</button>
+        <div id="sliderXBox" class="slider-box"><label>Axe X (0.5 = entre)</label><input type="range" id="mirrorXSlider" step="0.5"></div>
+    </div>
+    <div style="position:relative">
+        <button id="mirrorYBtn">↕️</button>
+        <div id="sliderYBox" class="slider-box"><label>Axe Y (0.5 = entre)</label><input type="range" id="mirrorYSlider" step="0.5"></div>
+    </div>
+    <button id="gridBtn">#</button>
+    <button id="renderBtn">⬛</button>
+    <button id="zoomIn">＋</button>
+    <button id="zoomOut">－</button>
 </div>
 
 <div id="canvasContainer">
-  <div id="canvasWrapper">
-    <canvas id="canvas"></canvas>
-  </div>
+    <div id="canvasWrapper">
+        <canvas id="canvas"></canvas>
+        <div id="mirrorLineX" class="mirror-line"></div>
+        <div id="mirrorLineY" class="mirror-line"></div>
+        <div id="selectionBox"></div>
+    </div>
 </div>
 
-<div id="palette"></div>
-
-<div id="resizePanel">
-  W <input id="rw" type="number" min="1" max="256"><br>
-  H <input id="rh" type="number" min="1" max="256"><br><br>
-  <button id="resizeOk">OK</button>
-  <button id="resizeCancel">Cancel</button>
+<div id="palette">
+    <div id="colorContainer" style="display:flex; gap:8px;"></div>
+    <div id="addColorBtn" title="Ajouter une couleur">+</div>
 </div>
 
-<!-- NAVIGATION -->
-<div id="nav">
-  <div class="empty"></div>
-  <button data-dir="up">▲</button>
-  <div class="empty"></div>
-  <button data-dir="left">◀</button>
-  <div class="empty"></div>
-  <button data-dir="right">▶</button>
-  <div class="empty"></div>
-  <button data-dir="down">▼</button>
-  <div class="empty"></div>
+<div id="resizePanel" class="panel">
+    <strong>Dimensions</strong><br><br>
+    W <input id="rw" type="number" style="width:50px"> H <input id="rh" type="number" style="width:50px"><br><br>
+    <button id="resizeOk">OK</button> <button id="resizeCancel">Annuler</button>
 </div>
 
 <script>
-/* ===== CORE ===== */
+let W = 32, H = 32, pixelSize = 25;
+let pixels = [];
+let currentColor = "#ffffff";
+let paletteColors = ["#000000", "#ffffff", "#be0000", "#ffcc00", "#1a5e1a", "#2a2aff"];
+let tool = "pencil", mirrorX = false, mirrorY = false, mX = 15.5, mY = 15.5;
+let undoStack = [], redoStack = [];
+let gridMode = true, renderMode = "pixel", isDrawing = false;
+let sel = null, clipboard = null, floatingLayer = null;
+
+// Navigation (Pan)
+let isPanning = false, startX, startY, scrollLeft, scrollTop;
+
+const container = document.getElementById("canvasContainer");
 const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
+const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-let W=16,H=16,pixelSize=24;
-let bgColor="#ffffff";
-let pixels=[],currentColor="#000000";
-let tool="pencil",mirrorX=false,mirrorY=false;
-let undoStack=[],redoStack=[];
-let gridMode=false;
-let renderMode="pixel";
+function init(w, h, data = null) {
+    W = w; H = h;
+    pixels = data ? [...data] : new Array(W * H).fill("#111111");
+    
+    mX = (W - 1) / 2; mY = (H - 1) / 2;
+    const sx = document.getElementById("mirrorXSlider");
+    const sy = document.getElementById("mirrorYSlider");
+    sx.max = W - 1; sx.value = mX;
+    sy.max = H - 1; sy.value = mY;
 
-/* multitouch */
-let activePointers=0;
-let snapshot=null;
-
-/* ===== INIT ===== */
-function init(w,h){
-  W=w;H=h;
-  pixels=new Array(W*H).fill(bgColor);
-  undoStack=[];redoStack=[];
-  resize();
-}
-// Sauvegarde automatique
-function saveCanvas(){
-  localStorage.setItem("pixolator_pixels", JSON.stringify({
-    W, H, pixels
-  }));
+    refresh();
+    container.scrollLeft = 2000 + (canvas.width / 2) - (container.clientWidth / 2);
+    container.scrollTop = 2000 + (canvas.height / 2) - (container.clientHeight / 2);
 }
 
-// Charger depuis le localStorage
-function loadCanvas(){
-  const data = localStorage.getItem("pixolator_pixels");
-  if(!data) return;
-  const obj = JSON.parse(data);
-  W = obj.W;
-  H = obj.H;
-  pixels = obj.pixels;
-  resize();
-}
-function resize(){
-  canvas.width=W*pixelSize;
-  canvas.height=H*pixelSize;
-  render();
+function refresh() {
+    canvas.width = W * pixelSize;
+    canvas.height = H * pixelSize;
+    render();
+    updateUI();
 }
 
-/* ===== RENDER ===== */
-function drawPixel(x,y,c){
-  ctx.fillStyle=c;
-  ctx.fillRect(x*pixelSize,y*pixelSize,pixelSize,pixelSize);
-}
-function drawCross(x,y,c){
-  const px=x*pixelSize, py=y*pixelSize;
-  const pad=pixelSize*0.2;
-  ctx.strokeStyle=c;
-  ctx.lineWidth=Math.max(1,pixelSize*0.15);
-  ctx.lineCap="round";
-  ctx.beginPath();
-  ctx.moveTo(px+pad,py+pad);
-  ctx.lineTo(px+pixelSize-pad,py+pixelSize-pad);
-  ctx.moveTo(px+pixelSize-pad,py+pad);
-  ctx.lineTo(px+pad,py+pixelSize-pad);
-  ctx.stroke();
-}
-function render(){
-  ctx.fillStyle=bgColor;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  for(let y=0;y<H;y++){
-    for(let x=0;x<W;x++){
-      const c=pixels[y*W+x];
-      renderMode==="pixel"?drawPixel(x,y,c):drawCross(x,y,c);
-    }
-  }
-  if(gridMode) drawGrid();
-}
-function drawGrid(){
-  ctx.strokeStyle="#555";
-  for(let x=0;x<=W;x++){
-    ctx.beginPath();
-    ctx.moveTo(x*pixelSize,0);
-    ctx.lineTo(x*pixelSize,canvas.height);
-    ctx.stroke();
-  }
-  for(let y=0;y<=H;y++){
-    ctx.beginPath();
-    ctx.moveTo(0,y*pixelSize);
-    ctx.lineTo(canvas.width,y*pixelSize);
-    ctx.stroke();
-  }
-}
+/* --- NAVIGATION & ZOOM --- */
+container.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -2 : 2;
+    applyZoom(delta, e.clientX, e.clientY);
+}, { passive: false });
 
-/* ===== DRAW ===== */
-function pos(e){
-  const r=canvas.getBoundingClientRect();
-  return {
-    x:Math.floor((e.clientX-r.left)/pixelSize),
-    y:Math.floor((e.clientY-r.top)/pixelSize)
-  };
-}
-function applyPixel(x,y){
-  if(x<0||y<0||x>=W||y>=H) return;
-  pixels[y*W+x]=currentColor;
-  if(mirrorX) pixels[y*W+(W-1-x)] = currentColor;
-  if(mirrorY) pixels[(H-1-y)*W+x] = currentColor;
-  if(mirrorX&&mirrorY) pixels[(H-1-y)*W+(W-1-x)] = currentColor;
-}
-
-/* ===== FILL TOOL ===== */
-function floodFill(x, y, targetColor, replacementColor) {
-    if(targetColor === replacementColor) return;
-    const stack = [[x, y]];
-
-    while(stack.length) {
-        const [cx, cy] = stack.pop();
-        if(cx < 0 || cy < 0 || cx >= W || cy >= H) continue;
-        if(pixels[cy*W + cx] !== targetColor) continue;
-
-        pixels[cy*W + cx] = replacementColor;
-
-        // miroir
-        if(mirrorX) pixels[cy*W + (W-1-cx)] = replacementColor;
-        if(mirrorY) pixels[(H-1-cy)*W + cx] = replacementColor;
-        if(mirrorX && mirrorY) pixels[(H-1-cy)*W + (W-1-cx)] = replacementColor;
-
-        stack.push([cx+1, cy]);
-        stack.push([cx-1, cy]);
-        stack.push([cx, cy+1]);
-        stack.push([cx, cy-1]);
+function applyZoom(delta, mouseX = null, mouseY = null) {
+    const oldSize = pixelSize;
+    pixelSize = Math.max(2, Math.min(100, pixelSize + delta));
+    if (oldSize !== pixelSize) {
+        if (mouseX !== null) {
+            const rect = canvas.getBoundingClientRect();
+            const x = mouseX - rect.left;
+            const y = mouseY - rect.top;
+            const ratio = pixelSize / oldSize;
+            refresh();
+            container.scrollLeft += x * (ratio - 1);
+            container.scrollTop += y * (ratio - 1);
+        } else {
+            refresh();
+        }
     }
 }
 
-/* ===== POINTERS (FIX MULTITOUCH) ===== */
-canvas.onpointerdown=e=>{
-  canvas.setPointerCapture(e.pointerId);
-  if(activePointers===0) snapshot=pixels.slice();
-  activePointers++;
-
-  const p=pos(e);
-  if(tool==="picker"){
-    currentColor=pixels[p.y*W+p.x];
-    if(!paletteColors.includes(currentColor)){
-      paletteColors.push(currentColor);
-      rebuildPalette();
+container.addEventListener('mousedown', e => {
+    // Bouton molette (1) OU Espace + Clic Gauche si tu veux
+    if (e.button === 1) { 
+        isPanning = true;
+        container.style.cursor = 'grabbing';
+        // On prend la position de la souris RELATIVE au container
+        startX = e.clientX; 
+        startY = e.clientY;
+        scrollLeft = container.scrollLeft;
+        scrollTop = container.scrollTop;
+        e.preventDefault();
     }
-    activePointers--;
-    return;
-  }
-  if(tool==="pencil") applyPixel(p.x,p.y);
-
-  if(tool==="fill"){
-      const startColor = pixels[p.y*W + p.x];
-      floodFill(p.x, p.y, startColor, currentColor);
-      render();
-      activePointers--;
-      return;
-  }
-
-  render();
-};
-
-canvas.onpointermove=e=>{
-  if(activePointers<=0 || tool!=="pencil") return;
-  const p=pos(e);
-  applyPixel(p.x,p.y);
-  render();
-};
-
-function pointerEnd(e){
-  activePointers--;
-  if(activePointers<=0){
-    activePointers=0;
-    undoStack.push(snapshot);
-    redoStack=[];
-    saveCanvas();
-  }
-}
-canvas.onpointerup=pointerEnd;
-canvas.onpointercancel=pointerEnd;
-
-/* ===== UI ===== */
-document.querySelectorAll("[data-tool]").forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll("[data-tool]").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
-    tool=b.dataset.tool;
-  };
-});
-mirrorXBtn.onclick=()=>mirrorXBtn.classList.toggle("active",mirrorX=!mirrorX);
-mirrorYBtn.onclick=()=>mirrorYBtn.classList.toggle("active",mirrorY=!mirrorY);
-zoomIn.onclick=()=>{pixelSize+=4;resize();}
-zoomOut.onclick=()=>{pixelSize=Math.max(4,pixelSize-4);resize();}
-gridBtn.onclick=()=>{gridMode=!gridMode;render();}
-
-renderBtn.onclick=()=>{
-  renderMode=renderMode==="pixel"?"cross":"pixel";
-  renderBtn.textContent=renderMode==="pixel"?"⬛":"✖️";
-  render();
-};
-
-undoBtn.onclick=()=>{
-  if(!undoStack.length) return;
-  redoStack.push(pixels.slice());
-  pixels=undoStack.pop();
-  render();
-};
-redoBtn.onclick=()=>{
-  if(!redoStack.length) return;
-  undoStack.push(pixels.slice());
-  pixels=redoStack.pop();
-  render();
-};
-
-resizeBtn.onclick=()=>{
-  resizePanel.style.display="block";
-  rw.value=W; rh.value=H;
-};
-resizeOk.onclick=()=>{
-  init(+rw.value,+rh.value);
-  resizePanel.style.display="none";
-};
-resizeCancel.onclick=()=>resizePanel.style.display="none";
-
-exportBtn.onclick=()=>{
-  const a=document.createElement("a");
-  a.href=canvas.toDataURL();
-  a.download="pixolator.png";
-  a.click();
-};
-
-/* ===== PALETTE (ORIGINALE, INTACTE) ===== */
-const palette=document.getElementById("palette");
-let paletteColors=["#000","#fff","#f00","#0f0","#00f"];
-
-function rebuildPalette(){
-  palette.innerHTML="";
-  paletteColors.forEach((c,i)=>{
-    const d=document.createElement("div");
-    d.className="color";
-    d.style.background=c;
-    if(c===currentColor)d.classList.add("active");
-    d.onclick=()=>{
-      currentColor=c;
-      rebuildPalette();
-    };
-    d.ondblclick=()=>{
-      const input=document.createElement("input");
-      input.type="color";
-      input.value=c;
-      input.oninput=e=>{
-        paletteColors[i]=e.target.value;
-        rebuildPalette();
-      };
-      input.click();
-    };
-    palette.appendChild(d);
-  });
-}
-
-/* ===== NAVIGATION ===== */
-const container=document.getElementById("canvasContainer");
-document.querySelectorAll("#nav button").forEach(b=>{
-  b.onclick=()=>{
-    const s=50;
-    if(b.dataset.dir==="up") container.scrollTop-=s;
-    if(b.dataset.dir==="down") container.scrollTop+=s;
-    if(b.dataset.dir==="left") container.scrollLeft-=s;
-    if(b.dataset.dir==="right") container.scrollLeft+=s;
-  };
 });
 
-/* START */
-init(W,H);
-loadCanvas();
+window.addEventListener('mousemove', e => {
+    if (!isPanning) return;
+    // On calcule la distance parcourue par la souris
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    // On applique cette distance au scroll existant
+    container.scrollLeft = scrollLeft - dx;
+    container.scrollTop = scrollTop - dy;
+});
+
+window.addEventListener('mouseup', () => { 
+    isPanning = false; 
+    container.style.cursor = 'default'; 
+});
+
+/* --- LOGIQUE DESSIN & SYMETRIE --- */
+function setPix(x, y, c) {
+    if (x < 0 || y < 0 || x >= W || y >= H) return;
+    let col = (tool === "eraser") ? "#111111" : c;
+    pixels[y * W + x] = col;
+
+    let sx = Math.round(mX * 2 - x);
+    let sy = Math.round(mY * 2 - y);
+
+    if (mirrorX && sx >= 0 && sx < W && sx !== x) pixels[y * W + sx] = col;
+    if (mirrorY && sy >= 0 && sy < H && sy !== y) pixels[sy * W + x] = col;
+    if (mirrorX && mirrorY && sx >= 0 && sx < W && sy >= 0 && sy < H) {
+        if (sx !== x || sy !== y) pixels[sy * W + sx] = col;
+    }
+}
+
+function getCoord(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: Math.floor((e.clientX - rect.left) / (rect.width / W)),
+        y: Math.floor((e.clientY - rect.top) / (rect.height / H))
+    };
+}
+
+function render() {
+    ctx.fillStyle = "#111111";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < pixels.length; i++) {
+        let x = i % W, y = Math.floor(i / W);
+        if (pixels[i] === "#111111") continue;
+        ctx.fillStyle = pixels[i];
+        if (renderMode === "pixel") {
+            ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+        } else {
+            ctx.strokeStyle = pixels[i]; ctx.lineWidth = 2; ctx.beginPath();
+            let px = x*pixelSize, py = y*pixelSize, p = pixelSize*0.2;
+            ctx.moveTo(px+p,py+p); ctx.lineTo(px+pixelSize-p,py+pixelSize-p);
+            ctx.moveTo(px+pixelSize-p,py+p); ctx.lineTo(px+p,py+pixelSize-p); ctx.stroke();
+        }
+    }
+
+    // Dessin du groupe collé (Floating Layer)
+    if (floatingLayer) {
+        ctx.globalAlpha = 0.7;
+        for (let j = 0; j < floatingLayer.h; j++) {
+            for (let i = 0; i < floatingLayer.w; i++) {
+                let col = floatingLayer.data[j * floatingLayer.w + i];
+                if (col === "#111111") continue;
+                ctx.fillStyle = col;
+                ctx.fillRect((floatingLayer.x + i) * pixelSize, (floatingLayer.y + j) * pixelSize, pixelSize, pixelSize);
+            }
+        }
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 2;
+        ctx.strokeRect(floatingLayer.x * pixelSize, floatingLayer.y * pixelSize, floatingLayer.w * pixelSize, floatingLayer.h * pixelSize);
+    }
+
+    if (gridMode) {
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 0.5;
+        for(let i=0; i<=W; i++){ ctx.beginPath(); ctx.moveTo(i*pixelSize,0); ctx.lineTo(i*pixelSize,canvas.height); ctx.stroke(); }
+        for(let i=0; i<=H; i++){ ctx.beginPath(); ctx.moveTo(0,i*pixelSize); ctx.lineTo(canvas.width,i*pixelSize); ctx.stroke(); }
+    }
+}
+
+function updateUI() {
+    const lx = document.getElementById("mirrorLineX"), ly = document.getElementById("mirrorLineY");
+    lx.style.display = mirrorX ? "block" : "none";
+    lx.style.left = (mX * pixelSize + pixelSize / 2) + "px";
+    ly.style.display = mirrorY ? "block" : "none";
+    ly.style.top = (mY * pixelSize + pixelSize / 2) + "px";
+    
+    const b = document.getElementById("selectionBox");
+    if(!sel || tool !== "select") { b.style.display="none"; } 
+    else {
+        const x = Math.min(sel.x1, sel.x2), y = Math.min(sel.y1, sel.y2);
+        const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
+        b.style.display = "block";
+        b.style.left = (x * pixelSize) + "px"; b.style.top = (y * pixelSize) + "px";
+        b.style.width = (w * pixelSize) + "px"; b.style.height = (h * pixelSize) + "px";
+    }
+}
+
+function confirmPaste() {
+    if (!floatingLayer) return;
+    saveState();
+    for (let j = 0; j < floatingLayer.h; j++) {
+        for (let i = 0; i < floatingLayer.w; i++) {
+            let tx = floatingLayer.x + i;
+            let ty = floatingLayer.y + j;
+            let col = floatingLayer.data[j * floatingLayer.w + i];
+            if (tx >= 0 && tx < W && ty >= 0 && ty < H && col !== "#111111") {
+                setPix(tx, ty, col);
+            }
+        }
+    }
+    floatingLayer = null;
+    refresh();
+}
+
+/* --- ACTIONS SOURIS --- */
+canvas.onpointerdown = e => {
+    if (e.button !== 0) return;
+    const p = getCoord(e);
+
+    if (floatingLayer) {
+        // Si clic hors du bloc vert, on valide le collage
+        if (p.x < floatingLayer.x || p.x >= floatingLayer.x + floatingLayer.w || 
+            p.y < floatingLayer.y || p.y >= floatingLayer.y + floatingLayer.h) {
+            confirmPaste();
+        } else {
+            isDrawing = true; // On commence le drag
+        }
+        return;
+    }
+
+    canvas.setPointerCapture(e.pointerId);
+    saveState(); isDrawing = true;
+    if(tool === "select") { sel = {x1: p.x, y1: p.y, x2: p.x, y2: p.y}; }
+    else if(tool === "picker") { currentColor = pixels[p.y*W+p.x]; rebuildPalette(); isDrawing = false; }
+    else if(tool === "fill") {
+        let target = pixels[p.y*W+p.x];
+        let fillCol = (tool === "eraser") ? "#111111" : currentColor;
+        if(target !== fillCol) {
+            let s = [[p.x, p.y]];
+            while(s.length){
+                let [cx, cy] = s.pop();
+                if(cx>=0&&cy>=0&&cx<W&&cy<H && pixels[cy*W+cx]===target){
+                    setPix(cx, cy, fillCol);
+                    s.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+                }
+            }
+        }
+        isDrawing = false;
+    } else { setPix(p.x, p.y, currentColor); }
+    refresh();
+};
+
+canvas.onpointermove = e => {
+    if(!isDrawing) return;
+    const p = getCoord(e);
+    if (floatingLayer) {
+        floatingLayer.x = Math.floor(p.x - floatingLayer.w / 2);
+        floatingLayer.y = Math.floor(p.y - floatingLayer.h / 2);
+    }
+    else if(tool === "select") { sel.x2 = p.x; sel.y2 = p.y; }
+    else if(tool === "pencil" || tool === "eraser") { setPix(p.x, p.y, currentColor); }
+    refresh();
+};
+
+canvas.onpointerup = () => { 
+    isDrawing = false; 
+    localStorage.setItem("pix_save", JSON.stringify({W,H,pixels})); 
+};
+
+/* --- FONCTIONS BOUTONS --- */
+function saveState() { undoStack.push(JSON.stringify(pixels)); if(undoStack.length>50) undoStack.shift(); redoStack=[]; }
+
+document.querySelectorAll("[data-tool]").forEach(b => {
+    b.onclick = () => {
+        if(floatingLayer) confirmPaste();
+        document.querySelectorAll("[data-tool]").forEach(x=>x.classList.remove("active"));
+        b.classList.add("active"); tool = b.dataset.tool; refresh();
+    };
+});
+
+document.getElementById("mirrorXBtn").onclick = function() { mirrorX = !mirrorX; this.classList.toggle("active"); document.getElementById("sliderXBox").style.display = mirrorX ? "flex" : "none"; refresh(); };
+document.getElementById("mirrorYBtn").onclick = function() { mirrorY = !mirrorY; this.classList.toggle("active"); document.getElementById("sliderYBox").style.display = mirrorY ? "flex" : "none"; refresh(); };
+document.getElementById("mirrorXSlider").oninput = function() { mX = parseFloat(this.value); refresh(); };
+document.getElementById("mirrorYSlider").oninput = function() { mY = parseFloat(this.value); refresh(); };
+
+document.getElementById("undoBtn").onclick = () => { if(undoStack.length){ redoStack.push(JSON.stringify(pixels)); pixels=JSON.parse(undoStack.pop()); refresh(); }};
+document.getElementById("redoBtn").onclick = () => { if(redoStack.length){ undoStack.push(JSON.stringify(pixels)); pixels=JSON.parse(redoStack.pop()); refresh(); }};
+
+document.getElementById("zoomIn").onclick = () => applyZoom(5);
+document.getElementById("zoomOut").onclick = () => applyZoom(-5);
+document.getElementById("gridBtn").onclick = () => { gridMode=!gridMode; render(); };
+document.getElementById("renderBtn").onclick = () => { renderMode = (renderMode==="pixel"?"cross":"pixel"); refresh(); };
+
+// COPIER / COLLER
+document.getElementById("copyBtn").onclick = () => {
+    if(!sel) return;
+    const x = Math.min(sel.x1, sel.x2), y = Math.min(sel.y1, sel.y2);
+    const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
+    clipboard = { w, h, data: [] };
+    for(let j=0; j<h; j++){
+        for(let i=0; i<w; i++){ clipboard.data.push(pixels[(y+j)*W + (x+i)]); }
+    }
+    alert("Copié ! Utilisez 'Coller' pour déplacer.");
+};
+
+document.getElementById("pasteBtn").onclick = () => {
+    if(!clipboard) return;
+    if(floatingLayer) confirmPaste();
+    floatingLayer = { 
+        w: clipboard.w, h: clipboard.h, data: [...clipboard.data], 
+        x: Math.floor(W/2 - clipboard.w/2), y: Math.floor(H/2 - clipboard.h/2) 
+    };
+    refresh();
+};
+
+// TAILLE & FICHIERS
+document.getElementById("resizeBtn").onclick = () => {
+    document.getElementById("resizePanel").style.display="block";
+    document.getElementById("rw").value = W; document.getElementById("rh").value = H;
+};
+document.getElementById("resizeOk").onclick = () => {
+    saveState();
+    const nW = parseInt(document.getElementById("rw").value);
+    const nH = parseInt(document.getElementById("rh").value);
+    let newP = new Array(nW * nH).fill("#111111");
+    for(let y=0; y<Math.min(H, nH); y++){
+        for(let x=0; x<Math.min(W, nW); x++){ newP[y * nW + x] = pixels[y * W + x]; }
+    }
+    W = nW; H = nH; pixels = newP;
+    document.getElementById("resizePanel").style.display="none";
+    init(W, H, pixels);
+};
+document.getElementById("resizeCancel").onclick = () => document.getElementById("resizePanel").style.display="none";
+
+document.getElementById("saveJsonBtn").onclick = () => {
+    const blob = new Blob([JSON.stringify({W, H, pixels, paletteColors})], {type:"application/json"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "pixel-design.json"; a.click();
+};
+
+document.getElementById("loadJsonBtn").onclick = () => {
+    const i = document.createElement("input"); i.type="file"; i.accept=".json";
+    i.onchange = e => {
+        const reader = new FileReader();
+        reader.onload = r => {
+            const d = JSON.parse(r.target.result);
+            if(d.paletteColors) paletteColors = d.paletteColors;
+            init(d.W, d.H, d.pixels); rebuildPalette();
+        };
+        reader.readAsText(e.target.files[0]);
+    }; i.click();
+};
+
+document.getElementById("exportBtn").onclick = () => {
+    const link = document.createElement('a'); link.download = 'pixel-art.png';
+    const oldGrid = gridMode; gridMode = false; render();
+    link.href = canvas.toDataURL(); link.click();
+    gridMode = oldGrid; render();
+};
+
+document.getElementById("newBtn").onclick = () => { if(confirm("Nouveau projet ?")) init(32, 32); };
+
+/* --- PALETTE --- */
+function rebuildPalette() {
+    const c = document.getElementById("colorContainer"); c.innerHTML = "";
+    paletteColors.forEach(col => {
+        const d = document.createElement("div"); d.className = "color" + (col===currentColor?" active":"");
+        d.style.background = col; d.onclick = () => { currentColor = col; rebuildPalette(); };
+        c.appendChild(d);
+    });
+}
+document.getElementById("addColorBtn").onclick = () => {
+    const i = document.createElement("input"); i.type="color";
+    i.onchange = () => { paletteColors.push(i.value); currentColor=i.value; rebuildPalette(); }; i.click();
+};
+
+// Start
+const saved = localStorage.getItem("pix_save");
+if(saved) { const s = JSON.parse(saved); init(s.W, s.H, s.pixels); } else { init(32, 32); }
 rebuildPalette();
 </script>
-
 </body>
 </html>
