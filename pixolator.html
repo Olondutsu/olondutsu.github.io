@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Pix-o-lator Pro | GLOBAL EDITION</title>
     <style>
         :root { --bg: #1a1a1a; --panel: #2a2a2a; --accent: #007bff; --border: #444; }
@@ -22,18 +22,25 @@
         .dropdown div { padding: 10px 15px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
         .dropdown div:hover { background: var(--accent); }
 
-        /* Sidebar Tools */
+        /* Sidebar Tools - Responsive */
         #tools { position: fixed; left: 15px; top: 60px; background: var(--panel); border: 1px solid #555; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; z-index: 50; width: 140px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        @media (max-width: 768px) {
+            #tools { width: auto; left: 5px; right: 5px; top: 50px; flex-direction: row; height: 50px; overflow-x: auto; padding: 5px; }
+            .tool-group { flex-direction: row !important; border-bottom: none !important; border-right: 1px solid #444; padding: 0 5px; align-items: center; }
+            #brushSlider { width: 60px !important; }
+            #stats { bottom: 130px !important; }
+        }
+
         .tool-group { display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid #444; padding-bottom: 8px; }
         .tool-group:last-child { border: none; }
-        button.tool-btn { background: #333; color: #eee; border: 1px solid #555; padding: 8px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; width: 100%; }
+        button.tool-btn { background: #333; color: #eee; border: 1px solid #555; padding: 8px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; width: 100%; white-space: nowrap; }
         button.tool-btn:hover { background: #444; }
         button.tool-btn.active { background: var(--accent); border-color: #00bfff; }
         .tool-icon { width: 18px; height: 18px; image-rendering: pixelated; pointer-events: none; }
 
         /* Workspace */
-        #canvasContainer { flex: 1; position: relative; overflow: auto; background: #0b0b0b; scrollbar-width: none; }
-        #canvasContainer::-webkit-scrollbar { display: none; }
+        #canvasContainer { flex: 1; position: relative; overflow: hidden; background: #0b0b0b; touch-action: none; }
         #canvasWrapper { position: relative; margin: 2000px; background: #111; width: fit-content; height: fit-content; }
         canvas { image-rendering: pixelated; display: block; box-shadow: 0 0 30px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none; }
         
@@ -42,25 +49,26 @@
         #mirrorLineY { height: 1px; width: 100%; border-top: 1px dashed #ff00ea; left: 0; }
         
         /* Bottom Palette */
-        #palette { height: 70px; background: #222; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 15px; z-index: 110; }
-        .color-wrapper { position: relative; }
+        #palette { height: 75px; background: #222; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 10px; z-index: 110; padding: 0 10px; }
+        #colorContainer { display: flex; gap: 8px; overflow-x: auto; padding: 5px; scrollbar-width: none; }
+        #colorContainer::-webkit-scrollbar { display: none; }
+        .color-wrapper { position: relative; flex-shrink: 0; }
         .color { width: 34px; height: 34px; border: 2px solid #000; border-radius: 4px; cursor: pointer; }
         .color.active { border-color: #fff; transform: scale(1.1); }
         .del-color { position: absolute; top: -5px; right: -5px; background: red; color: white; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; text-align: center; cursor: pointer; display: none; font-weight: bold; line-height: 16px; }
         .color-wrapper:hover .del-color { display: block; }
-        #addColorBtn { width: 34px; height: 34px; border: 2px dashed #555; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #888; }
+        #addColorBtn { min-width: 34px; height: 34px; border: 2px dashed #555; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #888; }
 
         /* Panels */
         .panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 1px solid #555; padding: 0; display: none; z-index: 300; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); min-width: 280px; overflow: hidden; }
         .panel-header { background: #333; padding: 10px 15px; cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
         .panel-header h3 { margin: 0; font-size: 14px; color: var(--accent); pointer-events: none; }
         .close-btn { color: #888; cursor: pointer; font-size: 18px; font-weight: bold; padding: 0 5px; }
-        .close-btn:hover { color: #ff4d4d; }
         .panel-content { padding: 20px; }
         .panel button { margin-top: 10px; width: 100%; padding: 8px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 5px; }
         .panel .row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 14px; }
         
-        #stats { position: fixed; bottom: 85px; right: 20px; background: rgba(0,0,0,0.8); padding: 6px 15px; border-radius: 20px; font-size: 12px; color: #00ff00; border: 1px solid #444; pointer-events: none; }
+        #stats { position: fixed; bottom: 85px; right: 20px; background: rgba(0,0,0,0.8); padding: 6px 15px; border-radius: 20px; font-size: 12px; color: #00ff00; border: 1px solid #444; pointer-events: none; z-index: 90; }
     </style>
 </head>
 <body>
@@ -98,7 +106,7 @@
     <div class="tool-group">
         <button class="tool-btn active" data-tool="pencil" onclick="setTool('pencil')"><img src="icons/pencil.png" class="tool-icon">Pencil</button>
         <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')"><img src="icons/eraser.png" class="tool-icon">Eraser</button>
-        <div style="font-size:10px; color:#888; text-align:center; margin-top:5px">Brush: <span id="sizeVal">1</span>px</div>
+        <div style="font-size:10px; color:#888; text-align:center;">B:<span id="sizeVal">1</span></div>
         <input type="range" id="brushSlider" min="1" max="10" value="1" oninput="updateBrushSize(this.value)">
     </div>
     <div class="tool-group">
@@ -122,13 +130,13 @@
 <div id="stats">Active Pixels: <span id="pixelCount">0</span> | <span id="ruleText">Ruler: -</span></div>
 
 <div id="palette">
-    <div id="bgColorBtn" style="width:34px; height:34px; background:#111; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:9px; display:flex; align-items:center; justify-content:center;" onclick="changeBG()">BG</div>
-    <div id="colorContainer" style="display:flex; gap:8px;"></div>
+    <div id="bgColorBtn" style="width:34px; height:34px; background:#111; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0;" onclick="changeBG()">BG</div>
+    <div id="colorContainer"></div>
     <div id="addColorBtn" onclick="addNewColor()">+</div>
 </div>
 
 <div id="fillPanel" class="panel">
-    <div class="panel-header"><h3>Fill Settings</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3>Fill Settings</h3><span class="close-btn" onclick="hidePanels()">×</span></div>
     <div class="panel-content">
         <div class="row"><input type="checkbox" id="fillDiag"> Include Diagonals</div>
         <button onclick="setTool('fill'); hidePanels();" style="background:var(--accent)">Activate Bucket</button>
@@ -136,12 +144,12 @@
 </div>
 
 <div id="mirrorPanel" class="panel">
-    <div class="panel-header"><h3>Mirror Symmetry</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3>Mirror Symmetry</h3><span class="close-btn" onclick="hidePanels()">×</span></div>
     <div class="panel-content">
-        <div class="row"><input type="checkbox" id="mXCheck" onchange="toggleMX(this.checked)"> Vertical Mirror (X)</div>
+        <div class="row"><input type="checkbox" id="mXCheck" onchange="toggleMX(this.checked)"> Vertical (X)</div>
         <input type="range" id="mXSlider" min="0" step="0.5" style="width:100%" oninput="updateMX(this.value)">
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
-        <div class="row"><input type="checkbox" id="mYCheck" onchange="toggleMY(this.checked)"> Horizontal Mirror (Y)</div>
+        <div class="row"><input type="checkbox" id="mYCheck" onchange="toggleMY(this.checked)"> Horizontal (Y)</div>
         <input type="range" id="mYSlider" min="0" step="0.5" style="width:100%" oninput="updateMY(this.value)">
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
         <div class="row"><input type="checkbox" id="mRadialCheck" onchange="toggleRadial(this.checked)"> Radial (8-points)</div>
@@ -150,29 +158,28 @@
 </div>
 
 <div id="exportPanel" class="panel">
-    <div class="panel-header"><h3>Export Image</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3>Export Image</h3><span class="close-btn" onclick="hidePanels()">×</span></div>
     <div class="panel-content">
-        <button onclick="exportPNG(false)">PNG with background</button>
+        <button onclick="exportPNG(false)">With Background</button>
         <button onclick="exportPNG(true)" style="background:#28a745">Transparent PNG</button>
         <button onclick="hidePanels()" style="background:#666">Cancel</button>
     </div>
 </div>
 
 <div id="resizePanel" class="panel">
-    <div class="panel-header"><h3>Canvas Dimensions</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3>Canvas Dimensions</h3><span class="close-btn" onclick="hidePanels()">×</span></div>
     <div class="panel-content">
         <div class="row">Width: <input type="number" id="rw" value="32" style="width:60px"></div>
         <div class="row">Height: <input type="number" id="rh" value="32" style="width:60px"></div>
         <button onclick="applyResize()" style="background:var(--accent)">Apply Resize</button>
-        <button onclick="hidePanels()">Cancel</button>
     </div>
 </div>
 
 <div id="selectionPanel" class="panel">
-    <div class="panel-header"><h3>Selection Tools</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3>Selection</h3><span class="close-btn" onclick="hidePanels()">×</span></div>
     <div class="panel-content">
-        <button onclick="setTool('select'); hidePanels();">Activate Selection Box</button>
-        <button onclick="copySelection()">Copy Selection</button>
+        <button onclick="setTool('select'); hidePanels();">Activate Box</button>
+        <button onclick="copySelection()">Copy</button>
         <button onclick="pasteSelection()">Paste</button>
         <button onclick="hidePanels()">Close</button>
     </div>
@@ -191,13 +198,10 @@ let undoStack = [], redoStack = [];
 let gridMode = true, renderMode = "pixel", isDrawing = false;
 let sel = null, clipboard = null, lastRulePoint = null;
 
-// Touch Management
-let initialPinchDist = null;
-let lastTouchPos = null;
+// Touch & Pan State
 let isPanning = false;
-let lastPinchDist = 0;
-let lastTouchX = 0;
-let lastTouchY = 0;
+let lastTouchPos = null;
+let initialPinchDist = null;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -211,11 +215,10 @@ function init(w, h, data = null) {
     document.getElementById("mXSlider").max = W - 1;
     document.getElementById("mYSlider").max = H - 1;
     refresh();
-    // Centrage initial amélioré
     setTimeout(() => {
         container.scrollLeft = 2000 + (W * pixelSize / 2) - (container.clientWidth / 2);
         container.scrollTop = 2000 + (H * pixelSize / 2) - (container.clientHeight / 2);
-    }, 10);
+    }, 50);
 }
 
 function refresh() {
@@ -257,75 +260,6 @@ function render() {
     updateStats();
 }
 
-/** TOUCH & ZOOM LOGIC (FLUID VERSION) **/
-
-function getDistance(t1, t2) {
-    return Math.hypot(t1.pageX - t2.pageX, t1.pageY - t2.pageY);
-}
-
-function getMidpoint(t1, t2) {
-    return { x: (t1.pageX + t2.pageX) / 2, y: (t1.pageY + t2.pageY) / 2 };
-}
-
-container.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-        isPanning = true;
-        isDrawing = false;
-        lastPinchDist = getDistance(e.touches[0], e.touches[1]);
-    } else if (e.touches.length === 1) {
-        lastTouchX = e.touches[0].pageX;
-        lastTouchY = e.touches[0].pageY;
-        // On ne met isPanning à true ici que si on veut scroller à un doigt (ex: sur les bords)
-    }
-}, { passive: false });
-
-container.addEventListener('touchmove', e => {
-    e.preventDefault(); // Empêche le rebond Safari/Chrome
-
-    if (e.touches.length === 2 && isPanning) {
-        // --- ZOOM FLUIDE ---
-        const currentDist = getDistance(e.touches[0], e.touches[1]);
-        const mid = getMidpoint(e.touches[0], e.touches[1]);
-        
-        // Facteur multiplicateur sensible
-        const zoomFactor = currentDist / lastPinchDist;
-        const oldSize = pixelSize;
-        
-        // Limites de zoom
-        pixelSize = Math.max(2, Math.min(100, pixelSize * zoomFactor));
-        
-        if (pixelSize !== oldSize) {
-            refresh();
-            // Ajustement du scroll pour zoomer vers le centre des doigts
-            const rect = container.getBoundingClientRect();
-            const offsetX = mid.clientX - rect.left;
-            const offsetY = mid.clientY - rect.top;
-            
-            container.scrollLeft = (container.scrollLeft + offsetX) * (pixelSize / oldSize) - offsetX;
-            container.scrollTop = (container.scrollTop + offsetY) * (pixelSize / oldSize) - offsetY;
-        }
-        lastPinchDist = currentDist;
-
-    } else if (e.touches.length === 1 && isPanning) {
-        // --- PANNING FLUIDE (si activé) ---
-        const dx = e.touches[0].pageX - lastTouchX;
-        const dy = e.touches[0].pageY - lastTouchY;
-        container.scrollLeft -= dx;
-        container.scrollTop -= dy;
-    }
-    
-    if (e.touches.length > 0) {
-        lastTouchX = e.touches[0].pageX;
-        lastTouchY = e.touches[0].pageY;
-    }
-}, { passive: false });
-
-container.addEventListener('touchend', e => {
-    if (e.touches.length < 2) {
-        isPanning = false;
-        lastPinchDist = 0;
-    }
-});
 /** CORE DRAWING **/
 function setPix(x, y, col) {
     if (x < 0 || y < 0 || x >= W || y >= H) return;
@@ -362,56 +296,101 @@ function setPix(x, y, col) {
     });
 }
 
-/** TOOLS LOGIC **/
+/** TOUCH & MOUSE UNIFIED LOGIC **/
 canvas.addEventListener('pointerdown', e => {
-    if(e.button === 1 || isPanning) return; 
-
+    if(e.button === 1 || e.pointerType === 'touch' && isPanning) return; 
     const p = getCoord(e);
     saveState();
     isDrawing = true;
 
     if (tool === "rules") {
-        if (!lastRulePoint) {
-            lastRulePoint = p;
-            document.getElementById("ruleText").innerText = "Point 1 set...";
-        } else {
-            let dx = Math.abs(p.x - lastRulePoint.x);
-            let dy = Math.abs(p.y - lastRulePoint.y);
-            let dist = Math.max(dx, dy) + 1;
-            document.getElementById("ruleText").innerText = `Total Length: ${dist} px`;
+        if (!lastRulePoint) { lastRulePoint = p; document.getElementById("ruleText").innerText = "Point 1 set..."; } 
+        else {
+            let dist = Math.max(Math.abs(p.x - lastRulePoint.x), Math.abs(p.y - lastRulePoint.y)) + 1;
+            document.getElementById("ruleText").innerText = `Total: ${dist} px`;
             lastRulePoint = null;
         }
         isDrawing = false; return;
     }
-    if (tool === "picker") {
-        currentColor = pixels[p.y*W + p.x];
-        rebuildPalette(); isDrawing = false; return;
-    }
+    if (tool === "picker") { currentColor = pixels[p.y*W + p.x]; rebuildPalette(); isDrawing = false; return; }
     if (tool === "fill") {
         let target = pixels[p.y*W + p.x];
         if (target !== currentColor) floodFill(p.x, p.y, target, currentColor);
         isDrawing = false; refresh(); return;
     }
-    if (tool === "select") {
-        sel = {x1: p.x, y1: p.y, x2: p.x, y2: p.y};
-    } else {
-        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor));
-    }
+    if (tool === "select") { sel = {x1: p.x, y1: p.y, x2: p.x, y2: p.y}; } 
+    else { setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor)); }
     refresh();
 });
 
 canvas.addEventListener('pointermove', e => {
     if (!isDrawing || isPanning) return;
     const p = getCoord(e);
-    if (tool === "select") {
-        sel.x2 = p.x; sel.y2 = p.y;
-    } else if (tool === "pencil" || tool === "eraser") {
-        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor));
-    }
+    if (tool === "select") { sel.x2 = p.x; sel.y2 = p.y; } 
+    else if (tool === "pencil" || tool === "eraser") { setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor)); }
     refresh();
 });
 
 window.addEventListener('pointerup', () => { isDrawing = false; saveLocal(); });
+
+function getCoord(e) {
+    const rect = canvas.getBoundingClientRect();
+    let x = Math.floor((e.clientX - rect.left) / (rect.width / W));
+    let y = Math.floor((e.clientY - rect.top) / (rect.height / H));
+    return { x: Math.max(0, Math.min(W-1, x)), y: Math.max(0, Math.min(H-1, y)) };
+}
+
+/** ZOOM & PAN (MOBILE & DESKTOP) **/
+container.addEventListener('wheel', e => {
+    e.preventDefault();
+    let old = pixelSize;
+    pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
+    refresh();
+    const rect = canvas.getBoundingClientRect();
+    container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
+    container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
+}, { passive: false });
+
+container.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        isPanning = true; isDrawing = false;
+        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    }
+    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+}, { passive: false });
+
+container.addEventListener('touchmove', e => {
+    if (!lastTouchPos) return;
+    if (e.touches.length === 2 && isPanning) {
+        e.preventDefault();
+        let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        if (Math.abs(dist - initialPinchDist) > 5) {
+            let old = pixelSize;
+            pixelSize = Math.max(2, Math.min(100, pixelSize + (dist > initialPinchDist ? 1 : -1)));
+            initialPinchDist = dist;
+            refresh();
+        }
+    }
+    if (isPanning || (e.touches.length === 1 && e.target === container)) {
+        container.scrollLeft -= (e.touches[0].pageX - lastTouchPos.x);
+        container.scrollTop -= (e.touches[0].pageY - lastTouchPos.y);
+    }
+    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+}, { passive: false });
+
+container.addEventListener('touchend', () => { isPanning = false; initialPinchDist = null; });
+
+// Mouse Middle Click Pan
+container.onmousedown = e => { if(e.button === 1) { isPanning = true; e.preventDefault(); } };
+window.addEventListener('mousemove', e => { if(isPanning && !initialPinchDist) { container.scrollLeft -= e.movementX; container.scrollTop -= e.movementY; } });
+window.addEventListener('mouseup', () => isPanning = false);
+
+/** TOOLS & UI **/
+function setTool(t) { tool = t; document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === t)); }
+function updateBrushSize(v) { brushSize = parseInt(v); document.getElementById("sizeVal").innerText = v; }
+function showFillSettings() { showPanel('fillPanel'); }
+function hidePanels() { document.querySelectorAll('.panel').forEach(p => p.style.display = 'none'); }
+function showPanel(id) { let p = document.getElementById(id); let isVis = p.style.display === "block"; hidePanels(); if(!isVis) p.style.display = "block"; }
 
 function floodFill(startX, startY, targetColor, fillCol) {
     let stack = [[startX, startY]], diag = document.getElementById("fillDiag").checked;
@@ -424,65 +403,7 @@ function floodFill(startX, startY, targetColor, fillCol) {
     }
 }
 
-function getCoord(e) {
-    const rect = canvas.getBoundingClientRect();
-    let x = Math.floor((e.clientX - rect.left) / (rect.width / W));
-    let y = Math.floor((e.clientY - rect.top) / (rect.height / H));
-    return { x: Math.max(0, Math.min(W-1, x)), y: Math.max(0, Math.min(H-1, y)) };
-}
-
-function showPanel(id) {
-    const p = document.getElementById(id);
-    if (p.style.display === "block") {
-        p.style.display = "none";
-        return;
-    }
-    hidePanels();
-    p.style.display = "block";
-}
-
-function hidePanels() { document.querySelectorAll('.panel').forEach(p => p.style.display = 'none'); }
-
-function setTool(t) {
-    tool = t;
-    document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
-}
-
-function updateBrushSize(v) { brushSize = parseInt(v); document.getElementById("sizeVal").innerText = v; }
-function showFillSettings() { showPanel('fillPanel'); }
-
-/** DRAGGABLE PANELS **/
-document.querySelectorAll('.panel').forEach(p => {
-    const header = p.querySelector('.panel-header');
-    let isDraggingPanel = false, offset = [0,0];
-    header.onmousedown = (e) => {
-        isDraggingPanel = true; p.style.transform = 'none';
-        offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY];
-    };
-    window.addEventListener('mousemove', (e) => {
-        if (!isDraggingPanel) return;
-        p.style.left = (e.clientX + offset[0]) + 'px';
-        p.style.top = (e.clientY + offset[1]) + 'px';
-    });
-    window.addEventListener('mouseup', () => isDraggingPanel = false);
-});
-
-/** SYMMETRY **/
-function toggleMX(v) { mirrorX = v; if(v) mirrorRadial = false; refresh(); }
-function toggleMY(v) { mirrorY = v; if(v) mirrorRadial = false; refresh(); }
-function toggleRadial(v) { mirrorRadial = v; if(v) { mirrorX = false; mirrorY = false; } refresh(); }
-function updateMX(v) { mX = parseFloat(v); refresh(); }
-function updateMY(v) { mY = parseFloat(v); refresh(); }
-
-function updateUI() {
-    const lx = document.getElementById("mirrorLineX"), ly = document.getElementById("mirrorLineY");
-    lx.style.display = mirrorX ? "block" : "none";
-    lx.style.left = (mX * pixelSize + pixelSize/2) + "px";
-    ly.style.display = mirrorY ? "block" : "none";
-    ly.style.top = (mY * pixelSize + pixelSize/2) + "px";
-}
-
-/** PALETTE **/
+/** PALETTE & COLORS **/
 function rebuildPalette() {
     const cont = document.getElementById("colorContainer");
     cont.innerHTML = "";
@@ -490,12 +411,7 @@ function rebuildPalette() {
         const wrap = document.createElement("div"); wrap.className = "color-wrapper";
         const d = document.createElement("div"); d.className = "color" + (c === currentColor ? " active" : "");
         d.style.background = c;
-        d.onclick = (e) => { e.stopPropagation(); currentColor = c; rebuildPalette(); };
-        d.ondblclick = () => {
-            let i = document.createElement("input"); i.type="color"; i.value=c;
-            i.onchange = () => { paletteColors[idx] = i.value; currentColor = i.value; rebuildPalette(); };
-            i.click();
-        };
+        d.onclick = () => { currentColor = c; rebuildPalette(); };
         const del = document.createElement("div"); del.className = "del-color"; del.innerText = "✕";
         del.onclick = (e) => { e.stopPropagation(); paletteColors.splice(idx, 1); rebuildPalette(); };
         wrap.append(d, del); cont.appendChild(wrap);
@@ -518,144 +434,72 @@ function changeBG() {
     }; i.click();
 }
 
-/** HISTORY **/
-function saveState() {
-    undoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
-    if(undoStack.length > 50) undoStack.shift();
-    redoStack = [];
+/** SELECTION FUNCTIONS **/
+function copySelection() {
+    if(!sel) return;
+    let x = Math.min(sel.x1, sel.x2), y = Math.min(sel.y1, sel.y2);
+    let w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
+    clipboard = { w, h, data: [] };
+    for(let i=0; i<h; i++) for(let j=0; j<w; j++) clipboard.data.push(pixels[(y+i)*W + (x+j)]);
+    alert("Copied to clipboard!");
 }
-function undo() {
-    if(!undoStack.length) return;
-    redoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
-    let s = JSON.parse(undoStack.pop());
-    pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H;
-    refresh(); rebuildPalette();
+function pasteSelection() {
+    if(!clipboard) return;
+    saveState();
+    let startX = sel ? Math.min(sel.x1, sel.x2) : 0;
+    let startY = sel ? Math.min(sel.y1, sel.y2) : 0;
+    for(let i=0; i<clipboard.h; i++) {
+        for(let j=0; j<clipboard.w; j++) {
+            if(startX+j < W && startY+i < H) pixels[(startY+i)*W + (startX+j)] = clipboard.data[i*clipboard.w + j];
+        }
+    }
+    refresh();
 }
-function redo() {
-    if(!redoStack.length) return;
-    undoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
-    let s = JSON.parse(redoStack.pop());
-    pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H;
-    refresh(); rebuildPalette();
+
+/** SYMMETRY CONTROLS **/
+function toggleMX(v) { mirrorX = v; if(v) mirrorRadial = false; refresh(); }
+function toggleMY(v) { mirrorY = v; if(v) mirrorRadial = false; refresh(); }
+function toggleRadial(v) { mirrorRadial = v; if(v) { mirrorX = false; mirrorY = false; } refresh(); }
+function updateMX(v) { mX = parseFloat(v); refresh(); }
+function updateMY(v) { mY = parseFloat(v); refresh(); }
+function updateUI() {
+    const lx = document.getElementById("mirrorLineX"), ly = document.getElementById("mirrorLineY");
+    lx.style.display = mirrorX ? "block" : "none";
+    lx.style.left = (mX * pixelSize + pixelSize/2) + "px";
+    ly.style.display = mirrorY ? "block" : "none";
+    ly.style.top = (mY * pixelSize + pixelSize/2) + "px";
 }
+
+/** DRAGGABLE PANELS **/
+document.querySelectorAll('.panel').forEach(p => {
+    const header = p.querySelector('.panel-header');
+    let isDraggingPanel = false, offset = [0,0];
+    header.onmousedown = (e) => { isDraggingPanel = true; p.style.transform = 'none'; offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY]; };
+    window.addEventListener('mousemove', (e) => { if (isDraggingPanel) { p.style.left = (e.clientX + offset[0]) + 'px'; p.style.top = (e.clientY + offset[1]) + 'px'; } });
+    window.addEventListener('mouseup', () => isDraggingPanel = false);
+});
+
+/** HISTORY & STORAGE **/
+function saveState() { undoStack.push(JSON.stringify({pixels, bgDefault, W, H})); if(undoStack.length > 50) undoStack.shift(); redoStack = []; }
+function undo() { if(!undoStack.length) return; redoStack.push(JSON.stringify({pixels, bgDefault, W, H})); let s = JSON.parse(undoStack.pop()); pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H; refresh(); rebuildPalette(); }
+function redo() { if(!redoStack.length) return; undoStack.push(JSON.stringify({pixels, bgDefault, W, H})); let s = JSON.parse(redoStack.pop()); pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H; refresh(); rebuildPalette(); }
+function saveLocal() { localStorage.setItem("pix_pro_save_v3", JSON.stringify({W,H,pixels,bgDefault,paletteColors})); }
 
 /** EXPORT / RESIZE **/
-function applyResize() {
-    saveState();
-    let nW = parseInt(document.getElementById("rw").value), nH = parseInt(document.getElementById("rh").value);
-    let newP = new Array(nW * nH).fill(bgDefault);
-    for(let y=0; y<Math.min(H, nH); y++) for(let x=0; x<Math.min(W, nW); x++) newP[y*nW + x] = pixels[y*W + x];
-    W = nW; H = nH; pixels = newP; hidePanels(); init(W, H, pixels);
-}
-
-function exportPNG(trans) {
-    const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
-    const tCtx = tmp.getContext('2d');
-    for(let i=0; i<pixels.length; i++) {
-        if(trans && pixels[i] === bgDefault) continue;
-        tCtx.fillStyle = pixels[i]; tCtx.fillRect(i%W, Math.floor(i/W), 1, 1);
-    }
-    const a = document.createElement('a'); a.download = 'pixelart.png'; a.href = tmp.toDataURL(); a.click();
-}
-
-function saveJSON() {
-    const data = JSON.stringify({W, H, pixels, bgDefault, paletteColors});
-    const blob = new Blob([data], {type: "application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "design.json"; a.click();
-}
-
-function loadJSON() {
-    let i = document.createElement('input'); i.type="file"; i.accept=".json";
-    i.onchange = e => {
-        let reader = new FileReader();
-        reader.onload = r => {
-            let d = JSON.parse(r.target.result); paletteColors = d.paletteColors || paletteColors;
-            bgDefault = d.bgDefault || "#111111"; init(d.W, d.H, d.pixels); rebuildPalette();
-        }; reader.readAsText(e.target.files[0]);
-    }; i.click();
-}
+function applyResize() { saveState(); let nW = parseInt(document.getElementById("rw").value), nH = parseInt(document.getElementById("rh").value); let newP = new Array(nW * nH).fill(bgDefault); for(let y=0; y<Math.min(H, nH); y++) for(let x=0; x<Math.min(W, nW); x++) newP[y*nW + x] = pixels[y*W + x]; W = nW; H = nH; pixels = newP; hidePanels(); init(W, H, pixels); }
+function exportPNG(trans) { const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H; const tCtx = tmp.getContext('2d'); for(let i=0; i<pixels.length; i++) { if(trans && pixels[i] === bgDefault) continue; tCtx.fillStyle = pixels[i]; tCtx.fillRect(i%W, Math.floor(i/W), 1, 1); } const a = document.createElement('a'); a.download = 'pixelart.png'; a.href = tmp.toDataURL(); a.click(); }
+function saveJSON() { const data = JSON.stringify({W, H, pixels, bgDefault, paletteColors}); const blob = new Blob([data], {type: "application/json"}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "design.json"; a.click(); }
+function loadJSON() { let i = document.createElement('input'); i.type="file"; i.accept=".json"; i.onchange = e => { let reader = new FileReader(); reader.onload = r => { let d = JSON.parse(r.target.result); paletteColors = d.paletteColors || paletteColors; bgDefault = d.bgDefault || "#111111"; init(d.W, d.H, d.pixels); rebuildPalette(); }; reader.readAsText(e.target.files[0]); }; i.click(); }
 
 function updateStats() { document.getElementById("pixelCount").innerText = pixels.filter(p => p !== bgDefault).length; }
 function toggleGrid() { gridMode = !gridMode; render(); }
 function toggleRender() { renderMode = (renderMode === "pixel" ? "cross" : "pixel"); refresh(); }
-function saveLocal() { localStorage.setItem("pix_pro_save_v3", JSON.stringify({W,H,pixels,bgDefault,paletteColors})); }
-
-/** ZOOM & PAN (MOUSE + TOUCH) **/
-container.onwheel = e => {
-    e.preventDefault();
-    let old = pixelSize;
-    pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
-    refresh();
-    const rect = canvas.getBoundingClientRect();
-    container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
-    container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
-};
-
-// Touch Controls
-container.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-        isPanning = true; isDrawing = false;
-        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    } else if (e.touches.length === 1 && e.target === container) {
-        // Optionnel: autoriser le pan à 1 doigt sur le fond noir
-        isPanning = true;
-    }
-    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-}, { passive: false });
-
-container.addEventListener('touchmove', e => {
-    if (!lastTouchPos) return;
-    
-    if (e.touches.length === 2 && isPanning) {
-        e.preventDefault();
-        // Zoom par pincement
-        let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-        let delta = dist - initialPinchDist;
-        if (Math.abs(delta) > 5) {
-            let old = pixelSize;
-            pixelSize = Math.max(2, Math.min(100, pixelSize + (delta > 0 ? 1 : -1)));
-            initialPinchDist = dist;
-            refresh();
-        }
-    }
-    
-    if (isPanning) {
-        container.scrollLeft -= (e.touches[0].pageX - lastTouchPos.x);
-        container.scrollTop -= (e.touches[0].pageY - lastTouchPos.y);
-    }
-    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-}, { passive: false });
-
-container.addEventListener('touchend', () => { isPanning = false; initialPinchDist = null; });
-
-// Mouse Pan
-let sx, sy, sl, st;
-container.onmousedown = e => { 
-    if(e.button === 1) { 
-        isPanning = true; isDrawing = false;
-        sx = e.clientX; sy = e.clientY; 
-        sl = container.scrollLeft; st = container.scrollTop; 
-        e.preventDefault(); 
-    }
-};
-
-window.addEventListener('mousemove', e => { 
-    if(isPanning && !initialPinchDist) { 
-        container.scrollLeft = sl - (e.clientX - sx); 
-        container.scrollTop = st - (e.clientY - sy); 
-    }
-});
-
-window.addEventListener('mouseup', () => { isPanning = false; });
-
-function newProject() { if(confirm("Discard current work and start new?")) init(32, 32); }
+function newProject() { if(confirm("New Project?")) init(32, 32); }
 
 /** STARTUP **/
 const saved = localStorage.getItem("pix_pro_save_v3");
-if(saved) {
-    const s = JSON.parse(saved); bgDefault = s.bgDefault; paletteColors = s.paletteColors;
-    init(s.W, s.H, s.pixels);
-} else { init(32, 32); }
+if(saved) { const s = JSON.parse(saved); bgDefault = s.bgDefault; paletteColors = s.paletteColors; init(s.W, s.H, s.pixels); } 
+else { init(32, 32); }
 rebuildPalette();
 </script>
 </body>
