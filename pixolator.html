@@ -21,10 +21,39 @@
         .menu-item:hover .dropdown { display: block; }
         .dropdown div { padding: 10px 15px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
         .dropdown div:hover { background: var(--accent); }
-        #menuToggle {position: absolute; right: -40px; top: 10px; width: 35px; height: 35px; background: var(--panel); border: 1px solid #555; border-radius: 0 8px 8px 0; color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; box-shadow: 5px 0 10px rgba(0,0,0,0.3);
+        #menuToggle { position: absolute; 
+    right: -40px; 
+    top: 10px; 
+    width: 35px; 
+    height: 35px; 
+    background: var(--panel); 
+    border: 1px solid #555; 
+    border-radius: 0 8px 8px 0; 
+    color: var(--accent); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer; 
+    font-weight: bold; 
+    box-shadow: 5px 0 10px rgba(0,0,0,0.3);
 }
         /* Sidebar Tools */
-        #tools { position: fixed; left: 15px; top: 60px; background: var(--panel); border: 1px solid #555; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; z-index: 50; width: 140px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        #tools { 
+    position: fixed; 
+    left: 15px; 
+    top: 60px; 
+    background: var(--panel); 
+    border: 1px solid #555; 
+    border-radius: 12px; 
+    padding: 10px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    z-index: 150; /* Augmenté pour passer devant le reste */
+    width: 140px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
         .tool-group { display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid #444; padding-bottom: 8px; }
         .tool-group:last-child { border: none; }
         #tools.collapsed {transform: translateX(-120%);}
@@ -272,6 +301,13 @@ function render() {
         ctx.setLineDash([]);
     }
     updateStats();
+}
+
+function toggleSidebar() {
+    const tools = document.getElementById('tools');
+    tools.classList.toggle('collapsed');
+    // Change l'icône selon l'état
+    document.getElementById('menuToggle').innerText = tools.classList.contains('collapsed') ? '▶' : '☰';
 }
 
 /** CORE DRAWING **/
@@ -573,38 +609,58 @@ container.onwheel = e => {
 };
 
 // Touch Controls
-let initialPinchDist = null, lastTouchPos = null;
+// Variables pour le multi-touch
+let initialPinchDist = null;
+let lastTouchPos = null;
+
 container.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-        isPanning = true; isDrawing = false;
-        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    } else if (e.touches.length === 1 && e.target === container) {
+    if (e.touches.length >= 2) {
+        // Mode Zoom/Pan à deux doigts
         isPanning = true;
+        isDrawing = false;
+        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    } else if (e.touches.length === 1) {
+        // Un seul doigt : on ne pan que si on ne dessine pas (ou si c'est sur le conteneur vide)
+        if (tool === 'picker' || isPanningMode) { // Optionnel: ajouter un mode pan
+             isPanning = true;
+        }
     }
     lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
 }, { passive: false });
 
 container.addEventListener('touchmove', e => {
     if (!lastTouchPos) return;
-    if (e.touches.length === 2 && isPanning) {
-        e.preventDefault();
+
+    if (e.touches.length >= 2) {
+        e.preventDefault(); // Stop le scroll navigateur
         let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-        let delta = dist - initialPinchDist;
-        if (Math.abs(delta) > 5) {
-            let old = pixelSize;
-            pixelSize = Math.max(2, Math.min(100, pixelSize + (delta > 0 ? 1 : -1)));
-            initialPinchDist = dist;
-            refresh();
+        
+        // Gestion du Zoom
+        if (initialPinchDist) {
+            let diff = dist - initialPinchDist;
+            if (Math.abs(diff) > 2) {
+                let oldSize = pixelSize;
+                pixelSize = Math.max(2, Math.min(100, pixelSize + (diff > 0 ? 1.5 : -1.5)));
+                initialPinchDist = dist;
+                refresh();
+            }
         }
     }
-    if (isPanning) {
+    
+    // Gestion du Pan (déplacement)
+    if (isPanning || e.touches.length >= 2) {
         container.scrollLeft -= (e.touches[0].pageX - lastTouchPos.x);
         container.scrollTop -= (e.touches[0].pageY - lastTouchPos.y);
     }
+    
     lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
 }, { passive: false });
 
-container.addEventListener('touchend', () => { isPanning = false; initialPinchDist = null; });
+container.addEventListener('touchend', () => {
+    isPanning = false;
+    initialPinchDist = null;
+    lastTouchPos = null;
+});
 
 /** MOUSE PAN **/
 let sx, sy, sl, st;
