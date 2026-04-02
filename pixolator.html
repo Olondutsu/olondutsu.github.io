@@ -9,15 +9,42 @@
         body { margin: 0; background: var(--bg); color: #eee; font-family: 'Segoe UI', Tahoma, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
         /* Top Bar */
-        #top { height: 45px; background: #222; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); z-index: 100; justify-content: space-between; }
+        #top { height: 45px; background: #222; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); z-index: 300; justify-content: space-between; }
         .menu-left, .menu-right { display: flex; gap: 5px; align-items: center; flex: 1; }
         .menu-center { display: flex; gap: 10px; justify-content: center; flex: 1; }
 
         .menu-item { position: relative; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 14px; display: flex; align-items: center; background: transparent; border: none; color: #eee; }
         .menu-item:hover { background: #333; }
-        .menu-icon { width: 16px; height: 16px; image-rendering: pixelated; margin-right: 8px; }
+        .menu-icon { width: 16px; height: 16px; image-rendering: pixelated; margin-right: 8px; image-rendering: -moz-crisp-edges; image-rendering: pixelated; }
         
-        .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #2a2a2a; border: 1px solid #555; min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); border-radius: 0 0 4px 4px; z-index: 200; }
+       @media (max-width: 600px) {
+    /* 1. On cache le texte à côté des icônes */
+    .menu-text {
+        display: none;
+    }
+
+    /* 2. On ajuste les items du menu pour qu'ils soient compacts */
+    .menu-item {
+        padding: 0 10px;
+        min-width: auto;
+        justify-content: center;
+    }
+
+    /* 3. On réduit l'espace de l'icône puisqu'il n'y a plus de texte */
+    .menu-icon {
+        margin-right: 0; 
+        width: 24px; /* On peut les agrandir un peu pour le tactile */
+        height: 24px;
+    }
+
+    /* 4. On s'assure que la barre top répartit bien les icônes */
+    #top {
+        justify-content: space-around;
+        padding: 0 5px;
+    }
+}
+        
+        .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #2a2a2a; border: 1px solid #555; min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); border-radius: 0 0 4px 4px; z-index: 350; }
         .menu-item:hover .dropdown { display: block; }
         .dropdown div { padding: 10px 15px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
         .dropdown div:hover { background: var(--accent); }
@@ -49,7 +76,7 @@
     display: flex; 
     flex-direction: column; 
     gap: 10px; 
-    z-index: 150; 
+    z-index: 150; /* Augmenté pour passer devant le reste */
     width: 140px; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
@@ -105,7 +132,6 @@
                 <div onclick="saveJSON()"><img src="icons/save.png" class="menu-icon">Save JSON</div>
                 <div onclick="loadJSON()"><img src="icons/open.png" class="menu-icon">Open JSON</div>
                 <div onclick="showPanel('exportPanel')" style="color:#28a745"><b><img src="icons/export.png" class="menu-icon">Export Image...</b></div>
-                <div onclick="showPanel('refPanel')"><img src="icons/image.png" class="menu-icon">Add Reference Image</div>
             </div>
         </div>
         <div class="menu-item">
@@ -186,23 +212,15 @@
 <div id="exportPanel" class="panel">
     <div class="panel-header"><h3>Export Image</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <button onclick="exportSVG()" style="background:#dc3545">Export SVG (Vector)</button>
         <button onclick="exportPNG(false)">PNG with background</button>
-        <button onclick="exportPNG(true)" style="background:#28a745">PNG with transparency</button>
+        <button onclick="exportPNG(true)">Transparent PNG</button>
+        <button onclick="exportSVG(true)">Export SVG (Optimized)</button>
+        <button onclick="exportSVG(false)">Export SVG (Raw Pixels)</button>
         <button onclick="hidePanels()" style="background:#666">Cancel</button>
     </div>
 </div>
 
-<div id="refPanel" class="panel">
-    <div class="panel-header"><h3>Reference Image</h3><span class="close-btn" onclick="hidePanels()">×</span></div>
-    <div class="panel-content">
-        <input type="file" id="refInput" accept="image/*" onchange="loadRefImage(this)">
-        <div class="row">Opacity: <input type="range" id="refOpacity" min="0" max="1" step="0.1" value="0.5" oninput="render()"></div>
-        <div class="row"><input type="checkbox" id="refFront" onchange="render()"> Display in front of pixels</div>
-        <button onclick="refImage = null; render();">Remove Image</button>
-        <button onclick="hidePanels()">Close</button>
-    </div>
-</div>
+
 
 <div id="resizePanel" class="panel">
     <div class="panel-header"><h3>Canvas Dimensions</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
@@ -238,7 +256,6 @@ let mirrorX = false, mirrorY = false, mirrorRadial = false, mX = 15.5, mY = 15.5
 let undoStack = [], redoStack = [];
 let gridMode = true, renderMode = "pixel", isDrawing = false, isPanning = false;
 let sel = null, clipboard = null, floatingLayer = null;
-let refImage = null;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -264,34 +281,18 @@ function refresh() {
 }
 
 function render() {
-    // 1. Nettoyage du canvas avec la couleur de fond
     ctx.fillStyle = bgDefault;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Récupération des réglages du calque de référence (via le panel)
-    const showInFront = document.getElementById('refFront')?.checked;
-    const opacity = document.getElementById('refOpacity')?.value || 0.5;
-
-    // 2. DESSIN DE L'IMAGE DE RÉFÉRENCE (Arrière-plan)
-    if (refImage && !showInFront) {
-        ctx.globalAlpha = opacity;
-        // On étire l'image pour qu'elle couvre exactement la zone du canvas
-        ctx.drawImage(refImage, 0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1.0;
-    }
     
-    // 3. DESSIN DES PIXELS DE BASE
+    // Base Pixels
     for (let i = 0; i < pixels.length; i++) {
         if (pixels[i] === bgDefault) continue;
         let x = i % W, y = Math.floor(i / W);
         ctx.fillStyle = pixels[i];
-        
         if (renderMode === "pixel") {
             ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
         } else {
-            // Mode Broderie (Cross-stitch)
-            ctx.strokeStyle = pixels[i]; 
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = pixels[i]; ctx.lineWidth = 2;
             ctx.beginPath();
             let px = x * pixelSize, py = y * pixelSize, p = pixelSize * 0.2;
             ctx.moveTo(px+p, py+p); ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
@@ -300,7 +301,7 @@ function render() {
         }
     }
 
-    // 4. CALQUE FLOTTANT (Sélection en cours de déplacement)
+    // Floating Layer (Selection being moved)
     if (floatingLayer) {
         ctx.globalAlpha = 0.7;
         for (let j = 0; j < floatingLayer.h; j++) {
@@ -313,50 +314,31 @@ function render() {
             }
         }
         ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = "#00ff00"; 
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 2;
         ctx.strokeRect(floatingLayer.x * pixelSize, floatingLayer.y * pixelSize, floatingLayer.w * pixelSize, floatingLayer.h * pixelSize);
     }
 
-    // 5. DESSIN DE L'IMAGE DE RÉFÉRENCE (Premier-plan)
-    if (refImage && showInFront) {
-        ctx.globalAlpha = opacity;
-        ctx.drawImage(refImage, 0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1.0;
-    }
-
-    // 6. GRILLE
+    // Grid
     if (gridMode) {
         ctx.strokeStyle = "rgba(120,120,120,0.15)";
         ctx.lineWidth = 0.5;
-        for(let i=0; i<=W; i++) { 
-            ctx.beginPath(); ctx.moveTo(i*pixelSize, 0); ctx.lineTo(i*pixelSize, canvas.height); ctx.stroke(); 
-        }
-        for(let i=0; i<=H; i++) { 
-            ctx.beginPath(); ctx.moveTo(0, i*pixelSize); ctx.lineTo(canvas.width, i*pixelSize); ctx.stroke(); 
-        }
+        for(let i=0; i<=W; i++) { ctx.beginPath(); ctx.moveTo(i*pixelSize, 0); ctx.lineTo(i*pixelSize, canvas.height); ctx.stroke(); }
+        for(let i=0; i<=H; i++) { ctx.beginPath(); ctx.moveTo(0, i*pixelSize); ctx.lineTo(canvas.width, i*pixelSize); ctx.stroke(); }
     }
 
-    // 7. BOITE DE SÉLECTION (Si outil sélection actif)
+    // Selection Box
     if(sel && tool === "select") {
-        ctx.strokeStyle = "#fff"; 
-        ctx.lineWidth = 2; 
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(
-            Math.min(sel.x1, sel.x2) * pixelSize, 
-            Math.min(sel.y1, sel.y2) * pixelSize, 
-            (Math.abs(sel.x1 - sel.x2) + 1) * pixelSize, 
-            (Math.abs(sel.y1 - sel.y2) + 1) * pixelSize
-        );
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+        ctx.strokeRect(Math.min(sel.x1, sel.x2)*pixelSize, Math.min(sel.y1, sel.y2)*pixelSize, (Math.abs(sel.x1-sel.x2)+1)*pixelSize, (Math.abs(sel.y1-sel.y2)+1)*pixelSize);
         ctx.setLineDash([]);
     }
-
     updateStats();
 }
 
 function toggleSidebar() {
     const tools = document.getElementById('tools');
     tools.classList.toggle('collapsed');
+    // Change l'icône selon l'état
     document.getElementById('menuToggle').innerText = tools.classList.contains('collapsed') ? '▶' : '☰';
 }
 
@@ -631,18 +613,50 @@ function exportPNG(trans) {
 }
 
 function exportSVG() {
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
-    for (let i = 0; i < pixels.length; i++) {
-        if (pixels[i] === bgDefault) continue;
-        let x = i % W, y = Math.floor(i / W);
-        svg += `<rect x="${x}" y="${y}" width="1" height="1" fill="${pixels[i]}" />`;
-    }
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
+    
+    // 1. On crée une liste de toutes les couleurs uniques présentes sur le dessin
+    const uniqueColors = [...new Set(pixels)].filter(c => c && c !== 'transparent' && c !== 'rgba(0,0,0,0)');
+
+    // 2. On boucle par couleur pour créer des groupes <g>
+    uniqueColors.forEach(targetColor => {
+        svg += `<g id="color-${targetColor.replace('#', '')}" fill="${targetColor}">`;
+        
+        for (let y = 0; y < H; y++) {
+            let x = 0;
+            while (x < W) {
+                let color = pixels[y * W + x];
+                
+                // On ne dessine que si c'est la couleur du groupe actuel
+                if (color !== targetColor) {
+                    x++;
+                    continue;
+                }
+                
+                let run = 1;
+                while (x + run < W && pixels[y * W + (x + run)] === targetColor) {
+                    run++;
+                }
+                
+                // On ajoute le rectangle sans l'attribut 'fill' (car il est hérité du groupe <g>)
+                svg += `<rect x="${x}" y="${y}" width="${run}" height="1" />`;
+                x += run;
+            }
+        }
+        svg += `</g>`;
+    });
+    
     svg += `</svg>`;
-    const blob = new Blob([svg], {type: "image/svg+xml"});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = "pattern.svg";
-    a.click();
+    
+    const blob = new Blob([svg], {type: 'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'pixel_art_grouped.svg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 function saveJSON() {
@@ -662,18 +676,7 @@ function loadJSON() {
     }; i.click();
 }
 
-// /** ZOOM & PAN (MOUSE + TOUCH) **/
-// container.onwheel = e => {
-//     e.preventDefault();
-//     let old = pixelSize;
-//     pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
-//     refresh();
-//     const rect = canvas.getBoundingClientRect();
-//     container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
-//     container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
-// };
-
-// Touch Controls
+/** ZOOM & PAN (MOUSE + TOUCH) **/
 container.onwheel = e => {
     e.preventDefault();
     let old = pixelSize;
@@ -684,19 +687,32 @@ container.onwheel = e => {
     container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
 };
 
+// Touch Controls
+/** ZOOM & PAN (MOUSE + TOUCH) **/
+container.onwheel = e => {
+    e.preventDefault();
+    let old = pixelSize;
+    pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
+    refresh();
+    const rect = canvas.getBoundingClientRect();
+    container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
+    container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
+};
+
+// Variables pour le multi-touch optimisées
 let initialPinchDist = null;
 let lastTouchPos = null;
-let isMultiTouching = false;
+let isMultiTouching = false; // Sécurité pour bloquer le dessin pendant/après un zoom
 
 container.addEventListener('touchstart', e => {
     if (e.touches.length >= 2) {
-
+        // Activation du mode multi-doigts
         isMultiTouching = true; 
         isPanning = true;
         isDrawing = false;
         initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     } else if (e.touches.length === 1) {
-
+        // Si on a encore le flag isMultiTouching (doigt restant après zoom), on reste en mode mouvement
         if (isMultiTouching) {
             isPanning = true;
             isDrawing = false;
@@ -709,7 +725,7 @@ container.addEventListener('touchmove', e => {
     if (!lastTouchPos) return;
 
     if (e.touches.length >= 2) {
-        e.preventDefault(); 
+        e.preventDefault(); // Empêche le défilement de la page
         let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         
         if (initialPinchDist) {
@@ -722,7 +738,7 @@ container.addEventListener('touchmove', e => {
         }
     }
     
-    // Touch Pan Canva
+    // Déplacement du canevas (Pan)
     if (isPanning || e.touches.length >= 2 || isMultiTouching) {
         container.scrollLeft -= (e.touches[0].pageX - lastTouchPos.x);
         container.scrollTop -= (e.touches[0].pageY - lastTouchPos.y);
@@ -733,7 +749,7 @@ container.addEventListener('touchmove', e => {
 }, { passive: false });
 
 container.addEventListener('touchend', e => {
-    // If screen is totally free
+    // Si l'écran est totalement libéré (plus aucun doigt)
     if (e.touches.length === 0) {
         isPanning = false;
         isMultiTouching = false; 
