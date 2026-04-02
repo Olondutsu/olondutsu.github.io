@@ -21,18 +21,20 @@
         .menu-item:hover .dropdown { display: block; }
         .dropdown div { padding: 10px 15px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
         .dropdown div:hover { background: var(--accent); }
-
+        #menuToggle {position: absolute; right: -40px; top: 10px; width: 35px; height: 35px; background: var(--panel); border: 1px solid #555; border-radius: 0 8px 8px 0; color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; box-shadow: 5px 0 10px rgba(0,0,0,0.3);
+}
         /* Sidebar Tools */
-        #tools { position: fixed; left: 15px; top: 60px; background: var(--panel); border: 1px solid #555; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; z-index: 50; width: 140px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #tools { position: fixed; left: 15px; top: 60px; background: var(--panel); border: 1px solid #555; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; z-index: 50; width: 140px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .tool-group { display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid #444; padding-bottom: 8px; }
         .tool-group:last-child { border: none; }
+        #tools.collapsed {transform: translateX(-120%);}
         button.tool-btn { background: #333; color: #eee; border: 1px solid #555; padding: 8px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; width: 100%; text-align: left; }
         button.tool-btn:hover { background: #444; }
         button.tool-btn.active { background: var(--accent); border-color: #00bfff; }
         .tool-icon { width: 18px; height: 18px; image-rendering: pixelated; pointer-events: none; }
 
         /* Workspace */
-        #canvasContainer { flex: 1; position: relative; overflow: auto; background: #0b0b0b; scrollbar-width: none; }
+        #canvasContainer { flex: 1; position: relative; overflow: auto; background: #0b0b0b; scrollbar-width: none; touch-action: none;}
         #canvasContainer::-webkit-scrollbar { display: none; }
         #canvasWrapper { position: relative; margin: 2000px; background: #111; width: fit-content; height: fit-content; }
         canvas { image-rendering: pixelated; display: block; box-shadow: 0 0 30px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none; }
@@ -95,6 +97,7 @@
 </div>
 
 <div id="tools">
+    <div id="menuToggle" onclick="toggleSidebar()">☰</div>
     <div class="tool-group">
         <button class="tool-btn active" data-tool="pencil" onclick="setTool('pencil')"><img src="icons/pencil.png" class="tool-icon">Pencil</button>
         <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')"><img src="icons/eraser.png" class="tool-icon">Eraser</button>
