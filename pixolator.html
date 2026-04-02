@@ -126,6 +126,7 @@
 </div>
 
 <div id="tools">
+    <div id="menuToggle" onpointerdown="toggleSidebar(); event.stopPropagation();">☰</div>
     <div id="menuToggle" onclick="toggleSidebar()">☰</div>
     <div class="tool-group">
         <button class="tool-btn active" data-tool="pencil" onclick="setTool('pencil')"><img src="icons/pencil.png" class="tool-icon">Pencil</button>
@@ -609,20 +610,34 @@ container.onwheel = e => {
 };
 
 // Touch Controls
-// Variables pour le multi-touch
+/** ZOOM & PAN (MOUSE + TOUCH) **/
+container.onwheel = e => {
+    e.preventDefault();
+    let old = pixelSize;
+    pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
+    refresh();
+    const rect = canvas.getBoundingClientRect();
+    container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
+    container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
+};
+
+// Variables pour le multi-touch optimisées
 let initialPinchDist = null;
 let lastTouchPos = null;
+let isMultiTouching = false; // Sécurité pour bloquer le dessin pendant/après un zoom
 
 container.addEventListener('touchstart', e => {
     if (e.touches.length >= 2) {
-        // Mode Zoom/Pan à deux doigts
+        // Activation du mode multi-doigts
+        isMultiTouching = true; 
         isPanning = true;
         isDrawing = false;
         initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     } else if (e.touches.length === 1) {
-        // Un seul doigt : on ne pan que si on ne dessine pas (ou si c'est sur le conteneur vide)
-        if (tool === 'picker' || isPanningMode) { // Optionnel: ajouter un mode pan
-             isPanning = true;
+        // Si on a encore le flag isMultiTouching (doigt restant après zoom), on reste en mode mouvement
+        if (isMultiTouching) {
+            isPanning = true;
+            isDrawing = false;
         }
     }
     lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
@@ -632,14 +647,12 @@ container.addEventListener('touchmove', e => {
     if (!lastTouchPos) return;
 
     if (e.touches.length >= 2) {
-        e.preventDefault(); // Stop le scroll navigateur
+        e.preventDefault(); // Empêche le défilement de la page
         let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         
-        // Gestion du Zoom
         if (initialPinchDist) {
             let diff = dist - initialPinchDist;
             if (Math.abs(diff) > 2) {
-                let oldSize = pixelSize;
                 pixelSize = Math.max(2, Math.min(100, pixelSize + (diff > 0 ? 1.5 : -1.5)));
                 initialPinchDist = dist;
                 refresh();
@@ -647,19 +660,27 @@ container.addEventListener('touchmove', e => {
         }
     }
     
-    // Gestion du Pan (déplacement)
-    if (isPanning || e.touches.length >= 2) {
+    // Déplacement du canevas (Pan)
+    if (isPanning || e.touches.length >= 2 || isMultiTouching) {
         container.scrollLeft -= (e.touches[0].pageX - lastTouchPos.x);
         container.scrollTop -= (e.touches[0].pageY - lastTouchPos.y);
+        isDrawing = false; // Verrouillage du dessin
     }
     
     lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
 }, { passive: false });
 
-container.addEventListener('touchend', () => {
-    isPanning = false;
-    initialPinchDist = null;
-    lastTouchPos = null;
+container.addEventListener('touchend', e => {
+    // Si l'écran est totalement libéré (plus aucun doigt)
+    if (e.touches.length === 0) {
+        isPanning = false;
+        isMultiTouching = false; 
+        initialPinchDist = null;
+        lastTouchPos = null;
+    } else {
+        // S'il reste un doigt (fin de pincement), on maintient le mode Pan pour éviter de dessiner
+        isPanning = true;
+    }
 });
 
 /** MOUSE PAN **/
