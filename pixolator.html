@@ -173,6 +173,7 @@
         <button class="tool-btn" data-tool="select" onclick="setTool('select')"><img src="icons/select.png" class="tool-icon">Select Box</button>
     </div>
     <div class="tool-group">
+            <button class="tool-btn" data-tool="ruler" onclick="setTool('ruler')" title="Ruler">📏<span class="menu-text"> Ruler</span></button>
         <button class="tool-btn" onclick="showPanel('mirrorPanel')">✨ Mirrors</button>
     </div>
 </div>
@@ -262,6 +263,11 @@ let mirrorX = false, mirrorY = false, mirrorRadial = false, mX = 15.5, mY = 15.5
 let undoStack = [], redoStack = [];
 let gridMode = true, renderMode = "pixel", isDrawing = false, isPanning = false;
 let sel = null, clipboard = null, floatingLayer = null;
+let drawing = false;
+let isRulerActive = false;
+let rulerStart = null;
+let rulerCurrent = null;
+
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -282,6 +288,14 @@ function init(w, h, data = null) {
 function refresh() {
     canvas.width = W * pixelSize;
     canvas.height = H * pixelSize;
+    if (tool === "ruler" && rulerStart && rulerCurrent) {
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 1 / zoom;
+        ctx.beginPath();
+        ctx.moveTo(rulerStart.x + 0.5, rulerStart.y + 0.5);
+        ctx.lineTo(rulerCurrent.x + 0.5, rulerCurrent.y + 0.5);
+        ctx.stroke();
+    }
     render();
     updateUI();
 }
@@ -412,8 +426,15 @@ canvas.addEventListener('pointerdown', e => {
             isDrawing = true; return;
         }
     }
+    if (tool === "ruler") {
+        
+        rulerStart = p; // On stocke le point de départ {x, y}
+        isDrawing = true; 
+        return; 
+    }
 
     saveState();
+    
     isDrawing = true;
 
     if (tool === "picker") {
@@ -441,6 +462,12 @@ canvas.addEventListener('pointermove', e => {
         floatingLayer.x = Math.floor(p.x - floatingLayer.w / 2);
         floatingLayer.y = Math.floor(p.y - floatingLayer.h / 2);
     }
+    else if (tool === "ruler" && rulerStart) {
+        rulerCurrent = p; // On "publie" la position de la souris
+        const d = Math.max(Math.abs(p.x - rulerStart.x), Math.abs(p.y - rulerStart.y)) + 1;
+        document.getElementById('ruleText').innerText = `Ruler: ${Math.max(0, d-2)} (incl. ${d})`;
+        // Le refresh() qui est déjà en bas de ton code va s'occuper du reste
+    }
     else if (tool === "select") {
         sel.x2 = p.x; sel.y2 = p.y;
     } else if (tool === "pencil" || tool === "eraser") {
@@ -449,7 +476,15 @@ canvas.addEventListener('pointermove', e => {
     refresh();
 });
 
-window.addEventListener('pointerup', () => { isDrawing = false; saveLocal(); });
+window.addEventListener('pointerup', () => { 
+    if (tool === "ruler") {
+        refresh(); // Efface le trait blanc une fois fini
+        rulerStart = null; // Prêt pour la prochaine mesure
+    }
+    isDrawing = false; 
+    
+    saveLocal(); 
+});
 
 /** EDIT FUNCTIONS **/
 function copySelection() {
@@ -516,7 +551,14 @@ function hidePanels() { document.querySelectorAll('.panel').forEach(p => p.style
 function setTool(t) {
     if(floatingLayer && t !== "select") confirmPaste();
     tool = t;
+    
     document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+}
+
+function toggleRuler() {
+    isRulerActive = !isRulerActive;
+    rulerStart = null;
+    document.getElementById('ruleText').innerText = isRulerActive ? "Ruler: Ready" : "Ruler: -";
 }
 
 function updateBrushSize(v) { brushSize = parseInt(v); document.getElementById("sizeVal").innerText = v; }
