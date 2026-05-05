@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Produits</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .product-card {
+            background: white;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test de la gestion des produits</h1>
+    
+    <button onclick="testGetProducts()">Tester getProducts()</button>
+    <button onclick="testAddProduct()">Tester addProduct()</button>
+    <button onclick="displayProducts()">Afficher les produits</button>
+    
+    <div id="output"></div>
+    <div id="products-display"></div>
+
+    <script src="app.js"></script>
+    <script>
+        let stockManager;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            stockManager = new StockManager();
+            console.log('StockManager initialisé');
+            displayProducts();
+        });
+        
+        function testGetProducts() {
+            const products = stockManager.getProducts();
+            document.getElementById('output').innerHTML = `
+                <h2>Produits trouvés: ${products.length}</h2>
+                <pre>${JSON.stringify(products, null, 2)}</pre>
+            `;
+        }
+        
+        function testAddProduct() {
+            try {
+                const newProduct = stockManager.addProduct({
+                    name: 'Test Produit',
+                    icon: '🧪',
+                    category: 'autre',
+                    unit: 'piece',
+                    cost: 5,
+                    price: 10
+                });
+                alert('Produit ajouté: ' + newProduct.name);
+                displayProducts();
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+        
+        function displayProducts() {
+            const products = stockManager.getProducts();
+            let html = '<h2>Liste des produits:</h2>';
+            
+            products.forEach(product => {
+                html += `
+                    <div class="product-card">
+                        <h3>${product.icon} ${product.name}</h3>
+                        <p>Catégorie: ${product.category}</p>
+                        <p>Prix d'achat: ${product.cost}€</p>
+                        <p>Prix de vente: ${product.price}€</p>
+                        <p>Marge: ${(product.price - product.cost).toFixed(2)}€</p>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('products-display').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

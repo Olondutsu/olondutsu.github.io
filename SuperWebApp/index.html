@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Rôtisserie</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête -->
+        <header>
+            <h1>🍗 Gestion Rôtisserie</h1>
+            <p class="subtitle">Système de gestion des commandes et stocks</p>
+        </header>
+
+        <!-- Navigation par onglets -->
+        <nav class="tabs">
+            <button class="tab-button active" data-tab="commandes">
+                📝 Commandes
+            </button>
+            <button class="tab-button" data-tab="liste-commandes">
+                📋 Liste des commandes
+            </button>
+            <button class="tab-button" data-tab="produits">
+                🛍️ Produits
+            </button>
+            <button class="tab-button" data-tab="stocks">
+                📦 Stocks
+            </button>
+            <button class="tab-button" data-tab="historique">
+                📊 Historique
+            </button>
+        </nav>
+
+        <!-- Section Commandes -->
+        <section id="commandes" class="tab-content active">
+            <h2>Nouvelle Commande</h2>
+            
+            <!-- Informations Client -->
+            <div class="customer-section">
+                <div class="form-group">
+                    <label for="customer-name">
+                        <i class="icon">👤</i> Nom du client (optionnel)
+                    </label>
+                    <input type="text" id="customer-name" placeholder="Entrez le nom du client" class="customer-input">
+                </div>
+            </div>
+
+            <!-- Cartes Produits Cliquables (générées dynamiquement) -->
+            <div class="products-container">
+                <h3>Sélectionnez vos produits</h3>
+                <div id="products-grid" class="product-cards-grid">
+                    <!-- Les produits seront générés dynamiquement par JavaScript -->
+                </div>
+            </div>
+
+            <!-- Résumé de la commande -->
+            <div class="order-summary-card" id="order-summary-card">
+                <h3>📋 Résumé de la commande</h3>
+                <div id="order-items-list" class="order-items-list">
+                    <p class="empty-cart">Aucun produit sélectionné</p>
+                </div>
+                <div class="order-total">
+                    <span>Total:</span>
+                    <span class="total-amount" id="total-amount">0.00€</span>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="action-buttons">
+                <button class="btn btn-primary btn-large" id="validate-order">
+                    <span class="btn-icon">✓</span> Valider la commande
+                </button>
+                <button class="btn btn-secondary btn-large" id="reset-order">
+                    <span class="btn-icon">↺</span> Réinitialiser
+                </button>
+            </div>
+        </section>
+
+        <!-- Section Liste des Commandes -->
+        <section id="liste-commandes" class="tab-content">
+            <h2>Liste des Commandes</h2>
+            
+            <div class="search-bar">
+                <input type="text" id="customer-search" placeholder="🔍 Rechercher par nom de client...">
+            </div>
+
+            <div class="orders-filters">
+                <button class="filter-btn active" data-filter="all">Toutes</button>
+                <button class="filter-btn" data-filter="pending">En attente</button>
+                <button class="filter-btn" data-filter="completed">Traitées</button>
+                <button class="filter-btn" data-filter="cancelled">Annulées</button>
+            </div>
+
+            <div class="orders-stats">
+                <div class="stat-card">
+                    <span class="stat-label">En attente:</span>
+                    <span class="stat-value" id="pending-count">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Traitées:</span>
+                    <span class="stat-value" id="completed-count">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Annulées:</span>
+                    <span class="stat-value" id="cancelled-count">0</span>
+                </div>
+            </div>
+
+            <div id="orders-list" class="orders-list">
+                <p class="empty-message">Aucune commande</p>
+            </div>
+        </section>    
+
+        <!-- Section Produits -->
+        <section id="produits" class="tab-content">
+            <h2>Gestion des Produits</h2>
+            
+            <div class="products-management">
+                <!-- Formulaire d'ajout de produit -->
+                <div class="add-product-card">
+                    <h3>➕ Ajouter un nouveau produit</h3>
+                    <form id="add-product-form" class="product-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="product-name">Nom du produit *</label>
+                                <input type="text" id="product-name" placeholder="Ex: Poulet fermier bio" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-image">Image du produit</label>
+                                <input type="file" id="product-image" accept="image/*">
+                                <small>Ou utilisez un emoji par défaut : 🍗</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="product-cost">Prix d'achat (€)</label>
+                                <input type="number" id="product-cost" min="0" step="0.01" value="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="product-price">Prix de vente entier (€) *</label>
+                                <input type="number" id="product-price" min="0" step="0.01" value="0" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="product-half-available">
+                                    <span>Vendable en moitié (demi)</span>
+                                </label>
+                            </div>
+                            <div class="form-group" id="half-price-group" style="display: none;">
+                                <label for="product-half-price">Prix de vente demi (€)</label>
+                                <input type="number" id="product-half-price" min="0" step="0.01" value="0" placeholder="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="product-cooking-status">Statut de cuisson</label>
+                                <select id="product-cooking-status">
+                                    <option value="cooked">✅ Cuit (prêt à vendre)</option>
+                                    <option value="to-cook">🔥 À cuire</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="cooking-time-group" style="display: none;">
+                                <label for="product-cooking-time">Temps de cuisson (minutes)</label>
+                                <input type="number" id="product-cooking-time" min="1" step="1" value="90" placeholder="90">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <span class="btn-icon">✓</span> Ajouter le produit
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Liste des produits existants -->
+                <div class="products-list-section">
+                    <h3>📦 Produits existants</h3>
+                    <div id="products-list" class="products-grid">
+                        <!-- Les produits seront ajoutés dynamiquement ici -->
+                    </div>
+                </div>
+            </div>
+        </section>
+            </section>
+            
+        <!-- Section Stocks avec sous-onglets -->
+        <section id="stocks" class="tab-content">
+            <h2>Gestion des Stocks</h2>
+            
+            <!-- Sous-onglets pour Stocks -->
+            <div class="sub-tabs">
+                <button class="sub-tab-btn active" data-subtab="stock-actuel">📦 Stock Actuel</button>
+                <button class="sub-tab-btn" data-subtab="cuissons">🔥 Cuissons</button>
+                <button class="sub-tab-btn" data-subtab="historique-stocks">📜 Historique</button>
+            </div>
+            
+            <!-- Sous-onglet: Stock Actuel -->
+            <div id="stock-actuel" class="sub-tab-content active">
+                <div class="stock-cards-grid">
+                    <!-- Les cartes de stock seront générées dynamiquement par JavaScript -->
+                </div>
+                
+                <!-- Boutons de confirmation -->
+                <div class="stock-confirm-buttons">
+                    <button class="btn btn-success btn-large" id="confirm-stock-btn" style="display: none;">
+                        <span class="btn-icon">✓</span> Confirmer les modifications
+                    </button>
+                    <button class="btn btn-secondary btn-large" id="cancel-stock-btn" style="display: none;">
+                        <span class="btn-icon">✕</span> Annuler
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Sous-onglet: Cuissons -->
+            <div id="cuissons" class="sub-tab-content">
+                <div id="cooking-batches-container" class="cooking-batches-grid">
+                    <p class="no-data">Aucune cuisson en cours</p>
+                </div>
+            </div>
+            
+            <!-- Sous-onglet: Historique des Stocks -->
+            <div id="historique-stocks" class="sub-tab-content">
+                <div id="stock-history-list" class="stock-history-container">
+                    <p class="no-data">Aucun historique de stock disponible</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Historique -->
+        <section id="historique" class="tab-content">
+            <h2>Historique des Commandes</h2>
+            
+            <div class="history-controls">
+                <button class="btn btn-secondary" id="clear-history">Effacer l'historique</button>
+                <button class="btn btn-secondary" id="export-history">Exporter (CSV)</button>
+            </div>
+
+            <div class="history-stats">
+                <div class="stat-card">
+                    <span class="stat-label">Total commandes:</span>
+                    <span class="stat-value" id="total-orders">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Aujourd'hui:</span>
+                    <span class="stat-value" id="today-orders">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">CA Total:</span>
+                    <span class="stat-value" id="total-revenue">0 €</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">CA Aujourd'hui:</span>
+                    <span class="stat-value" id="today-revenue">0 €</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Marge Totale:</span>
+                    <span class="stat-value" id="total-profit">0 €</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Marge Aujourd'hui:</span>
+                    <span class="stat-value" id="today-profit">0 €</span>
+                </div>
+            </div>
+
+            <div id="history-list" class="history-list">
+                <p class="empty-message">Aucune commande enregistrée</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Messages de notification -->
+    <div id="notification" class="notification"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
