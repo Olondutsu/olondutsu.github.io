@@ -1,7 +1,9 @@
 /** GLOBAL STATE **/
 let W = 32, H = 32, pixelSize = 25;
-let pixels = [];
+let pixels = []; // Now stores {color, style} objects
+let pixelStyles = []; // 'cross', 'nyzynka', or null
 let currentColor = "#ffffff";
+let currentStyle = "cross"; // Default style
 let bgDefault = "#111111";
 let paletteColors = ["#000000", "#ffffff", "#be0000", "#ffcc00", "#1a5e1a", "#2a2aff"];
 let tool = "pencil", brushSize = 1;
@@ -19,9 +21,10 @@ const ctx = canvas.getContext("2d", { willReadFrequently: true });
 const container = document.getElementById("canvasContainer");
 
 /** INIT **/
-function init(w, h, data = null) {
+function init(w, h, data = null, styles = null) {
     W = w; H = h;
     pixels = data ? [...data] : new Array(W * H).fill(bgDefault);
+    pixelStyles = styles ? [...styles] : new Array(W * H).fill('cross');
     mX = (W - 1) / 2; mY = (H - 1) / 2;
     document.getElementById("mXSlider").max = W - 1;
     document.getElementById("mYSlider").max = H - 1;
@@ -58,25 +61,39 @@ function render() {
     for (let i = 0; i < pixels.length; i++) {
         if (pixels[i] === bgDefault) continue;
         let x = i % W, y = Math.floor(i / W);
+        let px = x * pixelSize, py = y * pixelSize;
+        let style = pixelStyles[i] || 'cross';
+        
         ctx.fillStyle = pixels[i];
         
-        if (nyzynkaMode) {
-            // Mode Nyzynka : une ligne verticale fine au centre
-            let px = x * pixelSize;
-            let py = y * pixelSize;
+        if (style === 'nyzynka') {
+            // Mode Nyzynka : lignes verticales avec décalage d'un carreau
+            // Chaque colonne est décalée verticalement par rapport à la précédente
             let lineWidth = Math.max(2, pixelSize * 0.15);
             let centerX = px + (pixelSize / 2) - (lineWidth / 2);
             
-            ctx.fillRect(centerX, py, lineWidth, pixelSize);
-        } else if (renderMode === "pixel") {
-            ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-        } else {
-            ctx.strokeStyle = pixels[i]; ctx.lineWidth = 2;
+            // Décalage vertical basé sur la colonne (alternance)
+            // Colonne paire : position normale
+            // Colonne impaire : décalée d'un demi-carreau vers le bas
+            let yOffset = (x % 2 === 1) ? pixelSize * 0.5 : 0;
+            
+            // Dessiner la ligne verticale décalée
+            ctx.fillRect(centerX, py + yOffset, lineWidth, pixelSize);
+            
+        } else if (renderMode === "cross") {
+            // Mode broderie (croix)
+            ctx.strokeStyle = pixels[i];
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            let px = x * pixelSize, py = y * pixelSize, p = pixelSize * 0.2;
-            ctx.moveTo(px+p, py+p); ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
-            ctx.moveTo(px+pixelSize-p, py+p); ctx.lineTo(px+p, py+pixelSize-p);
+            let p = pixelSize * 0.2;
+            ctx.moveTo(px+p, py+p);
+            ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
+            ctx.moveTo(px+pixelSize-p, py+p);
+            ctx.lineTo(px+p, py+pixelSize-p);
             ctx.stroke();
+        } else {
+            // Mode pixel normal (point de croix plein)
+            ctx.fillRect(px, py, pixelSize, pixelSize);
         }
     }
 
@@ -169,7 +186,11 @@ function setPix(x, y, col) {
         for(let i = -radius; i <= (brushSize%2===0?radius-1:radius); i++) {
             for(let j = -radius; j <= (brushSize%2===0?radius-1:radius); j++) {
                 let px = p[0]+i, py = p[1]+j;
-                if(px>=0 && px<W && py>=0 && py<H) pixels[py*W+px] = col;
+                if(px>=0 && px<W && py>=0 && py<H) {
+                    let idx = py*W+px;
+                    pixels[idx] = col;
+                    pixelStyles[idx] = currentStyle;
+                }
             }
         }
     });
@@ -329,7 +350,12 @@ function setTool(t) {
     if(floatingLayer && t !== "select") confirmPaste();
     tool = t;
     
-    document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+}
+
+function setStitchStyle(style) {
+    currentStyle = style;
+    document.querySelectorAll('.tool-btn[data-style]').forEach(b => b.classList.toggle('active', b.dataset.style === style));
 }
 
 function toggleRuler() {
@@ -447,7 +473,7 @@ function toggleGrid() { gridMode = !gridMode; render(); }
 function toggleNumberedGrid() { numberedGrid = !numberedGrid; refresh(); }
 function toggleRender() { renderMode = (renderMode === "pixel" ? "cross" : "pixel"); nyzynkaMode = false; refresh(); }
 function toggleNyzynka() { nyzynkaMode = !nyzynkaMode; if(nyzynkaMode) renderMode = "pixel"; refresh(); }
-function saveLocal() { localStorage.setItem("pix_pro_save_v3", JSON.stringify({W,H,pixels,bgDefault,paletteColors})); }
+function saveLocal() { localStorage.setItem("pix_pro_save_v3", JSON.stringify({W,H,pixels,pixelStyles,bgDefault,paletteColors})); }
 
 /** THREAD COUNTER **/
 function updateThreadCount() {
@@ -563,7 +589,7 @@ function exportSVG() {
 }
 
 function saveJSON() {
-    const data = JSON.stringify({W, H, pixels, bgDefault, paletteColors});
+    const data = JSON.stringify({W, H, pixels, pixelStyles, bgDefault, paletteColors});
     const blob = new Blob([data], {type: "application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "design.json"; a.click();
 }
@@ -573,8 +599,11 @@ function loadJSON() {
     i.onchange = e => {
         let reader = new FileReader();
         reader.onload = r => {
-            let d = JSON.parse(r.target.result); paletteColors = d.paletteColors || paletteColors;
-            bgDefault = d.bgDefault || "#111111"; init(d.W, d.H, d.pixels); rebuildPalette();
+            let d = JSON.parse(r.target.result);
+            paletteColors = d.paletteColors || paletteColors;
+            bgDefault = d.bgDefault || "#111111";
+            init(d.W, d.H, d.pixels, d.pixelStyles);
+            rebuildPalette();
         }; reader.readAsText(e.target.files[0]);
     }; i.click();
 }
@@ -691,9 +720,9 @@ function newProject() { if(confirm("Discard current work and start new?")) init(
 /** STARTUP **/
 const saved = localStorage.getItem("pix_pro_save_v3");
 if(saved) {
-    const s = JSON.parse(saved); bgDefault = s.bgDefault || "#111111"; 
+    const s = JSON.parse(saved); bgDefault = s.bgDefault || "#111111";
     paletteColors = s.paletteColors || paletteColors;
-    init(s.W, s.H, s.pixels);
+    init(s.W, s.H, s.pixels, s.pixelStyles);
 } else { init(32, 32); }
 rebuildPalette();
 
