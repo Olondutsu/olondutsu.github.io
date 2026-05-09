@@ -927,45 +927,65 @@ function rebuildPalette() {
         d.className = "color" + (c === currentColor ? " active" : "");
         d.style.background = c;
 
-        // Gestion tactile et souris unifiée
-        let lastTap = 0;
-        let touchStartTime = 0;
+        // Variables pour détecter le double-clic/tap (une par couleur)
+        let clickCount = 0;
+        let clickTimer = null;
         
-        const handleColorSelect = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const now = Date.now();
+        const handleColorClick = (e) => {
+            clickCount++;
             
-            // Gestion du double-tap/clic (pour mobile et desktop)
-            if (now - lastTap < 300) {
-                // Action double-tap : Sélecteur de couleur
-                let i = document.createElement("input");
-                i.type = "color";
-                i.value = c;
-                i.onchange = () => {
-                    paletteColors[idx] = i.value;
-                    currentColor = i.value;
+            if (clickCount === 1) {
+                // Premier clic : attendre un peu pour voir s'il y a un deuxième
+                clickTimer = setTimeout(() => {
+                    // Simple clic : Sélectionner la couleur
+                    currentColor = c;
                     rebuildPalette();
+                    clickCount = 0;
+                }, 300);
+            } else if (clickCount === 2) {
+                // Double-clic : Ouvrir le sélecteur de couleur
+                clearTimeout(clickTimer);
+                clickCount = 0;
+                
+                console.log('Double-clic détecté sur la couleur:', c);
+                
+                // Créer et ouvrir le sélecteur de couleur
+                let input = document.createElement("input");
+                input.type = "color";
+                input.value = c;
+                input.style.position = "absolute";
+                input.style.opacity = "0";
+                input.style.pointerEvents = "none";
+                document.body.appendChild(input);
+                
+                input.onchange = () => {
+                    console.log('Nouvelle couleur sélectionnée:', input.value);
+                    paletteColors[idx] = input.value;
+                    currentColor = input.value;
+                    rebuildPalette();
+                    document.body.removeChild(input);
                 };
-                i.click();
-                lastTap = 0; // Reset pour éviter triple-tap
-            } else {
-                // Action tap/clic simple : Sélection
-                currentColor = c;
-                rebuildPalette();
+                
+                input.onblur = () => {
+                    // Nettoyer si l'utilisateur annule
+                    setTimeout(() => {
+                        if (document.body.contains(input)) {
+                            document.body.removeChild(input);
+                        }
+                    }, 100);
+                };
+                
+                // Déclencher le clic pour ouvrir le sélecteur
+                input.click();
             }
-            lastTap = now;
         };
         
-        // Touch events pour mobile
-        d.addEventListener('touchstart', (e) => {
-            touchStartTime = Date.now();
-        }, { passive: false });
-        
-        d.addEventListener('touchend', handleColorSelect, { passive: false });
-        
-        // Mouse events pour desktop
-        d.addEventListener('click', handleColorSelect);
+        // Événements pour desktop et mobile
+        d.addEventListener('click', handleColorClick);
+        d.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleColorClick(e);
+        });
 
         const del = document.createElement("div");
         del.className = "del-color";
