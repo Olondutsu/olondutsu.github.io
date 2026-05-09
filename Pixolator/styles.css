@@ -142,25 +142,27 @@ body {
     
     /* 6. Palette plus grande sur mobile */
     #palette {
-        height: 80px !important;
-        gap: 12px;
-        padding: 0 10px;
+        height: 90px !important;
+        gap: 15px;
+        padding: 0 15px;
     }
     
     .color {
-        width: 45px !important;
-        height: 45px !important;
+        width: 55px !important;
+        height: 55px !important;
+        border-width: 3px !important;
     }
     
     #addColorBtn {
-        width: 45px !important;
-        height: 45px !important;
-        font-size: 24px;
+        width: 55px !important;
+        height: 55px !important;
+        font-size: 28px;
     }
     
     #bgColorBtn {
-        width: 45px !important;
-        height: 45px !important;
+        width: 55px !important;
+        height: 55px !important;
+        font-size: 11px !important;
     }
     
     /* 7. Stats plus discret */
@@ -389,18 +391,26 @@ canvas {
 }
 
 .color {
-    width: 34px;
-    height: 34px;
+    width: 42px;
+    height: 42px;
     border: 2px solid #000;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    transition: all 0.2s ease;
 }
 
 .color.active {
     border-color: #fff;
-    transform: scale(1.1);
+    border-width: 3px;
+    transform: scale(1.15);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.color:hover {
+    transform: scale(1.05);
+    border-color: #aaa;
 }
 
 .del-color {
@@ -427,6 +437,49 @@ canvas {
     .color-wrapper:hover .del-color {
         display: block;
     }
+}
+
+#addColorBtn {
+    width: 42px;
+    height: 42px;
+    background: #333;
+    border: 2px dashed #666;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+#addColorBtn:hover {
+    background: #444;
+    border-color: #888;
+    transform: scale(1.05);
+}
+
+#bgColorBtn {
+    width: 42px;
+    height: 42px;
+    border: 2px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+#bgColorBtn:hover {
+    border-color: #888;
+    transform: scale(1.05);
 }
 
 /* Mobile : toujours afficher le bouton de suppression */
