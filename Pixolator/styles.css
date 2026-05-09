@@ -354,53 +354,76 @@ canvas {
 }
 
 /* Bottom Palette */
-#palette { 
-    height: 70px; 
-    background: #222; 
-    border-top: 1px solid var(--border); 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 15px; 
-    z-index: 110; 
+#palette {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: #222;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    z-index: 200;
+    padding: 0 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
-.color-wrapper { 
-    position: relative; 
+.color-wrapper {
+    position: relative;
+    flex-shrink: 0;
 }
 
-.color { 
-    width: 34px; 
-    height: 34px; 
-    border: 2px solid #000; 
-    border-radius: 4px; 
-    cursor: pointer; 
+.color {
+    width: 34px;
+    height: 34px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.color.active { 
-    border-color: #fff; 
-    transform: scale(1.1); 
+.color.active {
+    border-color: #fff;
+    transform: scale(1.1);
 }
 
-.del-color { 
-    position: absolute; 
-    top: -5px; 
-    right: -5px; 
-    background: red; 
-    color: white; 
-    width: 16px; 
-    height: 16px; 
-    border-radius: 50%; 
-    font-size: 10px; 
-    text-align: center; 
-    cursor: pointer; 
-    display: none; 
-    font-weight: bold; 
-    line-height: 16px; 
+.del-color {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: red;
+    color: white;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 10px;
+    text-align: center;
+    cursor: pointer;
+    display: none;
+    font-weight: bold;
+    line-height: 16px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.color-wrapper:hover .del-color { 
-    display: block; 
+/* Desktop : hover pour afficher le bouton de suppression */
+@media (hover: hover) and (pointer: fine) {
+    .color-wrapper:hover .del-color {
+        display: block;
+    }
+}
+
+/* Mobile : toujours afficher le bouton de suppression */
+@media (hover: none) and (pointer: coarse) {
+    .del-color {
+        display: block;
+        opacity: 0.8;
+    }
 }
 
 #addColorBtn { 

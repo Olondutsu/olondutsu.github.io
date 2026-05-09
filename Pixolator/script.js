@@ -920,51 +920,69 @@ function rebuildPalette() {
     const cont = document.getElementById("colorContainer");
     cont.innerHTML = "";
     paletteColors.forEach((c, idx) => {
-        const wrap = document.createElement("div"); 
+        const wrap = document.createElement("div");
         wrap.className = "color-wrapper";
         
-        const d = document.createElement("div"); 
+        const d = document.createElement("div");
         d.className = "color" + (c === currentColor ? " active" : "");
         d.style.background = c;
 
-        // --- CORRECTION MOBILE : On utilise pointerdown ---
+        // Gestion tactile et souris unifiée
         let lastTap = 0;
-        d.onpointerdown = (e) => {
+        let touchStartTime = 0;
+        
+        const handleColorSelect = (e) => {
+            e.preventDefault();
             e.stopPropagation();
             const now = Date.now();
             
-            // Gestion du double-clic (pour mobile et desktop)
+            // Gestion du double-tap/clic (pour mobile et desktop)
             if (now - lastTap < 300) {
-                // Action double-clic : Sélecteur de couleur
-                let i = document.createElement("input"); 
-                i.type = "color"; 
+                // Action double-tap : Sélecteur de couleur
+                let i = document.createElement("input");
+                i.type = "color";
                 i.value = c;
-                i.onchange = () => { 
-                    paletteColors[idx] = i.value; 
-                    currentColor = i.value; 
-                    rebuildPalette(); 
+                i.onchange = () => {
+                    paletteColors[idx] = i.value;
+                    currentColor = i.value;
+                    rebuildPalette();
                 };
                 i.click();
+                lastTap = 0; // Reset pour éviter triple-tap
             } else {
-                // Action clic simple : Sélection
+                // Action tap/clic simple : Sélection
                 currentColor = c;
                 rebuildPalette();
             }
             lastTap = now;
         };
+        
+        // Touch events pour mobile
+        d.addEventListener('touchstart', (e) => {
+            touchStartTime = Date.now();
+        }, { passive: false });
+        
+        d.addEventListener('touchend', handleColorSelect, { passive: false });
+        
+        // Mouse events pour desktop
+        d.addEventListener('click', handleColorSelect);
 
-        const del = document.createElement("div"); 
-        del.className = "del-color"; 
+        const del = document.createElement("div");
+        del.className = "del-color";
         del.innerText = "✕";
         
-        // Suppression aussi en pointerdown pour le mobile
-        del.onpointerdown = (e) => { 
-            e.stopPropagation(); 
-            paletteColors.splice(idx, 1); 
-            rebuildPalette(); 
+        // Suppression - touch et mouse
+        const handleDelete = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            paletteColors.splice(idx, 1);
+            rebuildPalette();
         };
+        
+        del.addEventListener('touchend', handleDelete, { passive: false });
+        del.addEventListener('click', handleDelete);
 
-        wrap.append(d, del); 
+        wrap.append(d, del);
         cont.appendChild(wrap);
     });
     document.getElementById("bgColorBtn").style.background = bgDefault;
@@ -1262,14 +1280,13 @@ container.onwheel = e => {
     container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
 };
 
-// Variables pour le multi-touch optimisées avec inertie
+// Variables pour le multi-touch - Système Procreate/Krita
+// 1 doigt = Dessiner | 2 doigts = Pan/Zoom
 let initialPinchDist = null;
 let lastTouchPos = null;
-let isMultiTouching = false;
 let touchVelocity = { x: 0, y: 0 };
 let lastTouchTime = 0;
 let momentumAnimation = null;
-let zoomTimeout = null;
 
 container.addEventListener('touchstart', e => {
     // Annuler l'inertie en cours
@@ -1278,19 +1295,26 @@ container.addEventListener('touchstart', e => {
         momentumAnimation = null;
     }
     
-    if (e.touches.length >= 2) {
-        isMultiTouching = true;
+    if (e.touches.length === 2) {
+        // 2 DOIGTS = Mode navigation (Pan/Zoom)
+        e.preventDefault();
         isPanning = true;
         isDrawing = false;
-        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        initialPinchDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        // Position centrale entre les 2 doigts
+        lastTouchPos = {
+            x: (e.touches[0].pageX + e.touches[1].pageX) / 2,
+            y: (e.touches[0].pageY + e.touches[1].pageY) / 2
+        };
     } else if (e.touches.length === 1) {
-        if (isMultiTouching) {
-            isPanning = true;
-            isDrawing = false;
-        }
+        // 1 DOIGT = Mode dessin (comportement normal)
+        isPanning = false;
+        lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     }
     
-    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     lastTouchTime = Date.now();
     touchVelocity = { x: 0, y: 0 };
 }, { passive: false });
@@ -1301,77 +1325,84 @@ container.addEventListener('touchmove', e => {
     const now = Date.now();
     const deltaTime = Math.max(1, now - lastTouchTime);
 
-    if (e.touches.length >= 2) {
+    if (e.touches.length === 2) {
+        // 2 DOIGTS = Pan + Zoom simultanés
         e.preventDefault();
-        let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         
+        // Calculer la nouvelle distance pour le zoom
+        let dist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        
+        // Position centrale actuelle
+        const centerX = (e.touches[0].pageX + e.touches[1].pageX) / 2;
+        const centerY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
+        
+        // ZOOM
         if (initialPinchDist) {
-            let diff = dist - initialPinchDist;
-            if (Math.abs(diff) > 1) {
-                // Zoom plus progressif et fluide
-                let zoomFactor = diff > 0 ? 1.02 : 0.98;
-                pixelSize = Math.max(2, Math.min(100, pixelSize * zoomFactor));
+            let ratio = dist / initialPinchDist;
+            if (Math.abs(ratio - 1) > 0.01) { // Seuil de 1%
+                pixelSize = Math.max(2, Math.min(100, pixelSize * ratio));
                 initialPinchDist = dist;
-                
-                // Debounce du refresh pour éviter les saccades
-                if (zoomTimeout) clearTimeout(zoomTimeout);
-                zoomTimeout = setTimeout(() => refresh(), 16); // ~60fps
+                refresh();
             }
         }
-    }
-    
-    // Déplacement fluide avec calcul de vélocité
-    if (isPanning || e.touches.length >= 2 || isMultiTouching) {
-        const deltaX = e.touches[0].pageX - lastTouchPos.x;
-        const deltaY = e.touches[0].pageY - lastTouchPos.y;
+        
+        // PAN (déplacement)
+        const deltaX = centerX - lastTouchPos.x;
+        const deltaY = centerY - lastTouchPos.y;
         
         container.scrollLeft -= deltaX;
         container.scrollTop -= deltaY;
         
         // Calculer la vélocité pour l'inertie
-        touchVelocity.x = deltaX / deltaTime * 16; // Normaliser à 60fps
+        touchVelocity.x = deltaX / deltaTime * 16;
         touchVelocity.y = deltaY / deltaTime * 16;
         
+        lastTouchPos = { x: centerX, y: centerY };
         isDrawing = false;
+    } else if (e.touches.length === 1) {
+        // 1 DOIGT = Laisser le comportement de dessin normal se faire
+        lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     }
     
-    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     lastTouchTime = now;
 }, { passive: false });
 
 container.addEventListener('touchend', e => {
     if (e.touches.length === 0) {
+        // Tous les doigts levés
         isPanning = false;
-        isMultiTouching = false;
         initialPinchDist = null;
         
         // Appliquer l'inertie si la vélocité est suffisante
         const speed = Math.sqrt(touchVelocity.x ** 2 + touchVelocity.y ** 2);
-        if (speed > 2) {
+        if (speed > 1) {
             applyMomentum();
         }
         
         lastTouchPos = null;
-    } else {
-        isPanning = true;
+    } else if (e.touches.length === 1) {
+        // Il reste 1 doigt : repasser en mode dessin
+        isPanning = false;
+        initialPinchDist = null;
+        lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     }
 });
 
-// Fonction d'inertie (momentum scrolling)
+// Fonction d'inertie (momentum scrolling) - Plus rapide
 function applyMomentum() {
-    const friction = 0.92; // Coefficient de friction (0-1, plus proche de 1 = plus d'inertie)
-    const minSpeed = 0.5; // Vitesse minimale avant d'arrêter
+    const friction = 0.95; // Friction plus légère = plus fluide
+    const minSpeed = 0.3;
     
     function animate() {
-        // Appliquer la vélocité
         container.scrollLeft -= touchVelocity.x;
         container.scrollTop -= touchVelocity.y;
         
-        // Appliquer la friction
         touchVelocity.x *= friction;
         touchVelocity.y *= friction;
         
-        // Continuer l'animation si la vitesse est suffisante
         const speed = Math.sqrt(touchVelocity.x ** 2 + touchVelocity.y ** 2);
         if (speed > minSpeed && !isPanning) {
             momentumAnimation = requestAnimationFrame(animate);
