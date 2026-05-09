@@ -506,21 +506,39 @@ function setPix(x, y, col, mouseEvent = null) {
         }
     }
     points.forEach(p => {
-        // Utiliser le brushSize pour tous les styles
-        let radius = Math.floor(brushSize / 2);
-        for(let i = -radius; i <= (brushSize%2===0?radius-1:radius); i++) {
-            for(let j = -radius; j <= (brushSize%2===0?radius-1:radius); j++) {
-                let px = p[0]+i, py = p[1]+j;
-                if(px>=0 && px<W && py>=0 && py<H) {
-                    let idx = py*W+px;
-                    pixels[idx] = col;
-                    pixelStyles[idx] = currentStyle;
-                    
-                    // Sauvegarder le multiplicateur de yOffset pour Nyzynka
-                    if (currentStyle === 'nyzynka') {
-                        pixelOffsets[idx] = clickYOffsetMultiplier;
-                    } else {
+        // En mode TRAME avec style cross, dessiner un bloc 3×3
+        if (trameMode && currentStyle === 'cross') {
+            // En mode TRAME, les coordonnées sont déjà en haute résolution
+            // Dessiner un bloc 3×3 centré sur le point cliqué
+            for(let i = -1; i <= 1; i++) {
+                for(let j = -1; j <= 1; j++) {
+                    let px = p[0] + i;
+                    let py = p[1] + j;
+                    if(px>=0 && px<W && py>=0 && py<H) {
+                        let idx = py*W+px;
+                        pixels[idx] = col;
+                        pixelStyles[idx] = currentStyle;
                         pixelOffsets[idx] = 0;
+                    }
+                }
+            }
+        } else {
+            // Comportement normal pour les autres cas
+            let radius = Math.floor(brushSize / 2);
+            for(let i = -radius; i <= (brushSize%2===0?radius-1:radius); i++) {
+                for(let j = -radius; j <= (brushSize%2===0?radius-1:radius); j++) {
+                    let px = p[0]+i, py = p[1]+j;
+                    if(px>=0 && px<W && py>=0 && py<H) {
+                        let idx = py*W+px;
+                        pixels[idx] = col;
+                        pixelStyles[idx] = currentStyle;
+                        
+                        // Sauvegarder le multiplicateur de yOffset pour Nyzynka
+                        if (currentStyle === 'nyzynka') {
+                            pixelOffsets[idx] = clickYOffsetMultiplier;
+                        } else {
+                            pixelOffsets[idx] = 0;
+                        }
                     }
                 }
             }
@@ -603,6 +621,14 @@ canvas.addEventListener('pointerdown', e => {
         let target = pixels[p.y*W + p.x];
         if (target !== currentColor) floodFill(p.x, p.y, target, currentColor);
         isDrawing = false; refresh(); return;
+    }
+    if (tool === "convert") {
+        // Récupérer le style cible sélectionné dans le panneau
+        let targetStyle = document.getElementById("convertToCross").checked ? 'cross' : 'nyzynka';
+        saveState();
+        convertStitchStyle(p.x, p.y, targetStyle);
+        refresh();
+        return;
     }
     if (tool === "select") {
         sel = {x1: p.x, y1: p.y, x2: p.x, y2: p.y};
@@ -786,6 +812,44 @@ function updateLineWidth(v) {
     lineWidthPercent = parseInt(v);
     document.getElementById("lineWidthVal").innerText = v;
     render(); // Rafraîchir le rendu pour voir le changement
+}
+function showConvertSettings() { showPanel('convertPanel'); }
+function convertStitchStyle(startX, startY, targetStyle) {
+    let targetColor = pixels[startY * W + startX];
+    let currentStyle = pixelStyles[startY * W + startX] || 'cross';
+    
+    // Si le pixel est transparent ou si le style est déjà le bon, ne rien faire
+    if (targetColor === null || currentStyle === targetStyle) return;
+    
+    let diag = document.getElementById("convertDiag").checked;
+    let stack = [[startX, startY]];
+    let visited = new Set();
+    
+    while (stack.length > 0) {
+        let [x, y] = stack.pop();
+        let key = y * W + x;
+        
+        if (visited.has(key)) continue;
+        if (x < 0 || x >= W || y < 0 || y >= H) continue;
+        if (pixels[key] !== targetColor) continue;
+        if ((pixelStyles[key] || 'cross') !== currentStyle) continue;
+        
+        visited.add(key);
+        
+        // Convertir le style de ce pixel
+        pixelStyles[key] = targetStyle;
+        
+        // Si on convertit vers nyzynka, calculer et sauvegarder le décalage
+        if (targetStyle === 'nyzynka') {
+            pixelOffsets[key] = (x % 2 === 1) ? 1 : 0;
+        }
+        
+        // Ajouter les voisins
+        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+        if (diag) {
+            stack.push([x + 1, y + 1], [x + 1, y - 1], [x - 1, y + 1], [x - 1, y - 1]);
+        }
+    }
 }
 function showFillSettings() { showPanel('fillPanel'); }
 
@@ -1316,13 +1380,15 @@ function closeSelectionPanel() {
 }
 
 /**
- * Toggle (ouvrir/fermer) le panneau latéral de sélection
+ * Toggle (ouvrir/fermer) le panneau latéral - peut s'ouvrir sans sélection
  */
 function toggleSelectionPanel() {
     if (selectionSidePanel.classList.contains('open')) {
         closeSelectionPanel();
     } else {
-        openSelectionPanel();
+        // Ouvrir le panneau même sans sélection
+        selectionSidePanel.classList.add('open');
+        updateSelectionPanel();
     }
 }
 
@@ -1330,17 +1396,32 @@ function toggleSelectionPanel() {
  * Met à jour le panneau latéral avec les informations de la sélection
  */
 function updateSelectionPanel() {
+    // Ne plus fermer automatiquement le panneau s'il n'y a pas de sélection
+    // Le panneau peut rester ouvert pour accéder à l'onglet Géométrie
+    
     if (!sel && !floatingLayer) {
-        closeSelectionPanel();
+        // Pas de sélection : masquer les infos de sélection mais garder le panneau ouvert
+        const validateBtn = document.getElementById('validateBtn');
+        if (validateBtn) validateBtn.style.display = 'none';
+        
+        const selectionDimensions = document.getElementById('selectionDimensions');
+        const selectionPosition = document.getElementById('selectionPosition');
+        if (selectionDimensions) selectionDimensions.textContent = '-';
+        if (selectionPosition) selectionPosition.textContent = '-';
+        
+        // Mettre à jour le bouton de sauvegarde de symbole
+        updateSaveSymbolButton();
         return;
     }
     
     // Afficher le bouton de validation si floatingLayer est actif
     const validateBtn = document.getElementById('validateBtn');
-    if (floatingLayer) {
-        validateBtn.style.display = 'flex';
-    } else {
-        validateBtn.style.display = 'none';
+    if (validateBtn) {
+        if (floatingLayer) {
+            validateBtn.style.display = 'flex';
+        } else {
+            validateBtn.style.display = 'none';
+        }
     }
     
     // Calculer les dimensions et position
@@ -1368,11 +1449,16 @@ function updateSelectionPanel() {
     }
     
     // Mettre à jour les informations textuelles
-    document.getElementById('selectionDimensions').textContent = `${w} × ${h} px`;
-    document.getElementById('selectionPosition').textContent = `(${x}, ${y})`;
+    const selectionDimensions = document.getElementById('selectionDimensions');
+    const selectionPosition = document.getElementById('selectionPosition');
+    if (selectionDimensions) selectionDimensions.textContent = `${w} × ${h} px`;
+    if (selectionPosition) selectionPosition.textContent = `(${x}, ${y})`;
     
     // Rendre la prévisualisation
     renderSelectionPreview(x, y, w, h);
+    
+    // Mettre à jour le bouton de sauvegarde de symbole
+    updateSaveSymbolButton();
 }
 
 /**
@@ -1839,3 +1925,550 @@ window.addEventListener('keydown', e => {
         }
     }
 });
+
+
+// ============================================
+// SYSTÈME D'ONGLETS DU PANNEAU LATÉRAL
+// ============================================
+
+// Stockage des symboles sauvegardés
+let savedSymbols = [];
+
+/**
+ * Change l'onglet actif dans le panneau latéral
+ */
+function switchTab(tabName) {
+    // Désactiver tous les onglets et contenus
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Activer l'onglet sélectionné
+    const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    const activeContent = document.getElementById(`tab-${tabName}`);
+    
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activeContent) activeContent.classList.add('active');
+    
+    // Mettre à jour le titre du panneau
+    const title = document.getElementById('sidePanelTitle');
+    if (tabName === 'selection') {
+        title.textContent = '✂️ Sélection';
+    } else if (tabName === 'geometry') {
+        title.textContent = '📐 Géométrie';
+        updateSymbolsList();
+    }
+    
+    // Mettre à jour le bouton de sauvegarde si on est sur l'onglet géométrie
+    if (tabName === 'geometry') {
+        updateSaveSymbolButton();
+    }
+}
+
+/**
+ * Met à jour l'état du bouton de sauvegarde de symbole
+ */
+function updateSaveSymbolButton() {
+    const saveBtn = document.getElementById('saveSymbolBtn');
+    if (saveBtn) {
+        // Activer le bouton seulement si on a une sélection ou un floatingLayer
+        if (sel || floatingLayer) {
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = '1';
+        } else {
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.5';
+        }
+    }
+}
+
+/**
+ * Sauvegarde la sélection actuelle comme symbole
+ */
+function saveSelectionAsSymbol() {
+    if (!sel && !floatingLayer) {
+        alert('Aucune sélection active à sauvegarder');
+        return;
+    }
+    
+    // Demander un nom pour le symbole
+    const symbolName = prompt('Nom du symbole:', `Symbole ${savedSymbols.length + 1}`);
+    if (!symbolName) return;
+    
+    // Calculer les dimensions et position
+    let x, y, w, h;
+    
+    if (floatingLayer) {
+        x = floatingLayer.x;
+        y = floatingLayer.y;
+        w = floatingLayer.w;
+        h = floatingLayer.h;
+    } else if (sel) {
+        if (!trameMode) {
+            x = Math.min(sel.x1, sel.x2) * 3;
+            y = Math.min(sel.y1, sel.y2) * 3;
+            w = (Math.abs(sel.x1 - sel.x2) + 1) * 3;
+            h = (Math.abs(sel.y1 - sel.y2) + 1) * 3;
+        } else {
+            x = Math.min(sel.x1, sel.x2);
+            y = Math.min(sel.y1, sel.y2);
+            w = Math.abs(sel.x1 - sel.x2) + 1;
+            h = Math.abs(sel.y1 - sel.y2) + 1;
+        }
+    }
+    
+    // Copier les données de la sélection
+    const symbolData = {
+        name: symbolName,
+        width: w,
+        height: h,
+        pixels: [],
+        offsets: [],
+        styles: [],
+        timestamp: Date.now()
+    };
+    
+    // Récupérer la couleur de fond définie pour les symboles
+    const symbolBgColorInput = document.getElementById('symbolBgColor');
+    const symbolBgColor = symbolBgColorInput ? symbolBgColorInput.value : bgDefault;
+    
+    // Copier les pixels de la zone sélectionnée (uniquement les pixels non-vides)
+    for (let py = 0; py < h; py++) {
+        for (let px = 0; px < w; px++) {
+            const srcX = x + px;
+            const srcY = y + py;
+            const srcIdx = srcY * W + srcX;
+            
+            // Ne sauvegarder que les pixels qui ont une couleur différente de la couleur de fond choisie
+            if (pixels[srcIdx] && pixels[srcIdx] !== symbolBgColor) {
+                symbolData.pixels.push({
+                    x: px,
+                    y: py,
+                    color: pixels[srcIdx]
+                });
+                
+                if (pixelOffsets[srcIdx]) {
+                    symbolData.offsets.push({
+                        x: px,
+                        y: py,
+                        offset: pixelOffsets[srcIdx]
+                    });
+                }
+                
+                if (pixelStyles[srcIdx]) {
+                    symbolData.styles.push({
+                        x: px,
+                        y: py,
+                        style: pixelStyles[srcIdx]
+                    });
+                }
+            }
+        }
+    }
+    
+    // Ajouter le symbole à la liste
+    savedSymbols.push(symbolData);
+    
+    // Sauvegarder dans localStorage
+    saveSymbolsToStorage();
+    
+    // Mettre à jour l'affichage
+    updateSymbolsList();
+    
+    // Notification
+    console.log(`Symbole "${symbolName}" sauvegardé avec succès!`);
+}
+
+/**
+ * Met à jour l'affichage de la liste des symboles
+ */
+function updateSymbolsList() {
+    const symbolsList = document.getElementById('symbolsList');
+    const symbolCount = document.getElementById('symbolCount');
+    
+    if (!symbolsList) return;
+    
+    // Mettre à jour le compteur
+    if (symbolCount) {
+        symbolCount.textContent = savedSymbols.length;
+    }
+    
+    if (savedSymbols.length === 0) {
+        symbolsList.innerHTML = '<p class="empty-state">Aucun symbole dans votre kit</p>';
+        return;
+    }
+    
+    symbolsList.innerHTML = '';
+    
+    savedSymbols.forEach((symbol, index) => {
+        const symbolItem = document.createElement('div');
+        symbolItem.className = 'symbol-item';
+        
+        // Rendre l'élément draggable
+        symbolItem.draggable = true;
+        symbolItem.dataset.symbolIndex = index;
+        
+        // Miniature du symbole (format compact)
+        const thumbnailDiv = document.createElement('div');
+        thumbnailDiv.className = 'symbol-thumbnail';
+        
+        const thumbnailCanvas = document.createElement('canvas');
+        thumbnailCanvas.width = symbol.width;
+        thumbnailCanvas.height = symbol.height;
+        const ctx = thumbnailCanvas.getContext('2d');
+        
+        // Dessiner le symbole
+        symbol.pixels.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, 1, 1);
+        });
+        
+        thumbnailDiv.appendChild(thumbnailCanvas);
+        
+        // Informations (format ligne)
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'symbol-info';
+        
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'symbol-name';
+        nameDiv.textContent = symbol.name;
+        
+        const dimensionsDiv = document.createElement('div');
+        dimensionsDiv.className = 'symbol-dimensions';
+        dimensionsDiv.textContent = `${symbol.width} × ${symbol.height} px`;
+        
+        infoDiv.appendChild(nameDiv);
+        infoDiv.appendChild(dimensionsDiv);
+        
+        // Actions (boutons compacts)
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'symbol-actions';
+        
+        const useBtn = document.createElement('button');
+        useBtn.className = 'symbol-btn use';
+        useBtn.innerHTML = '📋';
+        useBtn.title = 'Utiliser ce symbole';
+        useBtn.onclick = (e) => {
+            e.stopPropagation();
+            useSymbol(index);
+        };
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'symbol-btn delete';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = 'Supprimer ce symbole';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteSymbol(index);
+        };
+        
+        actionsDiv.appendChild(useBtn);
+        actionsDiv.appendChild(deleteBtn);
+        
+        // Événements de drag & drop
+        symbolItem.addEventListener('dragstart', (e) => {
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('text/plain', index);
+            
+            // Créer une image fantôme à la même échelle que le canvas
+            const dragCanvas = document.createElement('canvas');
+            // Calculer la taille réelle du canvas à l'écran
+            const canvasRect = canvas.getBoundingClientRect();
+            const actualPixelSize = canvasRect.width / W; // Taille réelle d'un pixel à l'écran
+            
+            dragCanvas.width = symbol.width * actualPixelSize;
+            dragCanvas.height = symbol.height * actualPixelSize;
+            const dragCtx = dragCanvas.getContext('2d');
+            
+            // Dessiner le symbole à l'échelle réelle du canvas
+            symbol.pixels.forEach(p => {
+                dragCtx.fillStyle = p.color;
+                dragCtx.fillRect(p.x * actualPixelSize, p.y * actualPixelSize, actualPixelSize, actualPixelSize);
+            });
+            
+            // Utiliser ce canvas comme image de drag (centré sur le curseur)
+            e.dataTransfer.setDragImage(dragCanvas, dragCanvas.width / 2, dragCanvas.height / 2);
+            
+            symbolItem.style.opacity = '0.5';
+        });
+        
+        symbolItem.addEventListener('dragend', (e) => {
+            symbolItem.style.opacity = '1';
+        });
+        
+        // Clic sur la ligne entière pour utiliser le symbole
+        symbolItem.onclick = () => useSymbol(index);
+        
+        symbolItem.appendChild(thumbnailDiv);
+        symbolItem.appendChild(infoDiv);
+        symbolItem.appendChild(actionsDiv);
+        
+        symbolsList.appendChild(symbolItem);
+    });
+}
+
+/**
+ * Utilise un symbole sauvegardé (le colle dans le canvas)
+ */
+function useSymbol(index) {
+    const symbol = savedSymbols[index];
+    if (!symbol) return;
+    
+    // Créer un floatingLayer avec les données du symbole
+    floatingLayer = {
+        x: Math.floor(W / 2) - Math.floor(symbol.width / 2),
+        y: Math.floor(H / 2) - Math.floor(symbol.height / 2),
+        w: symbol.width,
+        h: symbol.height,
+        data: symbol.pixels.map(p => p.color),
+        offsets: {},
+        styles: {}
+    };
+    
+    // Reconstruire les offsets et styles
+    symbol.offsets.forEach(o => {
+        const idx = o.y * symbol.width + o.x;
+        floatingLayer.offsets[idx] = o.offset;
+    });
+    
+    symbol.styles.forEach(s => {
+        const idx = s.y * symbol.width + s.x;
+        floatingLayer.styles[idx] = s.style;
+    });
+    
+    // Passer en mode sélection
+    setTool('select');
+    
+    // Fermer le panneau ou basculer sur l'onglet sélection
+    switchTab('selection');
+    
+    // Mettre à jour l'affichage
+    refresh();
+    updateSelectionPanel();
+    
+    console.log(`Symbole "${symbol.name}" chargé et prêt à être placé`);
+}
+
+/**
+ * Supprime un symbole de la bibliothèque
+ */
+function deleteSymbol(index) {
+    const symbol = savedSymbols[index];
+    if (!symbol) return;
+    
+    if (confirm(`Supprimer le symbole "${symbol.name}" ?`)) {
+        savedSymbols.splice(index, 1);
+        saveSymbolsToStorage();
+        updateSymbolsList();
+    }
+}
+
+/**
+ * Sauvegarde les symboles dans localStorage
+ */
+function saveSymbolsToStorage() {
+    try {
+
+/**
+ * Définit la couleur de fond des symboles à partir de la couleur de fond du canvas
+ */
+function setSymbolBgFromCanvas() {
+    const symbolBgColorInput = document.getElementById('symbolBgColor');
+    if (symbolBgColorInput) {
+        symbolBgColorInput.value = bgDefault;
+    }
+}
+        localStorage.setItem('pixolator_symbols', JSON.stringify(savedSymbols));
+    } catch (e) {
+        console.error('Erreur lors de la sauvegarde des symboles:', e);
+    }
+}
+
+/**
+ * Charge les symboles depuis localStorage
+ */
+function loadSymbolsFromStorage() {
+    try {
+        const stored = localStorage.getItem('pixolator_symbols');
+        if (stored) {
+            savedSymbols = JSON.parse(stored);
+            console.log(`${savedSymbols.length} symbole(s) chargé(s)`);
+        }
+    } catch (e) {
+        console.error('Erreur lors du chargement des symboles:', e);
+        savedSymbols = [];
+    }
+}
+
+// Charger les symboles au démarrage
+
+/**
+ * Affiche une prévisualisation du symbole sur le canvas pendant le drag
+ */
+function showSymbolPreview(symbolIndex, targetX, targetY) {
+    const symbol = savedSymbols[symbolIndex];
+    if (!symbol) return;
+    
+    // Redessiner le canvas normalement
+    refresh();
+    
+    // Calculer la position de départ (centré sur le curseur)
+    const startX = targetX - Math.floor(symbol.width / 2);
+    const startY = targetY - Math.floor(symbol.height / 2);
+    
+    // Dessiner des bordures sur les pixels qui seront affectés
+    ctx.strokeStyle = '#00ff00'; // Vert fluo pour la prévisualisation
+    ctx.lineWidth = 2;
+    
+    symbol.pixels.forEach(p => {
+        const destX = startX + p.x;
+        const destY = startY + p.y;
+        
+        // Vérifier que la position est dans les limites du canvas
+        if (destX >= 0 && destX < W && destY >= 0 && destY < H) {
+            // Dessiner un rectangle de prévisualisation
+            ctx.strokeRect(
+                destX * pixelSize + 1,
+                destY * pixelSize + 1,
+                pixelSize - 2,
+                pixelSize - 2
+            );
+        }
+    });
+}
+loadSymbolsFromStorage();
+
+
+// ============================================
+// DRAG & DROP DE SYMBOLES SUR LE CANVAS
+// ============================================
+
+/**
+ * Initialise les événements de drag & drop sur le canvas
+ */
+function initSymbolDragDrop() {
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    
+    if (!canvasWrapper) return;
+    
+    let currentDragSymbolIndex = null;
+    
+    // Empêcher le comportement par défaut et afficher la prévisualisation
+    canvasWrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        canvasWrapper.style.outline = '2px dashed var(--accent)';
+        
+        // Récupérer l'index du symbole en cours de drag
+        const symbolIndex = parseInt(e.dataTransfer.getData('text/plain'));
+        if (!isNaN(symbolIndex)) {
+            currentDragSymbolIndex = symbolIndex;
+            
+            // Calculer la position du curseur sur le canvas
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const pixelX = Math.floor(x / pixelSize);
+            const pixelY = Math.floor(y / pixelSize);
+            
+            // Redessiner avec la prévisualisation
+            showSymbolPreview(symbolIndex, pixelX, pixelY);
+        }
+    });
+    
+    canvasWrapper.addEventListener('dragleave', (e) => {
+        canvasWrapper.style.outline = '';
+        currentDragSymbolIndex = null;
+        refresh(); // Effacer la prévisualisation
+    });
+    
+    // Gérer le drop
+    canvasWrapper.addEventListener('drop', (e) => {
+        e.preventDefault();
+        canvasWrapper.style.outline = '';
+        currentDragSymbolIndex = null;
+        
+        const symbolIndex = parseInt(e.dataTransfer.getData('text/plain'));
+        if (isNaN(symbolIndex)) return;
+        
+        const symbol = savedSymbols[symbolIndex];
+        if (!symbol) return;
+        
+        // Calculer la position du drop sur le canvas
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Convertir en coordonnées de pixels
+        const pixelX = Math.floor(x / pixelSize);
+        const pixelY = Math.floor(y / pixelSize);
+        
+        // Placer le symbole à cette position
+        placeSymbolAt(symbolIndex, pixelX, pixelY);
+    });
+}
+
+/**
+ * Place un symbole à une position spécifique sur le canvas
+ */
+function placeSymbolAt(symbolIndex, targetX, targetY) {
+    const symbol = savedSymbols[symbolIndex];
+    if (!symbol) return;
+    
+    // Sauvegarder l'état pour undo
+    saveState();
+    
+    // Centrer le symbole sur la position du curseur
+    const startX = targetX - Math.floor(symbol.width / 2);
+    const startY = targetY - Math.floor(symbol.height / 2);
+    
+    // Copier les pixels du symbole sur le canvas
+    symbol.pixels.forEach(p => {
+        const destX = startX + p.x;
+        const destY = startY + p.y;
+        
+        // Vérifier que la position est dans les limites du canvas
+        if (destX >= 0 && destX < W && destY >= 0 && destY < H) {
+            const destIdx = destY * W + destX;
+            pixels[destIdx] = p.color;
+        }
+    });
+    
+    // Copier les offsets
+    symbol.offsets.forEach(o => {
+        const destX = startX + o.x;
+        const destY = startY + o.y;
+        
+        if (destX >= 0 && destX < W && destY >= 0 && destY < H) {
+            const destIdx = destY * W + destX;
+            pixelOffsets[destIdx] = o.offset;
+        }
+    });
+    
+    // Copier les styles
+    symbol.styles.forEach(s => {
+        const destX = startX + s.x;
+        const destY = startY + s.y;
+        
+        if (destX >= 0 && destX < W && destY >= 0 && destY < H) {
+            const destIdx = destY * W + destX;
+            pixelStyles[destIdx] = s.style;
+        }
+    });
+    
+    // Rafraîchir l'affichage
+    refresh();
+    updateStats();
+    
+    console.log(`Symbole "${symbol.name}" placé à (${startX}, ${startY})`);
+}
+
+// Initialiser le drag & drop au chargement
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSymbolDragDrop);
+} else {
+    initSymbolDragDrop();
+}

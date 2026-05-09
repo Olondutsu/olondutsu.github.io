@@ -753,3 +753,305 @@ canvas {
         right: 0;
     }
 }
+
+/* Drag & Drop - Feedback visuel */
+.symbol-item[draggable="true"] {
+    cursor: grab;
+}
+
+.symbol-item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+#canvasWrapper {
+    transition: outline 0.2s;
+}
+
+/* Onglets du panneau latéral */
+.side-panel-tabs {
+    display: flex;
+    background: #222;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 15px;
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.tab-btn:hover {
+    background: #2a2a2a;
+    color: #ccc;
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: #2a2a2a;
+}
+
+/* Contenu des onglets */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+/* Onglet Géométrie */
+.geometry-header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.geometry-header h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: var(--accent);
+}
+
+.geometry-description {
+    margin: 0;
+    font-size: 12px;
+    color: #888;
+    line-height: 1.4;
+}
+
+.geometry-save-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hint-text {
+    margin: 0;
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Sélecteur de couleur de fond pour les symboles */
+.bg-color-selector {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+
+.bg-color-selector label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label-text {
+    font-size: 12px;
+    color: #ccc;
+    font-weight: 500;
+}
+
+.color-picker-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.color-picker-wrapper input[type="color"] {
+    width: 60px;
+    height: 35px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #333;
+}
+
+.mini-btn {
+    padding: 6px 10px;
+    background: #444;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #eee;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.mini-btn:hover {
+    background: #555;
+}
+
+/* En-tête de la liste des symboles */
+.symbols-list-header {
+    margin-bottom: 10px;
+}
+
+.symbols-list-header h5 {
+    margin: 0;
+    font-size: 13px;
+    color: #888;
+    font-weight: normal;
+}
+
+.symbols-list-header h5 span {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* Liste des symboles - Format compact en lignes */
+.symbols-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.empty-state {
+    text-align: center;
+    color: #666;
+    font-size: 12px;
+    padding: 30px 20px;
+    font-style: italic;
+}
+
+/* Item de symbole - Format ligne compacte */
+.symbol-item {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.symbol-item:hover {
+    border-color: var(--accent);
+    background: #2a2a2a;
+    transform: translateX(2px);
+}
+
+/* Miniature du symbole */
+.symbol-thumbnail {
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: repeating-conic-gradient(#1a1a1a 0% 25%, #111 0% 50%) 50% / 10px 10px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.symbol-thumbnail canvas {
+    image-rendering: pixelated;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Informations du symbole */
+.symbol-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.symbol-name {
+    font-weight: bold;
+    color: #eee;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.symbol-dimensions {
+    font-size: 11px;
+    color: #888;
+}
+
+/* Actions du symbole */
+.symbol-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.symbol-btn {
+    padding: 6px 10px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #eee;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+}
+
+.symbol-btn:hover {
+    background: #444;
+    transform: scale(1.05);
+}
+
+.symbol-btn.use {
+    background: var(--accent);
+    border-color: #0056b3;
+}
+
+.symbol-btn.use:hover {
+    background: #0056b3;
+}
+
+.symbol-btn.delete {
+    background: #dc3545;
+    border-color: #bd2130;
+}
+
+.symbol-btn.delete:hover {
+    background: #bd2130;
+}
+
+/* Scrollbar personnalisée pour la liste de symboles */
+.symbols-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.symbols-list::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+}
+
+.symbols-list::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+.symbols-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

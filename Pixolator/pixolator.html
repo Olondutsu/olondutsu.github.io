@@ -169,13 +169,25 @@
     </div>
 </div>
 
-<!-- Panneau latéral de sélection -->
+<!-- Panneau latéral avec onglets -->
 <div id="selectionSidePanel" class="side-panel">
     <div class="side-panel-header">
-        <h3>✂️ Selection Active</h3>
+        <h3 id="sidePanelTitle">📐 Édition</h3>
         <span class="close-btn" onclick="closeSelectionPanel()">×</span>
     </div>
-    <div class="side-panel-content">
+    
+    <!-- Onglets de navigation -->
+    <div class="side-panel-tabs">
+        <button class="tab-btn active" data-tab="selection" onclick="switchTab('selection')">
+            ✂️ Sélection
+        </button>
+        <button class="tab-btn" data-tab="geometry" onclick="switchTab('geometry')">
+            📐 Géométrie
+        </button>
+    </div>
+    
+    <!-- Contenu de l'onglet Sélection -->
+    <div class="side-panel-content tab-content active" id="tab-selection">
         <!-- Canvas de prévisualisation -->
         <div class="preview-container">
             <canvas id="selectionPreviewCanvas"></canvas>
@@ -207,6 +219,46 @@
             <button onclick="confirmPaste()" class="action-btn success" id="validateBtn" style="display:none;">
                 ✓ Valider le déplacement
             </button>
+        </div>
+    </div>
+    
+    <!-- Contenu de l'onglet Géométrie -->
+    <div class="side-panel-content tab-content" id="tab-geometry">
+        <div class="geometry-header">
+            <h4>📐 Kit de Symboles</h4>
+            <p class="geometry-description">Créez votre bibliothèque de symboles réutilisables</p>
+        </div>
+        
+        <!-- Sélecteur de couleur de fond -->
+        <div class="bg-color-selector">
+            <label for="symbolBgColor">
+                <span class="label-text">🎨 Couleur de fond (transparente):</span>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="symbolBgColor" value="#111111">
+                    <button onclick="setSymbolBgFromCanvas()" class="mini-btn" title="Utiliser la couleur de fond du canvas">
+                        📋 Canvas
+                    </button>
+                </div>
+            </label>
+            <p class="hint-text">Les pixels de cette couleur ne seront pas sauvegardés</p>
+        </div>
+        
+        <!-- Actions pour sauvegarder -->
+        <div class="geometry-save-section">
+            <button onclick="saveSelectionAsSymbol()" class="action-btn primary" id="saveSymbolBtn" disabled>
+                ➕ Sauvegarder dans Géométrie
+            </button>
+            <p class="hint-text">💡 Sélectionnez une zone pour la sauvegarder</p>
+        </div>
+        
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0">
+        
+        <!-- Liste des symboles sauvegardés -->
+        <div class="symbols-list-header">
+            <h5>Symboles sauvegardés (<span id="symbolCount">0</span>)</h5>
+        </div>
+        <div class="symbols-list" id="symbolsList">
+            <p class="empty-state">Aucun symbole dans votre kit</p>
         </div>
     </div>
 </div>
