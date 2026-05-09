@@ -1280,13 +1280,16 @@ container.onwheel = e => {
     container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
 };
 
-// Variables pour le multi-touch - Système Procreate/Krita
+// Variables pour le multi-touch - Système Procreate/Krita amélioré
 // 1 doigt = Dessiner | 2 doigts = Pan/Zoom
 let initialPinchDist = null;
 let lastTouchPos = null;
 let touchVelocity = { x: 0, y: 0 };
 let lastTouchTime = 0;
 let momentumAnimation = null;
+let lastTwoFingerTime = 0; // Timestamp du dernier geste 2 doigts
+let panGraceTimeout = null; // Timeout pour la période de grâce
+const PAN_GRACE_PERIOD = 500; // 500ms de grâce après avoir levé un doigt
 
 container.addEventListener('touchstart', e => {
     // Annuler l'inertie en cours
@@ -1295,11 +1298,18 @@ container.addEventListener('touchstart', e => {
         momentumAnimation = null;
     }
     
+    // Annuler le timeout de grâce si on retouche l'écran
+    if (panGraceTimeout) {
+        clearTimeout(panGraceTimeout);
+        panGraceTimeout = null;
+    }
+    
     if (e.touches.length === 2) {
         // 2 DOIGTS = Mode navigation (Pan/Zoom)
         e.preventDefault();
         isPanning = true;
         isDrawing = false;
+        lastTwoFingerTime = Date.now();
         initialPinchDist = Math.hypot(
             e.touches[0].pageX - e.touches[1].pageX,
             e.touches[0].pageY - e.touches[1].pageY
@@ -1310,8 +1320,18 @@ container.addEventListener('touchstart', e => {
             y: (e.touches[0].pageY + e.touches[1].pageY) / 2
         };
     } else if (e.touches.length === 1) {
-        // 1 DOIGT = Mode dessin (comportement normal)
-        isPanning = false;
+        // 1 DOIGT
+        const timeSinceLastTwoFinger = Date.now() - lastTwoFingerTime;
+        
+        // Si on vient juste de lever un doigt (< période de grâce), rester en mode pan
+        if (timeSinceLastTwoFinger < PAN_GRACE_PERIOD && lastTwoFingerTime > 0) {
+            isPanning = true;
+            isDrawing = false;
+        } else {
+            // Sinon, mode dessin normal
+            isPanning = false;
+        }
+        
         lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     }
     
@@ -1328,6 +1348,7 @@ container.addEventListener('touchmove', e => {
     if (e.touches.length === 2) {
         // 2 DOIGTS = Pan + Zoom simultanés
         e.preventDefault();
+        lastTwoFingerTime = now;
         
         // Calculer la nouvelle distance pour le zoom
         let dist = Math.hypot(
@@ -1363,7 +1384,24 @@ container.addEventListener('touchmove', e => {
         lastTouchPos = { x: centerX, y: centerY };
         isDrawing = false;
     } else if (e.touches.length === 1) {
-        // 1 DOIGT = Laisser le comportement de dessin normal se faire
+        // 1 DOIGT
+        const timeSinceLastTwoFinger = now - lastTwoFingerTime;
+        
+        // Si on est dans la période de grâce, continuer le pan
+        if (timeSinceLastTwoFinger < PAN_GRACE_PERIOD && isPanning) {
+            e.preventDefault();
+            const deltaX = e.touches[0].pageX - lastTouchPos.x;
+            const deltaY = e.touches[0].pageY - lastTouchPos.y;
+            
+            container.scrollLeft -= deltaX;
+            container.scrollTop -= deltaY;
+            
+            touchVelocity.x = deltaX / deltaTime * 16;
+            touchVelocity.y = deltaY / deltaTime * 16;
+            
+            isDrawing = false;
+        }
+        
         lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     }
     
@@ -1373,7 +1411,19 @@ container.addEventListener('touchmove', e => {
 container.addEventListener('touchend', e => {
     if (e.touches.length === 0) {
         // Tous les doigts levés
-        isPanning = false;
+        const timeSinceLastTwoFinger = Date.now() - lastTwoFingerTime;
+        
+        // Si on vient de faire un geste 2 doigts, garder le mode pan pendant la période de grâce
+        if (timeSinceLastTwoFinger < PAN_GRACE_PERIOD && lastTwoFingerTime > 0) {
+            // Programmer la fin du mode pan après la période de grâce
+            panGraceTimeout = setTimeout(() => {
+                isPanning = false;
+                panGraceTimeout = null;
+            }, PAN_GRACE_PERIOD - timeSinceLastTwoFinger);
+        } else {
+            isPanning = false;
+        }
+        
         initialPinchDist = null;
         
         // Appliquer l'inertie si la vélocité est suffisante
@@ -1384,10 +1434,11 @@ container.addEventListener('touchend', e => {
         
         lastTouchPos = null;
     } else if (e.touches.length === 1) {
-        // Il reste 1 doigt : repasser en mode dessin
-        isPanning = false;
+        // Il reste 1 doigt après avoir levé l'autre
+        lastTwoFingerTime = Date.now(); // Mettre à jour le timestamp
         initialPinchDist = null;
         lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+        // isPanning reste true pendant la période de grâce
     }
 });
 
@@ -1487,7 +1538,29 @@ if(saved) {
 } else {
     init(32, 32);
 }
+// Debug : Vérifier que la palette est bien présente
+console.log('🎨 Initialisation de la palette...');
+const paletteElement = document.getElementById('palette');
+if (paletteElement) {
+    console.log('✅ Élément #palette trouvé');
+    console.log('📏 Dimensions:', paletteElement.offsetWidth, 'x', paletteElement.offsetHeight);
+    console.log('📍 Position:', window.getComputedStyle(paletteElement).position);
+    console.log('🎯 Z-index:', window.getComputedStyle(paletteElement).zIndex);
+    console.log('👁️ Visibility:', window.getComputedStyle(paletteElement).visibility);
+    console.log('🎨 Background:', window.getComputedStyle(paletteElement).background);
+} else {
+    console.error('❌ Élément #palette NON TROUVÉ !');
+}
+
+const colorContainer = document.getElementById('colorContainer');
+if (colorContainer) {
+    console.log('✅ Élément #colorContainer trouvé');
+} else {
+    console.error('❌ Élément #colorContainer NON TROUVÉ !');
+}
+
 rebuildPalette();
+console.log('🎨 Palette reconstruite, nombre de couleurs:', paletteColors.length);
 refresh();
 
 /** PANNEAU LATÉRAL DE SÉLECTION **/
