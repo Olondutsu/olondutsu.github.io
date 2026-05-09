@@ -1532,7 +1532,12 @@ if(saved) {
     // Charger le design Vyshyvka Studio par défaut
     console.log('🎨 Chargement du design Vyshyvka Studio par défaut...');
     fetch('vyshyvka_studio.json')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             bgDefault = data.bgDefault || "#111111";
             paletteColors = data.paletteColors || paletteColors;
@@ -1548,7 +1553,18 @@ if(saved) {
             document.getElementById("mYSlider").max = H - 1;
             canvas.width = W * pixelSize;
             canvas.height = H * pixelSize;
+            
+            // Debug : Vérifier que la palette est bien présente
+            console.log('🎨 Initialisation de la palette...');
+            const paletteElement = document.getElementById('palette');
+            if (paletteElement) {
+                console.log('✅ Élément #palette trouvé');
+            } else {
+                console.error('❌ Élément #palette NON TROUVÉ !');
+            }
+            
             rebuildPalette();
+            console.log('🎨 Palette reconstruite, nombre de couleurs:', paletteColors.length);
             refresh();
             console.log('✅ Design Vyshyvka Studio chargé avec succès! 🇺🇦');
         })
@@ -1556,32 +1572,16 @@ if(saved) {
             console.warn('⚠️ Impossible de charger vyshyvka_studio.json, canvas vide par défaut');
             console.error(error);
             init(32, 32);
+            rebuildPalette();
+            refresh();
         });
 }
-// Debug : Vérifier que la palette est bien présente
-console.log('🎨 Initialisation de la palette...');
-const paletteElement = document.getElementById('palette');
-if (paletteElement) {
-    console.log('✅ Élément #palette trouvé');
-    console.log('📏 Dimensions:', paletteElement.offsetWidth, 'x', paletteElement.offsetHeight);
-    console.log('📍 Position:', window.getComputedStyle(paletteElement).position);
-    console.log('🎯 Z-index:', window.getComputedStyle(paletteElement).zIndex);
-    console.log('👁️ Visibility:', window.getComputedStyle(paletteElement).visibility);
-    console.log('🎨 Background:', window.getComputedStyle(paletteElement).background);
-} else {
-    console.error('❌ Élément #palette NON TROUVÉ !');
-}
 
-const colorContainer = document.getElementById('colorContainer');
-if (colorContainer) {
-    console.log('✅ Élément #colorContainer trouvé');
-} else {
-    console.error('❌ Élément #colorContainer NON TROUVÉ !');
+// Si une sauvegarde existe, initialiser la palette normalement
+if (saved) {
+    rebuildPalette();
+    refresh();
 }
-
-rebuildPalette();
-console.log('🎨 Palette reconstruite, nombre de couleurs:', paletteColors.length);
-refresh();
 
 /** PANNEAU LATÉRAL DE SÉLECTION **/
 
