@@ -140,22 +140,27 @@ body {
         height: 14px;
     }
     
-    /* 6. Palette plus compacte */
+    /* 6. Palette plus grande sur mobile */
     #palette {
-        height: 60px;
-        gap: 8px;
-        padding: 0 5px;
+        height: 80px !important;
+        gap: 12px;
+        padding: 0 10px;
     }
     
     .color {
-        width: 28px;
-        height: 28px;
+        width: 45px !important;
+        height: 45px !important;
     }
     
     #addColorBtn {
-        width: 28px;
-        height: 28px;
-        font-size: 18px;
+        width: 45px !important;
+        height: 45px !important;
+        font-size: 24px;
+    }
+    
+    #bgColorBtn {
+        width: 45px !important;
+        height: 45px !important;
     }
     
     /* 7. Stats plus discret */

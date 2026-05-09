@@ -1288,8 +1288,8 @@ let touchVelocity = { x: 0, y: 0 };
 let lastTouchTime = 0;
 let momentumAnimation = null;
 let lastTwoFingerTime = 0; // Timestamp du dernier geste 2 doigts
-let panGraceTimeout = null; // Timeout pour la période de grâce
-const PAN_GRACE_PERIOD = 500; // 500ms de grâce après avoir levé un doigt
+let wasTwoFinger = false; // Flag pour savoir si on vient de faire un geste 2 doigts
+const PAN_GRACE_PERIOD = 800; // 800ms de grâce après avoir levé un doigt
 
 container.addEventListener('touchstart', e => {
     // Annuler l'inertie en cours
@@ -1298,17 +1298,12 @@ container.addEventListener('touchstart', e => {
         momentumAnimation = null;
     }
     
-    // Annuler le timeout de grâce si on retouche l'écran
-    if (panGraceTimeout) {
-        clearTimeout(panGraceTimeout);
-        panGraceTimeout = null;
-    }
-    
     if (e.touches.length === 2) {
         // 2 DOIGTS = Mode navigation (Pan/Zoom)
         e.preventDefault();
         isPanning = true;
         isDrawing = false;
+        wasTwoFinger = true;
         lastTwoFingerTime = Date.now();
         initialPinchDist = Math.hypot(
             e.touches[0].pageX - e.touches[1].pageX,
@@ -1324,12 +1319,14 @@ container.addEventListener('touchstart', e => {
         const timeSinceLastTwoFinger = Date.now() - lastTwoFingerTime;
         
         // Si on vient juste de lever un doigt (< période de grâce), rester en mode pan
-        if (timeSinceLastTwoFinger < PAN_GRACE_PERIOD && lastTwoFingerTime > 0) {
+        if (wasTwoFinger && timeSinceLastTwoFinger < PAN_GRACE_PERIOD) {
             isPanning = true;
             isDrawing = false;
+            console.log('🖐️ Mode Pan prolongé (1 doigt après 2 doigts)');
         } else {
             // Sinon, mode dessin normal
             isPanning = false;
+            wasTwoFinger = false;
         }
         
         lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
@@ -1348,6 +1345,7 @@ container.addEventListener('touchmove', e => {
     if (e.touches.length === 2) {
         // 2 DOIGTS = Pan + Zoom simultanés
         e.preventDefault();
+        wasTwoFinger = true;
         lastTwoFingerTime = now;
         
         // Calculer la nouvelle distance pour le zoom
@@ -1363,7 +1361,7 @@ container.addEventListener('touchmove', e => {
         // ZOOM
         if (initialPinchDist) {
             let ratio = dist / initialPinchDist;
-            if (Math.abs(ratio - 1) > 0.01) { // Seuil de 1%
+            if (Math.abs(ratio - 1) > 0.01) {
                 pixelSize = Math.max(2, Math.min(100, pixelSize * ratio));
                 initialPinchDist = dist;
                 refresh();
@@ -1377,31 +1375,27 @@ container.addEventListener('touchmove', e => {
         container.scrollLeft -= deltaX;
         container.scrollTop -= deltaY;
         
-        // Calculer la vélocité pour l'inertie
         touchVelocity.x = deltaX / deltaTime * 16;
         touchVelocity.y = deltaY / deltaTime * 16;
         
         lastTouchPos = { x: centerX, y: centerY };
         isDrawing = false;
+    } else if (e.touches.length === 1 && isPanning) {
+        // 1 DOIGT en mode Pan (période de grâce)
+        e.preventDefault();
+        const deltaX = e.touches[0].pageX - lastTouchPos.x;
+        const deltaY = e.touches[0].pageY - lastTouchPos.y;
+        
+        container.scrollLeft -= deltaX;
+        container.scrollTop -= deltaY;
+        
+        touchVelocity.x = deltaX / deltaTime * 16;
+        touchVelocity.y = deltaY / deltaTime * 16;
+        
+        lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+        isDrawing = false;
     } else if (e.touches.length === 1) {
-        // 1 DOIGT
-        const timeSinceLastTwoFinger = now - lastTwoFingerTime;
-        
-        // Si on est dans la période de grâce, continuer le pan
-        if (timeSinceLastTwoFinger < PAN_GRACE_PERIOD && isPanning) {
-            e.preventDefault();
-            const deltaX = e.touches[0].pageX - lastTouchPos.x;
-            const deltaY = e.touches[0].pageY - lastTouchPos.y;
-            
-            container.scrollLeft -= deltaX;
-            container.scrollTop -= deltaY;
-            
-            touchVelocity.x = deltaX / deltaTime * 16;
-            touchVelocity.y = deltaY / deltaTime * 16;
-            
-            isDrawing = false;
-        }
-        
+        // 1 DOIGT en mode dessin normal
         lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
     }
     
@@ -1409,20 +1403,20 @@ container.addEventListener('touchmove', e => {
 }, { passive: false });
 
 container.addEventListener('touchend', e => {
+    const now = Date.now();
+    
     if (e.touches.length === 0) {
         // Tous les doigts levés
-        const timeSinceLastTwoFinger = Date.now() - lastTwoFingerTime;
+        const timeSinceLastTwoFinger = now - lastTwoFingerTime;
         
-        // Si on vient de faire un geste 2 doigts, garder le mode pan pendant la période de grâce
-        if (timeSinceLastTwoFinger < PAN_GRACE_PERIOD && lastTwoFingerTime > 0) {
-            // Programmer la fin du mode pan après la période de grâce
-            panGraceTimeout = setTimeout(() => {
+        // Désactiver le mode pan après un délai
+        setTimeout(() => {
+            if (Date.now() - lastTwoFingerTime >= PAN_GRACE_PERIOD) {
                 isPanning = false;
-                panGraceTimeout = null;
-            }, PAN_GRACE_PERIOD - timeSinceLastTwoFinger);
-        } else {
-            isPanning = false;
-        }
+                wasTwoFinger = false;
+                console.log('✋ Fin de la période de grâce - Mode dessin activé');
+            }
+        }, PAN_GRACE_PERIOD);
         
         initialPinchDist = null;
         
@@ -1435,10 +1429,9 @@ container.addEventListener('touchend', e => {
         lastTouchPos = null;
     } else if (e.touches.length === 1) {
         // Il reste 1 doigt après avoir levé l'autre
-        lastTwoFingerTime = Date.now(); // Mettre à jour le timestamp
+        // Garder le mode pan actif
         initialPinchDist = null;
         lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-        // isPanning reste true pendant la période de grâce
     }
 });
 
@@ -1536,7 +1529,34 @@ if(saved) {
         init(s.W, s.H, s.pixels, s.pixelStyles, s.pixelOffsets);
     }
 } else {
-    init(32, 32);
+    // Charger le design Vyshyvka Studio par défaut
+    console.log('🎨 Chargement du design Vyshyvka Studio par défaut...');
+    fetch('vyshyvka_studio.json')
+        .then(response => response.json())
+        .then(data => {
+            bgDefault = data.bgDefault || "#111111";
+            paletteColors = data.paletteColors || paletteColors;
+            W = data.W;
+            H = data.H;
+            pixels = data.pixels;
+            pixelStyles = data.pixelStyles;
+            pixelOffsets = data.pixelOffsets || new Array(W * H).fill(0);
+            originalW = Math.floor(W / 3);
+            originalH = Math.floor(H / 3);
+            mX = (W - 1) / 2; mY = (H - 1) / 2;
+            document.getElementById("mXSlider").max = W - 1;
+            document.getElementById("mYSlider").max = H - 1;
+            canvas.width = W * pixelSize;
+            canvas.height = H * pixelSize;
+            rebuildPalette();
+            refresh();
+            console.log('✅ Design Vyshyvka Studio chargé avec succès! 🇺🇦');
+        })
+        .catch(error => {
+            console.warn('⚠️ Impossible de charger vyshyvka_studio.json, canvas vide par défaut');
+            console.error(error);
+            init(32, 32);
+        });
 }
 // Debug : Vérifier que la palette est bien présente
 console.log('🎨 Initialisation de la palette...');
