@@ -22,11 +22,9 @@
         <div class="menu-item">
             <img src="icons/view.png" class="menu-icon">View
             <div class="dropdown">
-                <div onclick="toggleGrid()"><img src="icons/grid.png" class="menu-icon"><span class="menu-text">Grid On/Off</span></div>
-                <div onclick="toggleNumberedGrid()"><img src="icons/grid.png" class="menu-icon"><span class="menu-text">Numbered Grid</span></div>
-                <div onclick="toggleRender()"><img src="icons/cross.png" class="menu-icon">Embroidery Mode</div>
-                <div onclick="toggleNyzynka()"><img src="icons/view.png" class="menu-icon">Nyzynka Mode</div>
-                <div onclick="showPanel('threadCountPanel')"><img src="icons/view.png" class="menu-icon">Thread Counter</div>
+                <div id="menuGrid" onclick="toggleGrid()"><img src="icons/grid.png" class="menu-icon"><span class="menu-text">Grid On/Off</span></div>
+                <div id="menuEmbroidery" onclick="toggleRender()"><img src="icons/cross.png" class="menu-icon">Embroidery Mode</div>
+                <div id="menuTrame" onclick="toggleTrameMode()"><img src="icons/view.png" class="menu-icon">TRAME Mode (3×3)</div>
             </div>
         </div>
     </div>
@@ -36,7 +34,7 @@
     </div>
     <div class="menu-right" style="justify-content: flex-end;">
         <button class="menu-item" onclick="showPanel('resizePanel')"><img src="icons/resize.png" class="menu-icon">Size</button>
-        <button class="menu-item" onclick="showPanel('selectionPanel')"><img src="icons/copy.png" class="menu-icon">Edit</button>
+        <button class="menu-item" onclick="toggleSelectionPanel()"><img src="icons/copy.png" class="menu-icon">Edit</button>
     </div>
 </div>
 
@@ -51,6 +49,7 @@
     </div>
     <div class="tool-group">
         <button class="tool-btn" data-tool="fill" onclick="showFillSettings()"><img src="icons/fill.png" class="tool-icon">Bucket</button>
+        <button class="tool-btn" data-tool="convert" onclick="showConvertSettings()"><img src="icons/view.png" class="tool-icon">Convert</button>
         <button class="tool-btn" data-tool="picker" onclick="setTool('picker')"><img src="icons/picker.png" class="tool-icon">Picker</button>
         <button class="tool-btn" data-tool="select" onclick="setTool('select')"><img src="icons/select.png" class="tool-icon">Select Box</button>
     </div>
@@ -58,6 +57,10 @@
         <div style="font-size:10px; color:#888; text-align:center; margin-bottom:5px">Stitch Style:</div>
         <button class="tool-btn active" data-style="cross" onclick="setStitchStyle('cross')">✖️ Cross</button>
         <button class="tool-btn" data-style="nyzynka" onclick="setStitchStyle('nyzynka')">🧵 Nyzynka</button>
+    </div>
+    <div class="tool-group">
+        <div style="font-size:10px; color:#888; text-align:center; margin-top:5px">Line Width: <span id="lineWidthVal">15</span>%</div>
+        <input type="range" id="lineWidthSlider" min="5" max="50" value="15" oninput="updateLineWidth(this.value)">
     </div>
     <div class="tool-group">
             <button class="tool-btn" data-tool="ruler" onclick="setTool('ruler')" title="Ruler">📏<span class="menu-text"> Ruler</span></button>
@@ -86,6 +89,22 @@
     <div class="panel-content">
         <div class="row"><input type="checkbox" id="fillDiag"> Include Diagonals</div>
         <button onclick="setTool('fill'); hidePanels();" style="background:var(--accent)">Activate Bucket</button>
+    </div>
+</div>
+
+<div id="convertPanel" class="panel">
+    <div class="panel-header"><h3>Convert Stitch Style</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-content">
+        <div class="row"><input type="checkbox" id="convertDiag"> Include Diagonals</div>
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0">
+        <div style="font-size:12px; color:#888; margin-bottom:10px;">Convert to:</div>
+        <div class="row"><input type="radio" name="convertTo" id="convertToCross" value="cross" checked> Cross Stitch (Point de croix)</div>
+        <div class="row"><input type="radio" name="convertTo" id="convertToNyzynka" value="nyzynka"> Nyzynka (Fils verticaux)</div>
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0">
+        <div style="font-size:11px; color:#666; margin-bottom:10px;">
+            ℹ️ Click on a pixel to convert all connected pixels of the same color to the selected stitch style.
+        </div>
+        <button onclick="setTool('convert'); hidePanels();" style="background:var(--accent)">Activate Convert Tool</button>
     </div>
 </div>
 
@@ -148,6 +167,55 @@
         </div>
         <button onclick="hidePanels()">Close</button>
     </div>
+</div>
+
+<!-- Panneau latéral de sélection -->
+<div id="selectionSidePanel" class="side-panel">
+    <div class="side-panel-header">
+        <h3>✂️ Selection Active</h3>
+        <span class="close-btn" onclick="closeSelectionPanel()">×</span>
+    </div>
+    <div class="side-panel-content">
+        <!-- Canvas de prévisualisation -->
+        <div class="preview-container">
+            <canvas id="selectionPreviewCanvas"></canvas>
+        </div>
+        
+        <!-- Informations sur la sélection -->
+        <div class="selection-info">
+            <div class="info-row">
+                <span class="info-label">Dimensions:</span>
+                <span id="selectionDimensions">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Position:</span>
+                <span id="selectionPosition">-</span>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="selection-actions">
+            <button onclick="copySelection()" class="action-btn primary">
+                <img src="icons/copy.png" class="menu-icon">Copier
+            </button>
+            <button onclick="pasteSelection()" class="action-btn">
+                <img src="icons/copy.png" class="menu-icon">Coller
+            </button>
+            <button onclick="deleteSelection()" class="action-btn danger">
+                <img src="icons/eraser.png" class="menu-icon">Supprimer
+            </button>
+            <button onclick="confirmPaste()" class="action-btn success" id="validateBtn" style="display:none;">
+                ✓ Valider le déplacement
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Barre d'état en bas -->
+<div id="statusBar">
+    <span id="statusDimensions"></span>
+    <span id="statusMode"></span>
+    <span id="statusPixels"></span>
 </div>
 
 <script src="script.js"></script>

@@ -1,36 +1,99 @@
 /** GLOBAL STATE **/
-let W = 32, H = 32, pixelSize = 25;
-let pixels = []; // Now stores {color, style} objects
-let pixelStyles = []; // 'cross', 'nyzynka', or null
+let W = 32, H = 32, pixelSize = 10;
+let pixels = []; // Canvas principal (résolution normale)
+let pixelStyles = []; // 'cross' uniquement pour le canvas principal
+let pixelOffsets = []; // Décalage Y pour les traits de Nyzynka (sauvegardé au moment du dessin)
 let currentColor = "#ffffff";
 let currentStyle = "cross"; // Default style
 let bgDefault = "#111111";
 let paletteColors = ["#000000", "#ffffff", "#be0000", "#ffcc00", "#1a5e1a", "#2a2aff"];
 let tool = "pencil", brushSize = 1;
+let lineWidthPercent = 15; // Largeur des lignes en pourcentage (5-50%)
 let mirrorX = false, mirrorY = false, mirrorRadial = false, mX = 15.5, mY = 15.5;
 let undoStack = [], redoStack = [];
-let gridMode = true, numberedGrid = false, renderMode = "pixel", nyzynkaMode = false, isDrawing = false, isPanning = false;
+let gridMode = true, numberedGrid = false, renderMode = "pixel", nyzynkaMode = false, trameMode = false, isDrawing = false, isPanning = false;
 let sel = null, clipboard = null, floatingLayer = null;
 let drawing = false;
 let isRulerActive = false;
 let rulerStart = null;
 let rulerCurrent = null;
+let lockedColumn = null; // Pour verrouiller la colonne en mode Nyzynka
+
+// Variables pour stocker les dimensions et données originales (basse résolution)
+let originalW = 0, originalH = 0, originalPixelSize = 0;
+let originalPixels = null, originalPixelStyles = null;
+
+// Layer haute résolution pour Nyzynka (et futurs styles de broderie)
+let hiResLayer = {
+    enabled: false,
+    W: 0, // Largeur en haute résolution (W * 3)
+    H: 0, // Hauteur en haute résolution (H * 3)
+    pixels: [], // Pixels haute résolution
+    styles: []  // Styles haute résolution
+};
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
 const container = document.getElementById("canvasContainer");
 
+// Panneau latéral de sélection
+const selectionSidePanel = document.getElementById("selectionSidePanel");
+const selectionPreviewCanvas = document.getElementById("selectionPreviewCanvas");
+const selectionPreviewCtx = selectionPreviewCanvas.getContext("2d");
+
 /** INIT **/
-function init(w, h, data = null, styles = null) {
-    W = w; H = h;
-    pixels = data ? [...data] : new Array(W * H).fill(bgDefault);
-    pixelStyles = styles ? [...styles] : new Array(W * H).fill('cross');
+function init(w, h, data = null, styles = null, offsets = null) {
+    // Sauvegarder les dimensions originales
+    originalW = w;
+    originalH = h;
+    originalPixels = data ? [...data] : new Array(w * h).fill(bgDefault);
+    originalPixelStyles = styles ? [...styles] : new Array(w * h).fill('cross');
+    
+    // Étendre en mode TRAME (3×) par défaut
+    W = w * 3;
+    H = h * 3;
+    pixels = new Array(W * H).fill(bgDefault);
+    pixelStyles = new Array(W * H).fill('cross');
+    pixelOffsets = new Array(W * H).fill(0);
+    
+    // Copier chaque pixel original dans une zone 3×3
+    for(let y = 0; y < originalH; y++) {
+        for(let x = 0; x < originalW; x++) {
+            let oldIdx = y * originalW + x;
+            let color = originalPixels[oldIdx];
+            let style = originalPixelStyles[oldIdx];
+            
+            // Remplir la zone 3×3 correspondante
+            for(let dy = 0; dy < 3; dy++) {
+                for(let dx = 0; dx < 3; dx++) {
+                    let newX = x * 3 + dx;
+                    let newY = y * 3 + dy;
+                    let newIdx = newY * W + newX;
+                    pixels[newIdx] = color;
+                    pixelStyles[newIdx] = style;
+                    
+                    // Recalculer le multiplicateur pour chaque pixel en fonction de sa NOUVELLE position X
+                    if (style === 'nyzynka') {
+                        pixelOffsets[newIdx] = (newX % 2 === 1) ? 1 : 0;
+                    } else {
+                        pixelOffsets[newIdx] = 0;
+                    }
+                }
+            }
+        }
+    }
+    
     mX = (W - 1) / 2; mY = (H - 1) / 2;
     document.getElementById("mXSlider").max = W - 1;
     document.getElementById("mYSlider").max = H - 1;
     refresh();
-    container.scrollLeft = 2000 + (W * pixelSize / 2) - (container.clientWidth / 2);
-    container.scrollTop = 2000 + (H * pixelSize / 2) - (container.clientHeight / 2);
+    // Centrer le canvas dans le conteneur
+    // Le canvasWrapper a des marges de 50vw (gauche/droite) et 50vh (haut/bas)
+    // Pour centrer : marge + (taille canvas / 2) - (taille viewport / 2)
+    const marginLeft = container.clientWidth / 2;  // 50vw
+    const marginTop = container.clientHeight / 2;  // 50vh
+    container.scrollLeft = marginLeft + (W * pixelSize / 2) - (container.clientWidth / 2);
+    container.scrollTop = marginTop + (H * pixelSize / 2) - (container.clientHeight / 2);
 }
 
 function refresh() {
@@ -57,58 +120,227 @@ function render() {
     ctx.fillStyle = bgDefault;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Base Pixels
-    for (let i = 0; i < pixels.length; i++) {
-        if (pixels[i] === bgDefault) continue;
-        let x = i % W, y = Math.floor(i / W);
-        let px = x * pixelSize, py = y * pixelSize;
-        let style = pixelStyles[i] || 'cross';
-        
-        ctx.fillStyle = pixels[i];
-        
-        if (style === 'nyzynka') {
-            // Mode Nyzynka : lignes verticales avec décalage d'un carreau
-            // Chaque colonne est décalée verticalement par rapport à la précédente
-            let lineWidth = Math.max(2, pixelSize * 0.15);
-            let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+    // En mode PIXEL (par défaut) : regrouper les pixels 3×3 pour afficher 1 seul pixel/croix (sauf Nyzynka)
+    // En mode TRAME + Embroidery : afficher en haute résolution, mais regrouper en embroidery
+    if ((trameMode && renderMode === "cross") || !trameMode) {
+        // Parcourir par blocs 3×3
+        let blocksW = Math.floor(W / 3);
+        let blocksH = Math.floor(H / 3);
+        for (let by = 0; by < blocksH; by++) {
+            for (let bx = 0; bx < blocksW; bx++) {
+                // Vérifier si ce bloc 3×3 contient des pixels colorés et leur style
+                let blockColor = null;
+                let blockStyle = null;
+                for (let dy = 0; dy < 3 && !blockColor; dy++) {
+                    for (let dx = 0; dx < 3 && !blockColor; dx++) {
+                        let x = bx * 3 + dx;
+                        let y = by * 3 + dy;
+                        let idx = y * W + x;
+                        if (pixels[idx] !== bgDefault) {
+                            blockColor = pixels[idx];
+                            blockStyle = pixelStyles[idx];
+                        }
+                    }
+                }
+                
+                // Si le bloc contient une couleur
+                if (blockColor) {
+                    if (blockStyle === 'nyzynka') {
+                        // Nyzynka : dessiner les traits verticaux normalement pour chaque pixel du bloc
+                        for (let dy = 0; dy < 3; dy++) {
+                            for (let dx = 0; dx < 3; dx++) {
+                                let x = bx * 3 + dx;
+                                let y = by * 3 + dy;
+                                let idx = y * W + x;
+                                if (pixels[idx] !== bgDefault && pixelStyles[idx] === 'nyzynka') {
+                                    let px = x * pixelSize;
+                                    let py = y * pixelSize;
+                                    ctx.fillStyle = pixels[idx];
+                                    let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                                    let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                                    // Utiliser le multiplicateur sauvegardé et le multiplier par pixelSize
+                                    let yOffsetMultiplier = pixelOffsets[idx] || 0;
+                                    let yOffset = yOffsetMultiplier * pixelSize;
+                                    // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
+                                    ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                                }
+                            }
+                        }
+                    } else {
+                        // Point de croix : dessiner 1 croix au centre du bloc 3×3
+                        let centerX = (bx * 3 + 1.5) * pixelSize;
+                        let centerY = (by * 3 + 1.5) * pixelSize;
+                        let crossSize = pixelSize * 2.5;
+                        
+                        ctx.strokeStyle = blockColor;
+                        ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                        ctx.beginPath();
+                        let p = crossSize * 0.2;
+                        ctx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
+                        ctx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
+                        ctx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
+                        ctx.lineTo(centerX - crossSize/2 + p, centerY + crossSize/2 - p);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+    } else {
+        // Mode TRAME : afficher chaque pixel individuellement en haute résolution
+        for (let i = 0; i < pixels.length; i++) {
+            if (pixels[i] === bgDefault) continue;
+            let x = i % W, y = Math.floor(i / W);
+            let px = x * pixelSize, py = y * pixelSize;
+            let style = pixelStyles[i] || 'cross';
             
-            // Décalage vertical basé sur la colonne (alternance)
-            // Colonne paire : position normale
-            // Colonne impaire : décalée d'un demi-carreau vers le bas
-            let yOffset = (x % 2 === 1) ? pixelSize * 0.5 : 0;
+            ctx.fillStyle = pixels[i];
             
-            // Dessiner la ligne verticale décalée
-            ctx.fillRect(centerX, py + yOffset, lineWidth, pixelSize);
-            
-        } else if (renderMode === "cross") {
-            // Mode broderie (croix)
-            ctx.strokeStyle = pixels[i];
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            let p = pixelSize * 0.2;
-            ctx.moveTo(px+p, py+p);
-            ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
-            ctx.moveTo(px+pixelSize-p, py+p);
-            ctx.lineTo(px+p, py+pixelSize-p);
-            ctx.stroke();
-        } else {
-            // Mode pixel normal (point de croix plein)
-            ctx.fillRect(px, py, pixelSize, pixelSize);
+            if (style === 'nyzynka') {
+                // Mode Nyzynka : lignes verticales avec décalage
+                // Ligne du centre du trou au-dessus au centre du trou en-dessous
+                let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                // Utiliser le multiplicateur sauvegardé et le multiplier par pixelSize
+                let yOffsetMultiplier = pixelOffsets[i] || 0;
+                let yOffset = yOffsetMultiplier * pixelSize;
+                // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
+                ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                
+            } else if (renderMode === "cross") {
+                // Mode broderie (croix)
+                ctx.strokeStyle = pixels[i];
+                ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                ctx.beginPath();
+                let p = pixelSize * 0.2;
+                ctx.moveTo(px+p, py+p);
+                ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
+                ctx.moveTo(px+pixelSize-p, py+p);
+                ctx.lineTo(px+p, py+pixelSize-p);
+                ctx.stroke();
+            } else {
+                // Mode pixel normal (point de croix plein)
+                ctx.fillRect(px, py, pixelSize, pixelSize);
+            }
         }
     }
 
     // Floating Layer (Selection being moved)
     if (floatingLayer) {
         ctx.globalAlpha = 0.7;
-        for (let j = 0; j < floatingLayer.h; j++) {
-            for (let i = 0; i < floatingLayer.w; i++) {
-                let col = floatingLayer.data[j * floatingLayer.w + i];
-                if (col !== bgDefault) {
-                    ctx.fillStyle = col;
-                    ctx.fillRect((floatingLayer.x + i) * pixelSize, (floatingLayer.y + j) * pixelSize, pixelSize, pixelSize);
+        
+        // En mode PIXEL (par défaut) : regrouper les pixels 3×3 pour afficher 1 seul pixel/croix (sauf Nyzynka)
+        if ((trameMode && renderMode === "cross") || !trameMode) {
+            // Parcourir par blocs 3×3 dans le floatingLayer
+            let blocksW = Math.floor(floatingLayer.w / 3);
+            let blocksH = Math.floor(floatingLayer.h / 3);
+            
+            for (let by = 0; by < blocksH; by++) {
+                for (let bx = 0; bx < blocksW; bx++) {
+                    // Vérifier si ce bloc 3×3 contient des pixels colorés et leur style
+                    let blockColor = null;
+                    let blockStyle = null;
+                    for (let dy = 0; dy < 3 && !blockColor; dy++) {
+                        for (let dx = 0; dx < 3 && !blockColor; dx++) {
+                            let i = bx * 3 + dx;
+                            let j = by * 3 + dy;
+                            let idx = j * floatingLayer.w + i;
+                            if (floatingLayer.data[idx] !== bgDefault) {
+                                blockColor = floatingLayer.data[idx];
+                                blockStyle = floatingLayer.styles ? floatingLayer.styles[idx] : 'cross';
+                            }
+                        }
+                    }
+                    
+                    // Si le bloc contient une couleur
+                    if (blockColor) {
+                        if (blockStyle === 'nyzynka') {
+                            // Nyzynka : dessiner les traits verticaux normalement pour chaque pixel du bloc
+                            for (let dy = 0; dy < 3; dy++) {
+                                for (let dx = 0; dx < 3; dx++) {
+                                    let i = bx * 3 + dx;
+                                    let j = by * 3 + dy;
+                                    let idx = j * floatingLayer.w + i;
+                                    if (floatingLayer.data[idx] !== bgDefault &&
+                                        floatingLayer.styles && floatingLayer.styles[idx] === 'nyzynka') {
+                                        let x = floatingLayer.x + i;
+                                        let y = floatingLayer.y + j;
+                                        let px = x * pixelSize;
+                                        let py = y * pixelSize;
+                                        ctx.fillStyle = floatingLayer.data[idx];
+                                        let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                                        let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                                        // Utiliser le multiplicateur du floatingLayer et le multiplier par pixelSize
+                                        let yOffsetMultiplier = (floatingLayer.offsets && floatingLayer.offsets[idx]) || 0;
+                                        let yOffset = yOffsetMultiplier * pixelSize;
+                                        // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
+                                        ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                                    }
+                                }
+                            }
+                        } else {
+                            // Point de croix : dessiner 1 croix au centre du bloc 3×3
+                            let centerX = (floatingLayer.x + bx * 3 + 1.5) * pixelSize;
+                            let centerY = (floatingLayer.y + by * 3 + 1.5) * pixelSize;
+                            let crossSize = pixelSize * 2.5;
+                            
+                            ctx.strokeStyle = blockColor;
+                            ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                            ctx.beginPath();
+                            let p = crossSize * 0.2;
+                            ctx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
+                            ctx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
+                            ctx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
+                            ctx.lineTo(centerX - crossSize/2 + p, centerY + crossSize/2 - p);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+        } else {
+            // Mode TRAME : afficher chaque pixel individuellement en haute résolution
+            for (let j = 0; j < floatingLayer.h; j++) {
+                for (let i = 0; i < floatingLayer.w; i++) {
+                    let idx = j * floatingLayer.w + i;
+                    let col = floatingLayer.data[idx];
+                    let style = floatingLayer.styles ? floatingLayer.styles[idx] : 'cross';
+                    
+                    if (col !== bgDefault) {
+                        let x = floatingLayer.x + i;
+                        let y = floatingLayer.y + j;
+                        let px = x * pixelSize;
+                        let py = y * pixelSize;
+                        
+                        ctx.fillStyle = col;
+                        
+                        if (style === 'nyzynka') {
+                            // Mode Nyzynka : lignes verticales avec décalage
+                            let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                            let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                            // Utiliser le multiplicateur du floatingLayer et le multiplier par pixelSize
+                            let yOffsetMultiplier = (floatingLayer.offsets && floatingLayer.offsets[idx]) || 0;
+                            let yOffset = yOffsetMultiplier * pixelSize;
+                            // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
+                            ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                        } else if (renderMode === "cross") {
+                            // Mode broderie (croix)
+                            ctx.strokeStyle = col;
+                            ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                            ctx.beginPath();
+                            let p = pixelSize * 0.2;
+                            ctx.moveTo(px+p, py+p);
+                            ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
+                            ctx.moveTo(px+pixelSize-p, py+p);
+                            ctx.lineTo(px+p, py+pixelSize-p);
+                            ctx.stroke();
+                        } else {
+                            // Mode pixel normal
+                            ctx.fillRect(px, py, pixelSize, pixelSize);
+                        }
+                    }
                 }
             }
         }
+        
         ctx.globalAlpha = 1.0;
         ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 2;
         ctx.strokeRect(floatingLayer.x * pixelSize, floatingLayer.y * pixelSize, floatingLayer.w * pixelSize, floatingLayer.h * pixelSize);
@@ -116,10 +348,78 @@ function render() {
 
     // Grid
     if (gridMode) {
-        ctx.strokeStyle = "rgba(120,120,120,0.15)";
+        // Style uniforme pour toutes les grilles
+        ctx.strokeStyle = "rgba(120,120,120,0.2)";
         ctx.lineWidth = 0.5;
-        for(let i=0; i<=W; i++) { ctx.beginPath(); ctx.moveTo(i*pixelSize, 0); ctx.lineTo(i*pixelSize, canvas.height); ctx.stroke(); }
-        for(let i=0; i<=H; i++) { ctx.beginPath(); ctx.moveTo(0, i*pixelSize); ctx.lineTo(canvas.width, i*pixelSize); ctx.stroke(); }
+        
+        if (trameMode) {
+            // Mode TRAME : grille normale (chaque pixel)
+            for(let i=0; i<=W; i++) { ctx.beginPath(); ctx.moveTo(i*pixelSize, 0); ctx.lineTo(i*pixelSize, canvas.height); ctx.stroke(); }
+            for(let i=0; i<=H; i++) { ctx.beginPath(); ctx.moveTo(0, i*pixelSize); ctx.lineTo(canvas.width, i*pixelSize); ctx.stroke(); }
+        } else {
+            // Mode PIXEL (par défaut) : grille adaptée (3× pour les blocs collapsés, fine pour Nyzynka)
+            
+            // Dessiner la grille par blocs 3×3
+            let blocksW = Math.floor(W / 3);
+            let blocksH = Math.floor(H / 3);
+            
+            for (let by = 0; by <= blocksH; by++) {
+                for (let bx = 0; bx <= blocksW; bx++) {
+                    // Vérifier si ce bloc contient du Nyzynka
+                    let hasNyzynka = false;
+                    if (by < blocksH && bx < blocksW) {
+                        for (let dy = 0; dy < 3 && !hasNyzynka; dy++) {
+                            for (let dx = 0; dx < 3 && !hasNyzynka; dx++) {
+                                let x = bx * 3 + dx;
+                                let y = by * 3 + dy;
+                                if (x < W && y < H) {
+                                    let idx = y * W + x;
+                                    if (pixelStyles[idx] === 'nyzynka') {
+                                        hasNyzynka = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (hasNyzynka) {
+                        // Zone Nyzynka : grille fine (chaque pixel)
+                        for (let dy = 0; dy <= 3; dy++) {
+                            let y = by * 3 + dy;
+                            if (y <= H) {
+                                ctx.beginPath();
+                                ctx.moveTo(bx * 3 * pixelSize, y * pixelSize);
+                                ctx.lineTo((bx * 3 + 3) * pixelSize, y * pixelSize);
+                                ctx.stroke();
+                            }
+                        }
+                        for (let dx = 0; dx <= 3; dx++) {
+                            let x = bx * 3 + dx;
+                            if (x <= W) {
+                                ctx.beginPath();
+                                ctx.moveTo(x * pixelSize, by * 3 * pixelSize);
+                                ctx.lineTo(x * pixelSize, (by * 3 + 3) * pixelSize);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Dessiner la grille globale pour les blocs 3×3 (zones non-Nyzynka)
+            for (let i = 0; i <= blocksW; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * 3 * pixelSize, 0);
+                ctx.lineTo(i * 3 * pixelSize, canvas.height);
+                ctx.stroke();
+            }
+            for (let j = 0; j <= blocksH; j++) {
+                ctx.beginPath();
+                ctx.moveTo(0, j * 3 * pixelSize);
+                ctx.lineTo(canvas.width, j * 3 * pixelSize);
+                ctx.stroke();
+            }
+        }
     }
     
     // Numbered Grid
@@ -143,7 +443,19 @@ function render() {
     // Selection Box
     if(sel && tool === "select") {
         ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
-        ctx.strokeRect(Math.min(sel.x1, sel.x2)*pixelSize, Math.min(sel.y1, sel.y2)*pixelSize, (Math.abs(sel.x1-sel.x2)+1)*pixelSize, (Math.abs(sel.y1-sel.y2)+1)*pixelSize);
+        
+        // En mode PIXEL (trameMode=false), la sélection est en coordonnées de blocs 3×3
+        if (!trameMode) {
+            let x1 = Math.min(sel.x1, sel.x2) * 3;
+            let y1 = Math.min(sel.y1, sel.y2) * 3;
+            let w = (Math.abs(sel.x1 - sel.x2) + 1) * 3;
+            let h = (Math.abs(sel.y1 - sel.y2) + 1) * 3;
+            ctx.strokeRect(x1 * pixelSize, y1 * pixelSize, w * pixelSize, h * pixelSize);
+        } else {
+            // En mode TRAME, coordonnées normales
+            ctx.strokeRect(Math.min(sel.x1, sel.x2)*pixelSize, Math.min(sel.y1, sel.y2)*pixelSize, (Math.abs(sel.x1-sel.x2)+1)*pixelSize, (Math.abs(sel.y1-sel.y2)+1)*pixelSize);
+        }
+        
         ctx.setLineDash([]);
     }
     updateStats();
@@ -157,8 +469,20 @@ function toggleSidebar() {
 }
 
 /** CORE DRAWING **/
-function setPix(x, y, col) {
+function setPix(x, y, col, mouseEvent = null) {
     if (x < 0 || y < 0 || x >= W || y >= H) return;
+    
+    // Calculer le yOffset pour Nyzynka
+    // Stocker comme multiplicateur (0 ou 1), pas en pixels absolus
+    // Sera multiplié par pixelSize au moment du rendu pour s'adapter au zoom
+    let clickYOffsetMultiplier = 0;
+    if (currentStyle === 'nyzynka') {
+        // Le décalage alterne à chaque colonne X
+        // Colonne paire (0, 2, 4...) : multiplicateur = 0
+        // Colonne impaire (1, 3, 5...) : multiplicateur = 1
+        clickYOffsetMultiplier = (x % 2 === 1) ? 1 : 0;
+    }
+    
     let points = [[x, y]];
     if (mirrorRadial) {
         let cx = (W-1)/2, cy = (H-1)/2;
@@ -182,6 +506,7 @@ function setPix(x, y, col) {
         }
     }
     points.forEach(p => {
+        // Utiliser le brushSize pour tous les styles
         let radius = Math.floor(brushSize / 2);
         for(let i = -radius; i <= (brushSize%2===0?radius-1:radius); i++) {
             for(let j = -radius; j <= (brushSize%2===0?radius-1:radius); j++) {
@@ -190,6 +515,13 @@ function setPix(x, y, col) {
                     let idx = py*W+px;
                     pixels[idx] = col;
                     pixelStyles[idx] = currentStyle;
+                    
+                    // Sauvegarder le multiplicateur de yOffset pour Nyzynka
+                    if (currentStyle === 'nyzynka') {
+                        pixelOffsets[idx] = clickYOffsetMultiplier;
+                    } else {
+                        pixelOffsets[idx] = 0;
+                    }
                 }
             }
         }
@@ -203,15 +535,38 @@ canvas.addEventListener('pointerdown', e => {
     
     // Check for Move Selection
     if (tool === "select" && sel && !floatingLayer) {
-        const xMin = Math.min(sel.x1, sel.x2), yMin = Math.min(sel.y1, sel.y2);
-        const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
+        // p contient déjà les coordonnées converties (blocs en mode PIXEL, pixels en mode TRAME)
+        const xMin = Math.min(sel.x1, sel.x2);
+        const yMin = Math.min(sel.y1, sel.y2);
+        const w = Math.abs(sel.x1 - sel.x2) + 1;
+        const h = Math.abs(sel.y1 - sel.y2) + 1;
+        
         if (p.x >= xMin && p.x < xMin + w && p.y >= yMin && p.y < yMin + h) {
             saveState();
-            floatingLayer = { w, h, x: xMin, y: yMin, data: [] };
-            for(let j=0; j<h; j++) for(let i=0; i<w; i++) {
-                let idx = (yMin+j)*W + (xMin+i);
+            
+            // Convertir en coordonnées pixels pour extraire les données
+            let pixelXMin, pixelYMin, pixelW, pixelH;
+            if (!trameMode) {
+                pixelXMin = xMin * 3;
+                pixelYMin = yMin * 3;
+                pixelW = w * 3;
+                pixelH = h * 3;
+            } else {
+                pixelXMin = xMin;
+                pixelYMin = yMin;
+                pixelW = w;
+                pixelH = h;
+            }
+            
+            floatingLayer = { w: pixelW, h: pixelH, x: pixelXMin, y: pixelYMin, data: [], styles: [], offsets: [] };
+            for(let j=0; j<pixelH; j++) for(let i=0; i<pixelW; i++) {
+                let idx = (pixelYMin+j)*W + (pixelXMin+i);
                 floatingLayer.data.push(pixels[idx]);
+                floatingLayer.styles.push(pixelStyles[idx]);
+                floatingLayer.offsets.push(pixelOffsets[idx]);
                 pixels[idx] = bgDefault;
+                pixelStyles[idx] = 'cross'; // Réinitialiser le style aussi
+                pixelOffsets[idx] = 0; // Réinitialiser l'offset aussi
             }
             sel = null; isDrawing = true; return;
         }
@@ -234,6 +589,11 @@ canvas.addEventListener('pointerdown', e => {
     saveState();
     
     isDrawing = true;
+    
+    // Verrouiller la colonne en mode Nyzynka
+    if (currentStyle === 'nyzynka' && (tool === 'pencil' || tool === 'eraser')) {
+        lockedColumn = p.x;
+    }
 
     if (tool === "picker") {
         currentColor = pixels[p.y*W + p.x];
@@ -247,18 +607,30 @@ canvas.addEventListener('pointerdown', e => {
     if (tool === "select") {
         sel = {x1: p.x, y1: p.y, x2: p.x, y2: p.y};
     } else {
-        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor));
+        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor), e);
     }
     refresh();
 });
 
 canvas.addEventListener('pointermove', e => {
     if (!isDrawing || isPanning) return;
-    const p = getCoord(e);
+    let p = getCoord(e);
+    
+    // Verrouiller sur la colonne en mode Nyzynka
+    if (lockedColumn !== null && currentStyle === 'nyzynka' && (tool === 'pencil' || tool === 'eraser')) {
+        p.x = lockedColumn;
+    }
 
     if (floatingLayer) {
-        floatingLayer.x = Math.floor(p.x - floatingLayer.w / 2);
-        floatingLayer.y = Math.floor(p.y - floatingLayer.h / 2);
+        // En mode PIXEL, p.x et p.y sont en coordonnées de blocs, il faut les convertir en pixels
+        let targetX = p.x;
+        let targetY = p.y;
+        if (!trameMode) {
+            targetX = p.x * 3;
+            targetY = p.y * 3;
+        }
+        floatingLayer.x = Math.floor(targetX - floatingLayer.w / 2);
+        floatingLayer.y = Math.floor(targetY - floatingLayer.h / 2);
     }
     else if (tool === "ruler" && rulerStart) {
         rulerCurrent = p; // On "publie" la position de la souris
@@ -269,37 +641,67 @@ canvas.addEventListener('pointermove', e => {
     else if (tool === "select") {
         sel.x2 = p.x; sel.y2 = p.y;
     } else if (tool === "pencil" || tool === "eraser") {
-        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor));
+        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor), e);
     }
     refresh();
 });
 
-window.addEventListener('pointerup', () => { 
+window.addEventListener('pointerup', () => {
     if (tool === "ruler") {
         refresh(); // Efface le trait blanc une fois fini
         rulerStart = null; // Prêt pour la prochaine mesure
     }
-    isDrawing = false; 
     
-    saveLocal(); 
+    // Ouvrir le panneau latéral si une sélection vient d'être créée
+    if (tool === "select" && sel && isDrawing) {
+        openSelectionPanel();
+    }
+    
+    isDrawing = false;
+    lockedColumn = null; // Déverrouiller la colonne
+    
+    saveLocal();
 });
 
 /** EDIT FUNCTIONS **/
 function copySelection() {
     if(!sel) { alert("Select an area first"); return; }
-    const x = Math.min(sel.x1, sel.x2), y = Math.min(sel.y1, sel.y2);
-    const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
-    clipboard = { w, h, data: [] };
-    for(let j=0; j<h; j++) for(let i=0; i<w; i++) clipboard.data.push(pixels[(y+j)*W + (x+i)]);
+    
+    // En mode PIXEL (trameMode=false), convertir les coordonnées de blocs en pixels
+    let x, y, w, h;
+    if (!trameMode) {
+        x = Math.min(sel.x1, sel.x2) * 3;
+        y = Math.min(sel.y1, sel.y2) * 3;
+        w = (Math.abs(sel.x1 - sel.x2) + 1) * 3;
+        h = (Math.abs(sel.y1 - sel.y2) + 1) * 3;
+    } else {
+        x = Math.min(sel.x1, sel.x2);
+        y = Math.min(sel.y1, sel.y2);
+        w = Math.abs(sel.x1 - sel.x2) + 1;
+        h = Math.abs(sel.y1 - sel.y2) + 1;
+    }
+    
+    clipboard = { w, h, data: [], styles: [], offsets: [] };
+    for(let j=0; j<h; j++) {
+        for(let i=0; i<w; i++) {
+            let idx = (y+j)*W + (x+i);
+            clipboard.data.push(pixels[idx]);
+            clipboard.styles.push(pixelStyles[idx]);
+            clipboard.offsets.push(pixelOffsets[idx]);
+        }
+    }
     alert("Selection copied!");
 }
 
 function pasteSelection() {
     if(!clipboard) { alert("Nothing to paste"); return; }
     if(floatingLayer) confirmPaste();
-    floatingLayer = { 
-        w: clipboard.w, h: clipboard.h, data: [...clipboard.data], 
-        x: Math.floor(W/2 - clipboard.w/2), y: Math.floor(H/2 - clipboard.h/2) 
+    floatingLayer = {
+        w: clipboard.w, h: clipboard.h,
+        data: [...clipboard.data],
+        styles: [...clipboard.styles],
+        offsets: [...clipboard.offsets],
+        x: Math.floor(W/2 - clipboard.w/2), y: Math.floor(H/2 - clipboard.h/2)
     };
     refresh();
 }
@@ -310,9 +712,14 @@ function confirmPaste() {
     for (let j = 0; j < floatingLayer.h; j++) {
         for (let i = 0; i < floatingLayer.w; i++) {
             let tx = floatingLayer.x + i, ty = floatingLayer.y + j;
-            let col = floatingLayer.data[j * floatingLayer.w + i];
+            let idx = j * floatingLayer.w + i;
+            let col = floatingLayer.data[idx];
+            let style = floatingLayer.styles[idx];
+            let offset = floatingLayer.offsets ? floatingLayer.offsets[idx] : 0;
             if (tx >= 0 && tx < W && ty >= 0 && ty < H && col !== bgDefault) {
                 pixels[ty * W + tx] = col;
+                pixelStyles[ty * W + tx] = style;
+                pixelOffsets[ty * W + tx] = offset;
             }
         }
     }
@@ -335,6 +742,16 @@ function getCoord(e) {
     const rect = canvas.getBoundingClientRect();
     let x = Math.floor((e.clientX - rect.left) / (rect.width / W));
     let y = Math.floor((e.clientY - rect.top) / (rect.height / H));
+    
+    // En mode PIXEL (trameMode=false), convertir en coordonnées de blocs 3×3 pour la select box
+    if (!trameMode && tool === "select") {
+        x = Math.floor(x / 3);
+        y = Math.floor(y / 3);
+        let maxBlockX = Math.floor(W / 3) - 1;
+        let maxBlockY = Math.floor(H / 3) - 1;
+        return { x: Math.max(0, Math.min(maxBlockX, x)), y: Math.max(0, Math.min(maxBlockY, y)) };
+    }
+    
     return { x: Math.max(0, Math.min(W-1, x)), y: Math.max(0, Math.min(H-1, y)) };
 }
 
@@ -365,26 +782,37 @@ function toggleRuler() {
 }
 
 function updateBrushSize(v) { brushSize = parseInt(v); document.getElementById("sizeVal").innerText = v; }
+function updateLineWidth(v) {
+    lineWidthPercent = parseInt(v);
+    document.getElementById("lineWidthVal").innerText = v;
+    render(); // Rafraîchir le rendu pour voir le changement
+}
 function showFillSettings() { showPanel('fillPanel'); }
 
 /** HISTORY **/
 function saveState() {
-    undoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
+    undoStack.push(JSON.stringify({pixels, pixelStyles, pixelOffsets, bgDefault, W, H}));
     if(undoStack.length > 50) undoStack.shift();
     redoStack = [];
 }
 function undo() {
     if(!undoStack.length) return;
-    redoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
+    redoStack.push(JSON.stringify({pixels, pixelStyles, pixelOffsets, bgDefault, W, H}));
     let s = JSON.parse(undoStack.pop());
-    pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H;
+    pixels = s.pixels;
+    pixelStyles = s.pixelStyles || new Array(pixels.length).fill('cross');
+    pixelOffsets = s.pixelOffsets || new Array(pixels.length).fill(0);
+    bgDefault = s.bgDefault; W = s.W; H = s.H;
     refresh(); rebuildPalette();
 }
 function redo() {
     if(!redoStack.length) return;
-    undoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
+    undoStack.push(JSON.stringify({pixels, pixelStyles, pixelOffsets, bgDefault, W, H}));
     let s = JSON.parse(redoStack.pop());
-    pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H;
+    pixels = s.pixels;
+    pixelStyles = s.pixelStyles || new Array(pixels.length).fill('cross');
+    pixelOffsets = s.pixelOffsets || new Array(pixels.length).fill(0);
+    bgDefault = s.bgDefault; W = s.W; H = s.H;
     refresh(); rebuildPalette();
 }
 function rebuildPalette() {
@@ -462,6 +890,62 @@ function updateUI() {
     lx.style.left = (mX * pixelSize + pixelSize/2) + "px";
     ly.style.display = mirrorY ? "block" : "none";
     ly.style.top = (mY * pixelSize + pixelSize/2) + "px";
+    
+    // Mettre à jour les indicateurs visuels du menu View
+    updateMenuIndicators();
+}
+
+function updateMenuIndicators() {
+    // Grid
+    const menuGrid = document.getElementById("menuGrid");
+    if(menuGrid) {
+        if(gridMode) menuGrid.classList.add("active");
+        else menuGrid.classList.remove("active");
+    }
+    
+    // Embroidery Mode
+    const menuEmbroidery = document.getElementById("menuEmbroidery");
+    if(menuEmbroidery) {
+        if(renderMode === "cross") menuEmbroidery.classList.add("active");
+        else menuEmbroidery.classList.remove("active");
+    }
+    
+    // TRAME Mode
+    const menuTrame = document.getElementById("menuTrame");
+    if(menuTrame) {
+        if(trameMode) menuTrame.classList.add("active");
+        else menuTrame.classList.remove("active");
+    }
+    
+    // Mettre à jour la barre d'état
+    updateStatusBar();
+}
+
+function updateStatusBar() {
+    // Dimensions
+    const statusDimensions = document.getElementById("statusDimensions");
+    if(statusDimensions) {
+        let baseW = originalW || Math.floor(W / 3);
+        let baseH = originalH || Math.floor(H / 3);
+        statusDimensions.textContent = `${baseW}×${baseH}${!trameMode ? ' (Pixel Mode)' : ' (TRAME: ' + W + '×' + H + ')'}`;
+    }
+    
+    // Mode actif
+    const statusMode = document.getElementById("statusMode");
+    if(statusMode) {
+        let modes = [];
+        if(gridMode) modes.push("Grid");
+        if(renderMode === "cross") modes.push("Embroidery");
+        if(trameMode) modes.push("TRAME");
+        statusMode.textContent = modes.length > 0 ? modes.join(" | ") : "Pixel Mode";
+    }
+    
+    // Nombre de pixels
+    const statusPixels = document.getElementById("statusPixels");
+    if(statusPixels) {
+        let count = pixels.filter(p => p !== bgDefault).length;
+        statusPixels.textContent = `${count} pixels`;
+    }
 }
 
 function updateStats() {
@@ -471,9 +955,31 @@ function updateStats() {
 
 function toggleGrid() { gridMode = !gridMode; render(); }
 function toggleNumberedGrid() { numberedGrid = !numberedGrid; refresh(); }
-function toggleRender() { renderMode = (renderMode === "pixel" ? "cross" : "pixel"); nyzynkaMode = false; refresh(); }
-function toggleNyzynka() { nyzynkaMode = !nyzynkaMode; if(nyzynkaMode) renderMode = "pixel"; refresh(); }
-function saveLocal() { localStorage.setItem("pix_pro_save_v3", JSON.stringify({W,H,pixels,pixelStyles,bgDefault,paletteColors})); }
+function toggleRender() { renderMode = (renderMode === "pixel" ? "cross" : "pixel"); nyzynkaMode = false; if(trameMode) refresh(); }
+function toggleNyzynka() { nyzynkaMode = !nyzynkaMode; if(nyzynkaMode) { renderMode = "pixel"; trameMode = true; } refresh(); }
+function toggleTrameMode() {
+    // Basculer entre mode PIXEL (par défaut, collapsé) et mode TRAME (haute résolution)
+    trameMode = !trameMode;
+    
+    // Le rendu s'adapte automatiquement via la fonction render()
+    // En mode PIXEL (trameMode=false), les blocs 3×3 sont affichés comme 1 seul pixel/croix
+    // En mode TRAME (trameMode=true), affichage en haute résolution
+    // Nyzynka reste toujours en détail
+    refresh();
+}
+function saveLocal() {
+    // Sauvegarder en HAUTE RÉSOLUTION pour préserver les positions exactes des pixels
+    localStorage.setItem("pix_pro_save_v5", JSON.stringify({
+        W: W,
+        H: H,
+        pixels: pixels,
+        pixelStyles: pixelStyles,
+        pixelOffsets: pixelOffsets,
+        bgDefault,
+        paletteColors,
+        isHighRes: true  // Marqueur pour indiquer que c'est en haute résolution
+    }));
+}
 
 /** THREAD COUNTER **/
 function updateThreadCount() {
@@ -589,23 +1095,59 @@ function exportSVG() {
 }
 
 function saveJSON() {
-    const data = JSON.stringify({W, H, pixels, pixelStyles, bgDefault, paletteColors});
+    // Sauvegarder en HAUTE RÉSOLUTION pour préserver les positions exactes des pixels
+    const data = JSON.stringify({
+        W: W,
+        H: H,
+        pixels: pixels,
+        pixelStyles: pixelStyles,
+        pixelOffsets: pixelOffsets,
+        bgDefault,
+        paletteColors,
+        isHighRes: true  // Marqueur pour indiquer que c'est en haute résolution
+    });
     const blob = new Blob([data], {type: "application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "design.json"; a.click();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "design.json";
+    a.click();
 }
 
 function loadJSON() {
-    let i = document.createElement('input'); i.type="file"; i.accept=".json";
+    let i = document.createElement('input');
+    i.type = "file";
+    i.accept = ".json";
     i.onchange = e => {
         let reader = new FileReader();
         reader.onload = r => {
             let d = JSON.parse(r.target.result);
             paletteColors = d.paletteColors || paletteColors;
             bgDefault = d.bgDefault || "#111111";
-            init(d.W, d.H, d.pixels, d.pixelStyles);
+            
+            // Si c'est une sauvegarde en haute résolution, charger directement
+            if (d.isHighRes) {
+                W = d.W;
+                H = d.H;
+                pixels = d.pixels;
+                pixelStyles = d.pixelStyles;
+                pixelOffsets = d.pixelOffsets || new Array(W * H).fill(0);
+                originalW = Math.floor(W / 3);
+                originalH = Math.floor(H / 3);
+                mX = (W - 1) / 2; mY = (H - 1) / 2;
+                document.getElementById("mXSlider").max = W - 1;
+                document.getElementById("mYSlider").max = H - 1;
+                canvas.width = W * pixelSize;
+                canvas.height = H * pixelSize;
+            } else {
+                // Ancienne sauvegarde en basse résolution
+                init(d.W, d.H, d.pixels, d.pixelStyles, d.pixelOffsets);
+            }
             rebuildPalette();
-        }; reader.readAsText(e.target.files[0]);
-    }; i.click();
+            refresh();
+        };
+        reader.readAsText(e.target.files[0]);
+    };
+    i.click();
 }
 
 /** ZOOM & PAN (MOUSE + TOUCH) **/
@@ -715,16 +1257,509 @@ document.querySelectorAll('.panel').forEach(p => {
     window.addEventListener('mouseup', () => isDraggingPanel = false);
 });
 
-function newProject() { if(confirm("Discard current work and start new?")) init(32, 32); }
+function newProject() {
+    if(confirm("Discard current work and start new?")) {
+        // Réinitialiser les variables du mode TRAME
+        trameMode = false;
+        originalPixels = null;
+        originalPixelStyles = null;
+        originalW = 0;
+        originalH = 0;
+        init(32, 32);
+    }
+}
 
 /** STARTUP **/
-const saved = localStorage.getItem("pix_pro_save_v3");
+const saved = localStorage.getItem("pix_pro_save_v5") || localStorage.getItem("pix_pro_save_v4") || localStorage.getItem("pix_pro_save_v3");
 if(saved) {
     const s = JSON.parse(saved); bgDefault = s.bgDefault || "#111111";
-    paletteColors = s.paletteColors || paletteColors;
-    init(s.W, s.H, s.pixels, s.pixelStyles);
-} else { init(32, 32); }
+    // Si c'est une sauvegarde en haute résolution, charger directement
+    if (s.isHighRes) {
+        W = s.W;
+        H = s.H;
+        pixels = s.pixels;
+        pixelStyles = s.pixelStyles;
+        pixelOffsets = s.pixelOffsets || new Array(W * H).fill(0);
+        originalW = Math.floor(W / 3);
+        originalH = Math.floor(H / 3);
+        mX = (W - 1) / 2; mY = (H - 1) / 2;
+        document.getElementById("mXSlider").max = W - 1;
+        document.getElementById("mYSlider").max = H - 1;
+        canvas.width = W * pixelSize;
+        canvas.height = H * pixelSize;
+    } else {
+        // Ancienne sauvegarde en basse résolution
+        paletteColors = s.paletteColors || paletteColors;
+        init(s.W, s.H, s.pixels, s.pixelStyles, s.pixelOffsets);
+    }
+} else {
+    init(32, 32);
+}
 rebuildPalette();
+refresh();
+
+/** PANNEAU LATÉRAL DE SÉLECTION **/
+
+/**
+ * Ouvre le panneau latéral de sélection
+ */
+function openSelectionPanel() {
+    selectionSidePanel.classList.add('open');
+    updateSelectionPanel();
+}
+
+/**
+ * Ferme le panneau latéral de sélection
+ */
+function closeSelectionPanel() {
+    selectionSidePanel.classList.remove('open');
+}
+
+/**
+ * Toggle (ouvrir/fermer) le panneau latéral de sélection
+ */
+function toggleSelectionPanel() {
+    if (selectionSidePanel.classList.contains('open')) {
+        closeSelectionPanel();
+    } else {
+        openSelectionPanel();
+    }
+}
+
+/**
+ * Met à jour le panneau latéral avec les informations de la sélection
+ */
+function updateSelectionPanel() {
+    if (!sel && !floatingLayer) {
+        closeSelectionPanel();
+        return;
+    }
+    
+    // Afficher le bouton de validation si floatingLayer est actif
+    const validateBtn = document.getElementById('validateBtn');
+    if (floatingLayer) {
+        validateBtn.style.display = 'flex';
+    } else {
+        validateBtn.style.display = 'none';
+    }
+    
+    // Calculer les dimensions et position
+    let x, y, w, h;
+    
+    if (floatingLayer) {
+        // Si on a un floatingLayer, utiliser ses coordonnées
+        x = floatingLayer.x;
+        y = floatingLayer.y;
+        w = floatingLayer.w;
+        h = floatingLayer.h;
+    } else if (sel) {
+        // Sinon utiliser la sélection
+        if (!trameMode) {
+            x = Math.min(sel.x1, sel.x2) * 3;
+            y = Math.min(sel.y1, sel.y2) * 3;
+            w = (Math.abs(sel.x1 - sel.x2) + 1) * 3;
+            h = (Math.abs(sel.y1 - sel.y2) + 1) * 3;
+        } else {
+            x = Math.min(sel.x1, sel.x2);
+            y = Math.min(sel.y1, sel.y2);
+            w = Math.abs(sel.x1 - sel.x2) + 1;
+            h = Math.abs(sel.y1 - sel.y2) + 1;
+        }
+    }
+    
+    // Mettre à jour les informations textuelles
+    document.getElementById('selectionDimensions').textContent = `${w} × ${h} px`;
+    document.getElementById('selectionPosition').textContent = `(${x}, ${y})`;
+    
+    // Rendre la prévisualisation
+    renderSelectionPreview(x, y, w, h);
+}
+
+/**
+ * Rend la prévisualisation de la sélection dans le panneau latéral
+ */
+function renderSelectionPreview(x, y, w, h) {
+    // Définir la taille du canvas de prévisualisation avec marge pour les poignées
+    const handleSize = 8;
+    const margin = handleSize + 2;
+    const maxSize = 250 - (margin * 2);
+    const scale = Math.min(maxSize / w, maxSize / h, 10); // Max 10x zoom
+    const previewW = Math.floor(w * scale);
+    const previewH = Math.floor(h * scale);
+    
+    // Canvas plus grand pour inclure les poignées
+    selectionPreviewCanvas.width = previewW + (margin * 2);
+    selectionPreviewCanvas.height = previewH + (margin * 2);
+    
+    // Sauvegarder le contexte et translater pour dessiner avec marge
+    selectionPreviewCtx.save();
+    selectionPreviewCtx.translate(margin, margin);
+    
+    // Fond transparent avec damier
+    selectionPreviewCtx.fillStyle = bgDefault;
+    selectionPreviewCtx.fillRect(0, 0, previewW, previewH);
+    
+    // Extraire et dessiner les pixels de la sélection
+    if (floatingLayer) {
+        // Dessiner depuis le floatingLayer
+        renderFloatingLayerPreview(scale);
+    } else if (sel) {
+        // Dessiner depuis la sélection active
+        renderSelectionAreaPreview(x, y, w, h, scale);
+    }
+    
+    // Dessiner la grille sur la prévisualisation
+    drawPreviewGrid(w, h, scale);
+    
+    // Restaurer le contexte
+    selectionPreviewCtx.restore();
+    
+    // Dessiner les poignées de redimensionnement (sans translation)
+    drawResizeHandles(previewW, previewH, margin);
+}
+
+/**
+ * Rend la prévisualisation du floatingLayer
+ */
+function renderFloatingLayerPreview(scale) {
+    const data = floatingLayer.data;
+    const styles = floatingLayer.styles || [];
+    const w = floatingLayer.w;
+    const h = floatingLayer.h;
+    
+    // En mode PIXEL (par défaut) : regrouper les pixels 3×3
+    if ((trameMode && renderMode === "cross") || !trameMode) {
+        let blocksW = Math.floor(w / 3);
+        let blocksH = Math.floor(h / 3);
+        
+        for (let by = 0; by < blocksH; by++) {
+            for (let bx = 0; bx < blocksW; bx++) {
+                let blockColor = null;
+                let blockStyle = null;
+                
+                // Trouver la couleur du bloc
+                for (let dy = 0; dy < 3 && !blockColor; dy++) {
+                    for (let dx = 0; dx < 3 && !blockColor; dx++) {
+                        let i = bx * 3 + dx;
+                        let j = by * 3 + dy;
+                        let idx = j * w + i;
+                        if (data[idx] !== bgDefault) {
+                            blockColor = data[idx];
+                            blockStyle = styles[idx] || 'cross';
+                        }
+                    }
+                }
+                
+                if (blockColor) {
+                    if (blockStyle === 'nyzynka') {
+                        // Dessiner Nyzynka
+                        for (let dy = 0; dy < 3; dy++) {
+                            for (let dx = 0; dx < 3; dx++) {
+                                let i = bx * 3 + dx;
+                                let j = by * 3 + dy;
+                                let idx = j * w + i;
+                                if (data[idx] !== bgDefault && styles[idx] === 'nyzynka') {
+                                    let px = i * scale;
+                                    let py = j * scale;
+                                    selectionPreviewCtx.fillStyle = data[idx];
+                                    let lineWidth = Math.max(1, scale * 0.15);
+                                    let centerX = px + (scale / 2) - (lineWidth / 2);
+                                    let yOffset = (i % 2 === 1) ? scale : 0;
+                                    selectionPreviewCtx.fillRect(centerX, py - scale * 0.5 + yOffset, lineWidth, scale * 2);
+                                }
+                            }
+                        }
+                    } else {
+                        // Dessiner croix au centre du bloc
+                        let centerX = (bx * 3 + 1.5) * scale;
+                        let centerY = (by * 3 + 1.5) * scale;
+                        let crossSize = scale * 2.5;
+                        
+                        selectionPreviewCtx.strokeStyle = blockColor;
+                        selectionPreviewCtx.lineWidth = Math.max(1, scale * 0.15);
+                        selectionPreviewCtx.beginPath();
+                        let p = crossSize * 0.2;
+                        selectionPreviewCtx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
+                        selectionPreviewCtx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
+                        selectionPreviewCtx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
+                        selectionPreviewCtx.lineTo(centerX - crossSize/2 + p, centerY + crossSize/2 - p);
+                        selectionPreviewCtx.stroke();
+                    }
+                }
+            }
+        }
+    } else {
+        // Mode TRAME : dessiner chaque pixel
+        for (let j = 0; j < h; j++) {
+            for (let i = 0; i < w; i++) {
+                let idx = j * w + i;
+                if (data[idx] === bgDefault) continue;
+                
+                let px = i * scale;
+                let py = j * scale;
+                let style = styles[idx] || 'cross';
+                
+                selectionPreviewCtx.fillStyle = data[idx];
+                
+                if (style === 'nyzynka') {
+                    let lineWidth = Math.max(1, scale * 0.15);
+                    let centerX = px + (scale / 2) - (lineWidth / 2);
+                    let yOffset = (i % 2 === 1) ? scale : 0;
+                    selectionPreviewCtx.fillRect(centerX, py - scale * 0.5 + yOffset, lineWidth, scale * 2);
+                } else if (renderMode === "cross") {
+                    selectionPreviewCtx.strokeStyle = data[idx];
+                    selectionPreviewCtx.lineWidth = Math.max(1, scale * 0.15);
+                    selectionPreviewCtx.beginPath();
+                    let p = scale * 0.2;
+                    selectionPreviewCtx.moveTo(px+p, py+p);
+                    selectionPreviewCtx.lineTo(px+scale-p, py+scale-p);
+                    selectionPreviewCtx.moveTo(px+scale-p, py+p);
+                    selectionPreviewCtx.lineTo(px+p, py+scale-p);
+                    selectionPreviewCtx.stroke();
+                } else {
+                    selectionPreviewCtx.fillRect(px, py, scale, scale);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Rend la prévisualisation de la zone de sélection
+ */
+function renderSelectionAreaPreview(x, y, w, h, scale) {
+    // En mode PIXEL (par défaut) : regrouper les pixels 3×3
+    if ((trameMode && renderMode === "cross") || !trameMode) {
+        let blocksW = Math.floor(w / 3);
+        let blocksH = Math.floor(h / 3);
+        
+        for (let by = 0; by < blocksH; by++) {
+            for (let bx = 0; bx < blocksW; bx++) {
+                let blockColor = null;
+                let blockStyle = null;
+                
+                // Trouver la couleur du bloc
+                for (let dy = 0; dy < 3 && !blockColor; dy++) {
+                    for (let dx = 0; dx < 3 && !blockColor; dx++) {
+                        let px = x + bx * 3 + dx;
+                        let py = y + by * 3 + dy;
+                        let idx = py * W + px;
+                        if (pixels[idx] !== bgDefault) {
+                            blockColor = pixels[idx];
+                            blockStyle = pixelStyles[idx];
+                        }
+                    }
+                }
+                
+                if (blockColor) {
+                    if (blockStyle === 'nyzynka') {
+                        // Dessiner Nyzynka
+                        for (let dy = 0; dy < 3; dy++) {
+                            for (let dx = 0; dx < 3; dx++) {
+                                let px = x + bx * 3 + dx;
+                                let py = y + by * 3 + dy;
+                                let idx = py * W + px;
+                                if (pixels[idx] !== bgDefault && pixelStyles[idx] === 'nyzynka') {
+                                    let canvasX = (bx * 3 + dx) * scale;
+                                    let canvasY = (by * 3 + dy) * scale;
+                                    selectionPreviewCtx.fillStyle = pixels[idx];
+                                    let lineWidth = Math.max(1, scale * 0.15);
+                                    let centerX = canvasX + (scale / 2) - (lineWidth / 2);
+                                    let localX = bx * 3 + dx;
+                                    let yOffset = (localX % 2 === 1) ? scale : 0;
+                                    selectionPreviewCtx.fillRect(centerX, canvasY - scale * 0.5 + yOffset, lineWidth, scale * 2);
+                                }
+                            }
+                        }
+                    } else {
+                        // Dessiner croix au centre du bloc
+                        let centerX = (bx * 3 + 1.5) * scale;
+                        let centerY = (by * 3 + 1.5) * scale;
+                        let crossSize = scale * 2.5;
+                        
+                        selectionPreviewCtx.strokeStyle = blockColor;
+                        selectionPreviewCtx.lineWidth = Math.max(1, scale * 0.15);
+                        selectionPreviewCtx.beginPath();
+                        let p = crossSize * 0.2;
+                        selectionPreviewCtx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
+                        selectionPreviewCtx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
+                        selectionPreviewCtx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
+                        selectionPreviewCtx.lineTo(centerX - crossSize/2 + p, centerY + crossSize/2 - p);
+                        selectionPreviewCtx.stroke();
+                    }
+                }
+            }
+        }
+    } else {
+        // Mode TRAME : dessiner chaque pixel
+        for (let j = 0; j < h; j++) {
+            for (let i = 0; i < w; i++) {
+                let px = x + i;
+                let py = y + j;
+                let idx = py * W + px;
+                if (pixels[idx] === bgDefault) continue;
+                
+                let canvasX = i * scale;
+                let canvasY = j * scale;
+                let style = pixelStyles[idx];
+                
+                selectionPreviewCtx.fillStyle = pixels[idx];
+                
+                if (style === 'nyzynka') {
+                    let lineWidth = Math.max(1, scale * 0.15);
+                    let centerX = canvasX + (scale / 2) - (lineWidth / 2);
+                    let yOffset = (i % 2 === 1) ? scale : 0;
+                    selectionPreviewCtx.fillRect(centerX, canvasY - scale * 0.5 + yOffset, lineWidth, scale * 2);
+                } else if (renderMode === "cross") {
+                    selectionPreviewCtx.strokeStyle = pixels[idx];
+                    selectionPreviewCtx.lineWidth = Math.max(1, scale * 0.15);
+                    selectionPreviewCtx.beginPath();
+                    let p = scale * 0.2;
+                    selectionPreviewCtx.moveTo(canvasX+p, canvasY+p);
+                    selectionPreviewCtx.lineTo(canvasX+scale-p, canvasY+scale-p);
+                    selectionPreviewCtx.moveTo(canvasX+scale-p, canvasY+p);
+                    selectionPreviewCtx.lineTo(canvasX+p, canvasY+scale-p);
+                    selectionPreviewCtx.stroke();
+                } else {
+                    selectionPreviewCtx.fillRect(canvasX, canvasY, scale, scale);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Dessine la grille sur le canvas de prévisualisation
+ */
+function drawPreviewGrid(w, h, scale) {
+    selectionPreviewCtx.strokeStyle = "rgba(120,120,120,0.3)";
+    selectionPreviewCtx.lineWidth = 0.5;
+    
+    if (trameMode) {
+        // Mode TRAME : grille normale (chaque pixel)
+        for (let i = 0; i <= w; i++) {
+            selectionPreviewCtx.beginPath();
+            selectionPreviewCtx.moveTo(i * scale, 0);
+            selectionPreviewCtx.lineTo(i * scale, h * scale);
+            selectionPreviewCtx.stroke();
+        }
+        for (let j = 0; j <= h; j++) {
+            selectionPreviewCtx.beginPath();
+            selectionPreviewCtx.moveTo(0, j * scale);
+            selectionPreviewCtx.lineTo(w * scale, j * scale);
+            selectionPreviewCtx.stroke();
+        }
+    } else {
+        // Mode PIXEL : grille par blocs 3×3
+        let blocksW = Math.floor(w / 3);
+        let blocksH = Math.floor(h / 3);
+        
+        for (let i = 0; i <= blocksW; i++) {
+            selectionPreviewCtx.beginPath();
+            selectionPreviewCtx.moveTo(i * 3 * scale, 0);
+            selectionPreviewCtx.lineTo(i * 3 * scale, h * scale);
+            selectionPreviewCtx.stroke();
+        }
+        for (let j = 0; j <= blocksH; j++) {
+            selectionPreviewCtx.beginPath();
+            selectionPreviewCtx.moveTo(0, j * 3 * scale);
+            selectionPreviewCtx.lineTo(w * scale, j * 3 * scale);
+            selectionPreviewCtx.stroke();
+        }
+    }
+}
+
+/**
+ * Dessine les poignées de redimensionnement sur le canvas de prévisualisation
+ */
+function drawResizeHandles(contentW, contentH, margin) {
+    const handleSize = 8;
+    const handleColor = "#007bff";
+    const handleBorder = "#ffffff";
+    
+    // Positions des poignées : sur les bords de l'image (avec la marge)
+    const handles = [
+        { x: margin, y: margin, cursor: 'nw-resize' },                              // Coin haut-gauche
+        { x: margin + contentW / 2, y: margin, cursor: 'n-resize' },                // Milieu haut
+        { x: margin + contentW, y: margin, cursor: 'ne-resize' },                   // Coin haut-droit
+        { x: margin + contentW, y: margin + contentH / 2, cursor: 'e-resize' },     // Milieu droit
+        { x: margin + contentW, y: margin + contentH, cursor: 'se-resize' },        // Coin bas-droit
+        { x: margin + contentW / 2, y: margin + contentH, cursor: 's-resize' },     // Milieu bas
+        { x: margin, y: margin + contentH, cursor: 'sw-resize' },                   // Coin bas-gauche
+        { x: margin, y: margin + contentH / 2, cursor: 'w-resize' }                 // Milieu gauche
+    ];
+    
+    // Dessiner un rectangle de sélection autour de l'image
+    selectionPreviewCtx.strokeStyle = handleColor;
+    selectionPreviewCtx.lineWidth = 2;
+    selectionPreviewCtx.strokeRect(margin, margin, contentW, contentH);
+    
+    // Dessiner les poignées
+    handles.forEach(handle => {
+        // Bordure blanche
+        selectionPreviewCtx.fillStyle = handleBorder;
+        selectionPreviewCtx.fillRect(
+            handle.x - handleSize / 2 - 1,
+            handle.y - handleSize / 2 - 1,
+            handleSize + 2,
+            handleSize + 2
+        );
+        
+        // Poignée bleue
+        selectionPreviewCtx.fillStyle = handleColor;
+        selectionPreviewCtx.fillRect(
+            handle.x - handleSize / 2,
+            handle.y - handleSize / 2,
+            handleSize,
+            handleSize
+        );
+    });
+}
+
+/**
+ * Supprime la sélection active
+ */
+function deleteSelection() {
+    if (!sel && !floatingLayer) return;
+    
+    saveState();
+    
+    if (floatingLayer) {
+        // Si on a un floatingLayer, on l'annule simplement
+        floatingLayer = null;
+    } else if (sel) {
+        // Sinon on efface la zone sélectionnée
+        let xMin, yMin, w, h;
+        
+        if (!trameMode) {
+            xMin = Math.min(sel.x1, sel.x2) * 3;
+            yMin = Math.min(sel.y1, sel.y2) * 3;
+            w = (Math.abs(sel.x1 - sel.x2) + 1) * 3;
+            h = (Math.abs(sel.y1 - sel.y2) + 1) * 3;
+        } else {
+            xMin = Math.min(sel.x1, sel.x2);
+            yMin = Math.min(sel.y1, sel.y2);
+            w = Math.abs(sel.x1 - sel.x2) + 1;
+            h = Math.abs(sel.y1 - sel.y2) + 1;
+        }
+        
+        // Effacer tous les pixels de la sélection
+        for (let j = 0; j < h; j++) {
+            for (let i = 0; i < w; i++) {
+                let idx = (yMin + j) * W + (xMin + i);
+                pixels[idx] = bgDefault;
+                pixelStyles[idx] = 'cross';
+                pixelOffsets[idx] = 0;
+            }
+        }
+        
+        sel = null;
+    }
+    
+    closeSelectionPanel();
+    refresh();
+    saveLocal();
+}
 
 // Made with Bob
 
