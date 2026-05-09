@@ -5,15 +5,16 @@
     --border: #444; 
 }
 
-body { 
-    margin: 0; 
-    background: var(--bg); 
-    color: #eee; 
-    font-family: 'Segoe UI', Tahoma, sans-serif; 
-    height: 100vh; 
-    overflow: hidden; 
-    display: flex; 
-    flex-direction: column; 
+body {
+    margin: 0;
+    background: var(--bg);
+    color: #eee;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 70px; /* Espace pour la palette */
 }
 
 /* Top Bar */
