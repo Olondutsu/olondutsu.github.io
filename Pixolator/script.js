@@ -186,9 +186,12 @@ function render() {
             }
         }
     } else {
-        // Mode TRAME : afficher chaque pixel individuellement en haute résolution
+        // Mode TRAME : afficher en haute résolution
+        // Marquer les pixels déjà rendus pour éviter les doublons
+        let rendered = new Set();
+        
         for (let i = 0; i < pixels.length; i++) {
-            if (pixels[i] === bgDefault) continue;
+            if (pixels[i] === bgDefault || rendered.has(i)) continue;
             let x = i % W, y = Math.floor(i / W);
             let px = x * pixelSize, py = y * pixelSize;
             let style = pixelStyles[i] || 'cross';
@@ -197,29 +200,60 @@ function render() {
             
             if (style === 'nyzynka') {
                 // Mode Nyzynka : lignes verticales avec décalage
-                // Ligne du centre du trou au-dessus au centre du trou en-dessous
                 let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
                 let centerX = px + (pixelSize / 2) - (lineWidth / 2);
-                // Utiliser le multiplicateur sauvegardé et le multiplier par pixelSize
                 let yOffsetMultiplier = pixelOffsets[i] || 0;
                 let yOffset = yOffsetMultiplier * pixelSize;
-                // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
                 ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                rendered.add(i);
                 
-            } else if (renderMode === "cross") {
-                // Mode broderie (croix)
-                ctx.strokeStyle = pixels[i];
-                ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
-                ctx.beginPath();
-                let p = pixelSize * 0.2;
-                ctx.moveTo(px+p, py+p);
-                ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
-                ctx.moveTo(px+pixelSize-p, py+p);
-                ctx.lineTo(px+p, py+pixelSize-p);
-                ctx.stroke();
+            } else if (style === 'cross') {
+                // Style cross : toujours rendre comme un bloc 3×3, même en mode TRAME
+                // Trouver le coin supérieur gauche du bloc 3×3
+                let blockX = Math.floor(x / 3) * 3;
+                let blockY = Math.floor(y / 3) * 3;
+                
+                // Vérifier si ce bloc contient des pixels cross
+                let hasBlock = false;
+                for (let dy = 0; dy < 3; dy++) {
+                    for (let dx = 0; dx < 3; dx++) {
+                        let checkX = blockX + dx;
+                        let checkY = blockY + dy;
+                        if (checkX < W && checkY < H) {
+                            let checkIdx = checkY * W + checkX;
+                            if (pixels[checkIdx] !== bgDefault && pixelStyles[checkIdx] === 'cross') {
+                                hasBlock = true;
+                                rendered.add(checkIdx);
+                            }
+                        }
+                    }
+                }
+                
+                // Dessiner le bloc 3×3 complet
+                if (hasBlock) {
+                    if (renderMode === "cross") {
+                        // Mode embroidery : dessiner une croix
+                        let centerX = (blockX + 1.5) * pixelSize;
+                        let centerY = (blockY + 1.5) * pixelSize;
+                        let crossSize = pixelSize * 2.5;
+                        ctx.strokeStyle = pixels[i];
+                        ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                        ctx.beginPath();
+                        let p = crossSize * 0.2;
+                        ctx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
+                        ctx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
+                        ctx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
+                        ctx.lineTo(centerX - crossSize/2 + p, centerY + crossSize/2 - p);
+                        ctx.stroke();
+                    } else {
+                        // Mode pixel : dessiner un bloc 3×3 plein
+                        ctx.fillRect(blockX * pixelSize, blockY * pixelSize, pixelSize * 3, pixelSize * 3);
+                    }
+                }
             } else {
-                // Mode pixel normal (point de croix plein)
+                // Autres styles : pixel individuel
                 ctx.fillRect(px, py, pixelSize, pixelSize);
+                rendered.add(i);
             }
         }
     }
@@ -506,14 +540,17 @@ function setPix(x, y, col, mouseEvent = null) {
         }
     }
     points.forEach(p => {
-        // En mode TRAME avec style cross, dessiner un bloc 3×3
+        // En mode TRAME avec style cross, dessiner un bloc 3×3 aligné sur la grille
         if (trameMode && currentStyle === 'cross') {
-            // En mode TRAME, les coordonnées sont déjà en haute résolution
-            // Dessiner un bloc 3×3 centré sur le point cliqué
-            for(let i = -1; i <= 1; i++) {
-                for(let j = -1; j <= 1; j++) {
-                    let px = p[0] + i;
-                    let py = p[1] + j;
+            // Aligner sur la grille 3×3 : trouver le coin supérieur gauche du bloc
+            let blockX = Math.floor(p[0] / 3) * 3;
+            let blockY = Math.floor(p[1] / 3) * 3;
+            
+            // Dessiner un bloc 3×3 aligné sur la grille
+            for(let i = 0; i < 3; i++) {
+                for(let j = 0; j < 3; j++) {
+                    let px = blockX + i;
+                    let py = blockY + j;
                     if(px>=0 && px<W && py>=0 && py<H) {
                         let idx = py*W+px;
                         pixels[idx] = col;
@@ -1225,67 +1262,127 @@ container.onwheel = e => {
     container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
 };
 
-// Variables pour le multi-touch optimisées
+// Variables pour le multi-touch optimisées avec inertie
 let initialPinchDist = null;
 let lastTouchPos = null;
-let isMultiTouching = false; // Sécurité pour bloquer le dessin pendant/après un zoom
+let isMultiTouching = false;
+let touchVelocity = { x: 0, y: 0 };
+let lastTouchTime = 0;
+let momentumAnimation = null;
+let zoomTimeout = null;
 
 container.addEventListener('touchstart', e => {
+    // Annuler l'inertie en cours
+    if (momentumAnimation) {
+        cancelAnimationFrame(momentumAnimation);
+        momentumAnimation = null;
+    }
+    
     if (e.touches.length >= 2) {
-        // Activation du mode multi-doigts
-        isMultiTouching = true; 
+        isMultiTouching = true;
         isPanning = true;
         isDrawing = false;
         initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     } else if (e.touches.length === 1) {
-        // Si on a encore le flag isMultiTouching (doigt restant après zoom), on reste en mode mouvement
         if (isMultiTouching) {
             isPanning = true;
             isDrawing = false;
         }
     }
+    
     lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+    lastTouchTime = Date.now();
+    touchVelocity = { x: 0, y: 0 };
 }, { passive: false });
 
 container.addEventListener('touchmove', e => {
     if (!lastTouchPos) return;
+    
+    const now = Date.now();
+    const deltaTime = Math.max(1, now - lastTouchTime);
 
     if (e.touches.length >= 2) {
-        e.preventDefault(); // Empêche le défilement de la page
+        e.preventDefault();
         let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         
         if (initialPinchDist) {
             let diff = dist - initialPinchDist;
-            if (Math.abs(diff) > 2) {
-                pixelSize = Math.max(2, Math.min(100, pixelSize + (diff > 0 ? 1.5 : -1.5)));
+            if (Math.abs(diff) > 1) {
+                // Zoom plus progressif et fluide
+                let zoomFactor = diff > 0 ? 1.02 : 0.98;
+                pixelSize = Math.max(2, Math.min(100, pixelSize * zoomFactor));
                 initialPinchDist = dist;
-                refresh();
+                
+                // Debounce du refresh pour éviter les saccades
+                if (zoomTimeout) clearTimeout(zoomTimeout);
+                zoomTimeout = setTimeout(() => refresh(), 16); // ~60fps
             }
         }
     }
     
-    // Déplacement du canevas (Pan)
+    // Déplacement fluide avec calcul de vélocité
     if (isPanning || e.touches.length >= 2 || isMultiTouching) {
-        container.scrollLeft -= (e.touches[0].pageX - lastTouchPos.x);
-        container.scrollTop -= (e.touches[0].pageY - lastTouchPos.y);
-        isDrawing = false; // Verrouillage du dessin
+        const deltaX = e.touches[0].pageX - lastTouchPos.x;
+        const deltaY = e.touches[0].pageY - lastTouchPos.y;
+        
+        container.scrollLeft -= deltaX;
+        container.scrollTop -= deltaY;
+        
+        // Calculer la vélocité pour l'inertie
+        touchVelocity.x = deltaX / deltaTime * 16; // Normaliser à 60fps
+        touchVelocity.y = deltaY / deltaTime * 16;
+        
+        isDrawing = false;
     }
     
     lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+    lastTouchTime = now;
 }, { passive: false });
 
 container.addEventListener('touchend', e => {
-    // Si l'écran est totalement libéré (plus aucun doigt)
     if (e.touches.length === 0) {
         isPanning = false;
-        isMultiTouching = false; 
+        isMultiTouching = false;
         initialPinchDist = null;
+        
+        // Appliquer l'inertie si la vélocité est suffisante
+        const speed = Math.sqrt(touchVelocity.x ** 2 + touchVelocity.y ** 2);
+        if (speed > 2) {
+            applyMomentum();
+        }
+        
         lastTouchPos = null;
     } else {
-        // S'il reste un doigt (fin de pincement), on maintient le mode Pan pour éviter de dessiner
         isPanning = true;
     }
 });
+
+// Fonction d'inertie (momentum scrolling)
+function applyMomentum() {
+    const friction = 0.92; // Coefficient de friction (0-1, plus proche de 1 = plus d'inertie)
+    const minSpeed = 0.5; // Vitesse minimale avant d'arrêter
+    
+    function animate() {
+        // Appliquer la vélocité
+        container.scrollLeft -= touchVelocity.x;
+        container.scrollTop -= touchVelocity.y;
+        
+        // Appliquer la friction
+        touchVelocity.x *= friction;
+        touchVelocity.y *= friction;
+        
+        // Continuer l'animation si la vitesse est suffisante
+        const speed = Math.sqrt(touchVelocity.x ** 2 + touchVelocity.y ** 2);
+        if (speed > minSpeed && !isPanning) {
+            momentumAnimation = requestAnimationFrame(animate);
+        } else {
+            momentumAnimation = null;
+            touchVelocity = { x: 0, y: 0 };
+        }
+    }
+    
+    momentumAnimation = requestAnimationFrame(animate);
+}
 
 /** MOUSE PAN **/
 let sx, sy, sl, st;
