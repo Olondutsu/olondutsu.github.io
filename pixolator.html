@@ -4,128 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Pix-o-lator Pro | GLOBAL EDITION</title>
-    <style>
-        :root { --bg: #1a1a1a; --panel: #2a2a2a; --accent: #007bff; --border: #444; }
-        body { margin: 0; background: var(--bg); color: #eee; font-family: 'Segoe UI', Tahoma, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        /* Top Bar */
-        #top { height: 45px; background: #222; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); z-index: 300; justify-content: space-between; }
-        .menu-left, .menu-right { display: flex; gap: 5px; align-items: center; flex: 1; }
-        .menu-center { display: flex; gap: 10px; justify-content: center; flex: 1; }
-
-        .menu-item { position: relative; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 14px; display: flex; align-items: center; background: transparent; border: none; color: #eee; }
-        .menu-item:hover { background: #333; }
-        .menu-icon { width: 16px; height: 16px; image-rendering: pixelated; margin-right: 8px; image-rendering: -moz-crisp-edges; image-rendering: pixelated; }
-        
-       @media (max-width: 600px) {
-    button.menu-item {
-        background: none;
-        border: none;
-        color: inherit;
-        padding: 5px;
-    }
-    /* 1. On cache le texte à côté des icônes */
-    .menu-text {
-        display: none;
-    }
-
-    /* 2. On ajuste les items du menu pour qu'ils soient compacts */
-    .menu-item {
-        padding: 0 10px;
-        min-width: auto;
-        justify-content: center;
-    }
-
-    /* 3. On réduit l'espace de l'icône puisqu'il n'y a plus de texte */
-    .menu-icon {
-        margin-right: 0; 
-        width: 24px; /* On peut les agrandir un peu pour le tactile */
-        height: 24px;
-    }
-
-    /* 4. On s'assure que la barre top répartit bien les icônes */
-    #top {
-        justify-content: space-around;
-        padding: 0 5px;
-    }
-}
-        
-        .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #2a2a2a; border: 1px solid #555; min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); border-radius: 0 0 4px 4px; z-index: 350; }
-        .menu-item:hover .dropdown { display: block; }
-        .dropdown div { padding: 10px 15px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
-        .dropdown div:hover { background: var(--accent); }
-        #menuToggle { position: absolute; 
-    right: -40px; 
-    top: 10px; 
-    width: 35px; 
-    height: 35px; 
-    background: var(--panel); 
-    border: 1px solid #555; 
-    border-radius: 0 8px 8px 0; 
-    color: var(--accent); 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer; 
-    font-weight: bold; 
-    box-shadow: 5px 0 10px rgba(0,0,0,0.3);
-}
-        /* Sidebar Tools */
-        #tools { 
-    position: fixed; 
-    left: 15px; 
-    top: 60px; 
-    background: var(--panel); 
-    border: 1px solid #555; 
-    border-radius: 12px; 
-    padding: 10px; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px; 
-    z-index: 150; /* Augmenté pour passer devant le reste */
-    width: 140px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-}
-        .tool-group { display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid #444; padding-bottom: 8px; }
-        .tool-group:last-child { border: none; }
-        #tools.collapsed {transform: translateX(-120%);}
-        button.tool-btn { background: #333; color: #eee; border: 1px solid #555; padding: 8px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; width: 100%; text-align: left; }
-        button.tool-btn:hover { background: #444; }
-        button.tool-btn.active { background: var(--accent); border-color: #00bfff; }
-        .tool-icon { width: 18px; height: 18px; image-rendering: pixelated; pointer-events: none; }
-
-        /* Workspace */
-        #canvasContainer { flex: 1; position: relative; overflow: auto; background: #0b0b0b; scrollbar-width: none; touch-action: none;}
-        #canvasContainer::-webkit-scrollbar { display: none; }
-        #canvasWrapper { position: relative; margin: 300px; background: #111; width: fit-content; height: fit-content; }
-        canvas { image-rendering: pixelated; display: block; box-shadow: 0 0 30px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none; }
-        
-        .mirror-line { position: absolute; pointer-events: none; z-index: 10; display: none; }
-        #mirrorLineX { width: 1px; height: 100%; border-left: 1px dashed #ff00ea; top: 0; }
-        #mirrorLineY { height: 1px; width: 100%; border-top: 1px dashed #ff00ea; left: 0; }
-        
-        /* Bottom Palette */
-        #palette { height: 70px; background: #222; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 15px; z-index: 110; }
-        .color-wrapper { position: relative; }
-        .color { width: 34px; height: 34px; border: 2px solid #000; border-radius: 4px; cursor: pointer; }
-        .color.active { border-color: #fff; transform: scale(1.1); }
-        .del-color { position: absolute; top: -5px; right: -5px; background: red; color: white; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; text-align: center; cursor: pointer; display: none; font-weight: bold; line-height: 16px; }
-        .color-wrapper:hover .del-color { display: block; }
-        #addColorBtn { width: 34px; height: 34px; border: 2px dashed #555; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #888; }
-
-        /* Panels */
-        .panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 1px solid #555; padding: 0; display: none; z-index: 300; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); min-width: 280px; overflow: hidden; }
-        .panel-header { background: #333; padding: 10px 15px; cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
-        .panel-header h3 { margin: 0; font-size: 14px; color: var(--accent); pointer-events: none; }
-        .close-btn { color: #888; cursor: pointer; font-size: 18px; font-weight: bold; padding: 0 5px; }
-        .close-btn:hover { color: #ff4d4d; }
-        .panel-content { padding: 20px; }
-        .panel button { margin-top: 10px; width: 100%; padding: 8px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 5px; }
-        .panel .row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 14px; }
-        
-        #stats { position: fixed; bottom: 85px; right: 20px; background: rgba(0,0,0,0.8); padding: 6px 15px; border-radius: 20px; font-size: 12px; color: #00ff00; border: 1px solid #444; pointer-events: none; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -143,8 +22,9 @@
         <div class="menu-item">
             <img src="icons/view.png" class="menu-icon">View
             <div class="dropdown">
-                <div onclick="toggleGrid()"><img src="icons/grid.png" class="menu-icon"><span class="menu-text">Grid On/Off</span></div>
-                <div onclick="toggleRender()"><img src="icons/cross.png" class="menu-icon">Embroidery Mode</div>
+                <div id="menuGrid" onclick="toggleGrid()"><img src="icons/grid.png" class="menu-icon"><span class="menu-text">Grid On/Off</span></div>
+                <div id="menuEmbroidery" onclick="toggleRender()"><img src="icons/cross.png" class="menu-icon">Embroidery Mode</div>
+                <div id="menuTrame" onclick="toggleTrameMode()"><img src="icons/view.png" class="menu-icon">TRAME Mode (3×3)</div>
             </div>
         </div>
     </div>
@@ -154,7 +34,7 @@
     </div>
     <div class="menu-right" style="justify-content: flex-end;">
         <button class="menu-item" onclick="showPanel('resizePanel')"><img src="icons/resize.png" class="menu-icon">Size</button>
-        <button class="menu-item" onclick="showPanel('selectionPanel')"><img src="icons/copy.png" class="menu-icon">Edit</button>
+        <button class="menu-item" onclick="toggleSelectionPanel()"><img src="icons/copy.png" class="menu-icon">Edit</button>
     </div>
 </div>
 
@@ -169,8 +49,18 @@
     </div>
     <div class="tool-group">
         <button class="tool-btn" data-tool="fill" onclick="showFillSettings()"><img src="icons/fill.png" class="tool-icon">Bucket</button>
+        <button class="tool-btn" data-tool="convert" onclick="showConvertSettings()"><img src="icons/view.png" class="tool-icon">Convert</button>
         <button class="tool-btn" data-tool="picker" onclick="setTool('picker')"><img src="icons/picker.png" class="tool-icon">Picker</button>
         <button class="tool-btn" data-tool="select" onclick="setTool('select')"><img src="icons/select.png" class="tool-icon">Select Box</button>
+    </div>
+    <div class="tool-group">
+        <div style="font-size:10px; color:#888; text-align:center; margin-bottom:5px">Stitch Style:</div>
+        <button class="tool-btn active" data-style="cross" onclick="setStitchStyle('cross')">✖️ Cross</button>
+        <button class="tool-btn" data-style="nyzynka" onclick="setStitchStyle('nyzynka')">🧵 Nyzynka</button>
+    </div>
+    <div class="tool-group">
+        <div style="font-size:10px; color:#888; text-align:center; margin-top:5px">Line Width: <span id="lineWidthVal">15</span>%</div>
+        <input type="range" id="lineWidthSlider" min="5" max="50" value="15" oninput="updateLineWidth(this.value)">
     </div>
     <div class="tool-group">
             <button class="tool-btn" data-tool="ruler" onclick="setTool('ruler')" title="Ruler">📏<span class="menu-text"> Ruler</span></button>
@@ -202,6 +92,22 @@
     </div>
 </div>
 
+<div id="convertPanel" class="panel">
+    <div class="panel-header"><h3>Convert Stitch Style</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-content">
+        <div class="row"><input type="checkbox" id="convertDiag"> Include Diagonals</div>
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0">
+        <div style="font-size:12px; color:#888; margin-bottom:10px;">Convert to:</div>
+        <div class="row"><input type="radio" name="convertTo" id="convertToCross" value="cross" checked> Cross Stitch (Point de croix)</div>
+        <div class="row"><input type="radio" name="convertTo" id="convertToNyzynka" value="nyzynka"> Nyzynka (Fils verticaux)</div>
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0">
+        <div style="font-size:11px; color:#666; margin-bottom:10px;">
+            ℹ️ Click on a pixel to convert all connected pixels of the same color to the selected stitch style.
+        </div>
+        <button onclick="setTool('convert'); hidePanels();" style="background:var(--accent)">Activate Convert Tool</button>
+    </div>
+</div>
+
 <div id="mirrorPanel" class="panel">
     <div class="panel-header"><h3>Mirror Symmetry</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
@@ -227,8 +133,6 @@
     </div>
 </div>
 
-
-
 <div id="resizePanel" class="panel">
     <div class="panel-header"><h3>Canvas Dimensions</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
@@ -251,608 +155,121 @@
     </div>
 </div>
 
-<script>
-/** GLOBAL STATE **/
-let W = 32, H = 32, pixelSize = 25;
-let pixels = [];
-let currentColor = "#ffffff";
-let bgDefault = "#111111";
-let paletteColors = ["#000000", "#ffffff", "#be0000", "#ffcc00", "#1a5e1a", "#2a2aff"];
-let tool = "pencil", brushSize = 1;
-let mirrorX = false, mirrorY = false, mirrorRadial = false, mX = 15.5, mY = 15.5;
-let undoStack = [], redoStack = [];
-let gridMode = true, renderMode = "pixel", isDrawing = false, isPanning = false;
-let sel = null, clipboard = null, floatingLayer = null;
-let drawing = false;
-let isRulerActive = false;
-let rulerStart = null;
-let rulerCurrent = null;
+<div id="threadCountPanel" class="panel">
+    <div class="panel-header"><h3>Thread Counter</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-content">
+        <div style="max-height: 400px; overflow-y: auto;">
+            <div id="threadCountList"></div>
+        </div>
+        <hr style="border:0; border-top:1px solid #444; margin:10px 0">
+        <div style="font-size: 12px; color: #888;">
+            Total stitches: <span id="totalStitches">0</span>
+        </div>
+        <button onclick="hidePanels()">Close</button>
+    </div>
+</div>
 
-
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d", { willReadFrequently: true });
-const container = document.getElementById("canvasContainer");
-
-/** INIT **/
-function init(w, h, data = null) {
-    W = w; H = h;
-    pixels = data ? [...data] : new Array(W * H).fill(bgDefault);
-    mX = (W - 1) / 2; mY = (H - 1) / 2;
-    document.getElementById("mXSlider").max = W - 1;
-    document.getElementById("mYSlider").max = H - 1;
-    refresh();
-    container.scrollLeft = 2000 + (W * pixelSize / 2) - (container.clientWidth / 2);
-    container.scrollTop = 2000 + (H * pixelSize / 2) - (container.clientHeight / 2);
-}
-
-function refresh() {
-    canvas.width = W * pixelSize;
-    canvas.height = H * pixelSize;
-    if (tool === "ruler" && rulerStart && rulerCurrent) {
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 1 / zoom;
-        ctx.beginPath();
-        ctx.moveTo(rulerStart.x + 0.5, rulerStart.y + 0.5);
-        ctx.lineTo(rulerCurrent.x + 0.5, rulerCurrent.y + 0.5);
-        ctx.stroke();
-    }
-    render();
-    updateUI();
-}
-
-function render() {
-    ctx.fillStyle = bgDefault;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+<!-- Panneau latéral avec onglets -->
+<div id="selectionSidePanel" class="side-panel">
+    <div class="side-panel-header">
+        <h3 id="sidePanelTitle">📐 Édition</h3>
+        <span class="close-btn" onclick="closeSelectionPanel()">×</span>
+    </div>
     
-    // Base Pixels
-    for (let i = 0; i < pixels.length; i++) {
-        if (pixels[i] === bgDefault) continue;
-        let x = i % W, y = Math.floor(i / W);
-        ctx.fillStyle = pixels[i];
-        if (renderMode === "pixel") {
-            ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-        } else {
-            ctx.strokeStyle = pixels[i]; ctx.lineWidth = 2;
-            ctx.beginPath();
-            let px = x * pixelSize, py = y * pixelSize, p = pixelSize * 0.2;
-            ctx.moveTo(px+p, py+p); ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
-            ctx.moveTo(px+pixelSize-p, py+p); ctx.lineTo(px+p, py+pixelSize-p);
-            ctx.stroke();
-        }
-    }
-
-    // Floating Layer (Selection being moved)
-    if (floatingLayer) {
-        ctx.globalAlpha = 0.7;
-        for (let j = 0; j < floatingLayer.h; j++) {
-            for (let i = 0; i < floatingLayer.w; i++) {
-                let col = floatingLayer.data[j * floatingLayer.w + i];
-                if (col !== bgDefault) {
-                    ctx.fillStyle = col;
-                    ctx.fillRect((floatingLayer.x + i) * pixelSize, (floatingLayer.y + j) * pixelSize, pixelSize, pixelSize);
-                }
-            }
-        }
-        ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 2;
-        ctx.strokeRect(floatingLayer.x * pixelSize, floatingLayer.y * pixelSize, floatingLayer.w * pixelSize, floatingLayer.h * pixelSize);
-    }
-
-    // Grid
-    if (gridMode) {
-        ctx.strokeStyle = "rgba(120,120,120,0.15)";
-        ctx.lineWidth = 0.5;
-        for(let i=0; i<=W; i++) { ctx.beginPath(); ctx.moveTo(i*pixelSize, 0); ctx.lineTo(i*pixelSize, canvas.height); ctx.stroke(); }
-        for(let i=0; i<=H; i++) { ctx.beginPath(); ctx.moveTo(0, i*pixelSize); ctx.lineTo(canvas.width, i*pixelSize); ctx.stroke(); }
-    }
-
-    // Selection Box
-    if(sel && tool === "select") {
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
-        ctx.strokeRect(Math.min(sel.x1, sel.x2)*pixelSize, Math.min(sel.y1, sel.y2)*pixelSize, (Math.abs(sel.x1-sel.x2)+1)*pixelSize, (Math.abs(sel.y1-sel.y2)+1)*pixelSize);
-        ctx.setLineDash([]);
-    }
-    updateStats();
-}
-
-function toggleSidebar() {
-    const tools = document.getElementById('tools');
-    tools.classList.toggle('collapsed');
-    // Change l'icône selon l'état
-    document.getElementById('menuToggle').innerText = tools.classList.contains('collapsed') ? '▶' : '☰';
-}
-
-/** CORE DRAWING **/
-function setPix(x, y, col) {
-    if (x < 0 || y < 0 || x >= W || y >= H) return;
-    let points = [[x, y]];
-    if (mirrorRadial) {
-        let cx = (W-1)/2, cy = (H-1)/2;
-        let dx = x - cx, dy = y - cy;
-        points.push([cx - dx, cy + dy], [cx + dx, cy - dy], [cx - dx, cy - dy]);
-        points.push([cx + dy, cy + dx], [cx - dy, cy + dx], [cx + dy, cy - dx], [cx - dy, cy - dx]);
-    } else {
-        if (mirrorX) {
-            let nx = Math.round(mX * 2 - x);
-            if (nx >= 0 && nx < W) points.push([nx, y]);
-        }
-        if (mirrorY) {
-            let ny = Math.round(mY * 2 - y);
-            if (ny >= 0 && ny < H) {
-                points.push([x, ny]);
-                if (mirrorX) {
-                    let nx = Math.round(mX * 2 - x);
-                    if (nx >= 0 && nx < W) points.push([nx, ny]);
-                }
-            }
-        }
-    }
-    points.forEach(p => {
-        let radius = Math.floor(brushSize / 2);
-        for(let i = -radius; i <= (brushSize%2===0?radius-1:radius); i++) {
-            for(let j = -radius; j <= (brushSize%2===0?radius-1:radius); j++) {
-                let px = p[0]+i, py = p[1]+j;
-                if(px>=0 && px<W && py>=0 && py<H) pixels[py*W+px] = col;
-            }
-        }
-    });
-}
-
-/** INPUTS **/
-canvas.addEventListener('pointerdown', e => {
-    if(e.button === 1 || isPanning) return; 
-    const p = getCoord(e);
+    <!-- Onglets de navigation -->
+    <div class="side-panel-tabs">
+        <button class="tab-btn active" data-tab="selection" onclick="switchTab('selection')">
+            ✂️ Sélection
+        </button>
+        <button class="tab-btn" data-tab="geometry" onclick="switchTab('geometry')">
+            📐 Géométrie
+        </button>
+    </div>
     
-    // Check for Move Selection
-    if (tool === "select" && sel && !floatingLayer) {
-        const xMin = Math.min(sel.x1, sel.x2), yMin = Math.min(sel.y1, sel.y2);
-        const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
-        if (p.x >= xMin && p.x < xMin + w && p.y >= yMin && p.y < yMin + h) {
-            saveState();
-            floatingLayer = { w, h, x: xMin, y: yMin, data: [] };
-            for(let j=0; j<h; j++) for(let i=0; i<w; i++) {
-                let idx = (yMin+j)*W + (xMin+i);
-                floatingLayer.data.push(pixels[idx]);
-                pixels[idx] = bgDefault;
-            }
-            sel = null; isDrawing = true; return;
-        }
-    }
-
-    if (floatingLayer) {
-        if (p.x < floatingLayer.x || p.x >= floatingLayer.x + floatingLayer.w || p.y < floatingLayer.y || p.y >= floatingLayer.y + floatingLayer.h) {
-            confirmPaste();
-        } else {
-            isDrawing = true; return;
-        }
-    }
-    if (tool === "ruler") {
+    <!-- Contenu de l'onglet Sélection -->
+    <div class="side-panel-content tab-content active" id="tab-selection">
+        <!-- Canvas de prévisualisation -->
+        <div class="preview-container">
+            <canvas id="selectionPreviewCanvas"></canvas>
+        </div>
         
-        rulerStart = p; // On stocke le point de départ {x, y}
-        isDrawing = true; 
-        return; 
-    }
-
-    saveState();
-    
-    isDrawing = true;
-
-    if (tool === "picker") {
-        currentColor = pixels[p.y*W + p.x];
-        rebuildPalette(); isDrawing = false; return;
-    }
-    if (tool === "fill") {
-        let target = pixels[p.y*W + p.x];
-        if (target !== currentColor) floodFill(p.x, p.y, target, currentColor);
-        isDrawing = false; refresh(); return;
-    }
-    if (tool === "select") {
-        sel = {x1: p.x, y1: p.y, x2: p.x, y2: p.y};
-    } else {
-        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor));
-    }
-    refresh();
-});
-
-canvas.addEventListener('pointermove', e => {
-    if (!isDrawing || isPanning) return;
-    const p = getCoord(e);
-
-    if (floatingLayer) {
-        floatingLayer.x = Math.floor(p.x - floatingLayer.w / 2);
-        floatingLayer.y = Math.floor(p.y - floatingLayer.h / 2);
-    }
-    else if (tool === "ruler" && rulerStart) {
-        rulerCurrent = p; // On "publie" la position de la souris
-        const d = Math.max(Math.abs(p.x - rulerStart.x), Math.abs(p.y - rulerStart.y)) + 1;
-        document.getElementById('ruleText').innerText = `Ruler: ${Math.max(0, d-2)} (incl. ${d})`;
-        // Le refresh() qui est déjà en bas de ton code va s'occuper du reste
-    }
-    else if (tool === "select") {
-        sel.x2 = p.x; sel.y2 = p.y;
-    } else if (tool === "pencil" || tool === "eraser") {
-        setPix(p.x, p.y, (tool === "eraser" ? bgDefault : currentColor));
-    }
-    refresh();
-});
-
-window.addEventListener('pointerup', () => { 
-    if (tool === "ruler") {
-        refresh(); // Efface le trait blanc une fois fini
-        rulerStart = null; // Prêt pour la prochaine mesure
-    }
-    isDrawing = false; 
-    
-    saveLocal(); 
-});
-
-/** EDIT FUNCTIONS **/
-function copySelection() {
-    if(!sel) { alert("Select an area first"); return; }
-    const x = Math.min(sel.x1, sel.x2), y = Math.min(sel.y1, sel.y2);
-    const w = Math.abs(sel.x1 - sel.x2) + 1, h = Math.abs(sel.y1 - sel.y2) + 1;
-    clipboard = { w, h, data: [] };
-    for(let j=0; j<h; j++) for(let i=0; i<w; i++) clipboard.data.push(pixels[(y+j)*W + (x+i)]);
-    alert("Selection copied!");
-}
-
-function pasteSelection() {
-    if(!clipboard) { alert("Nothing to paste"); return; }
-    if(floatingLayer) confirmPaste();
-    floatingLayer = { 
-        w: clipboard.w, h: clipboard.h, data: [...clipboard.data], 
-        x: Math.floor(W/2 - clipboard.w/2), y: Math.floor(H/2 - clipboard.h/2) 
-    };
-    refresh();
-}
-
-function confirmPaste() {
-    if (!floatingLayer) return;
-    saveState();
-    for (let j = 0; j < floatingLayer.h; j++) {
-        for (let i = 0; i < floatingLayer.w; i++) {
-            let tx = floatingLayer.x + i, ty = floatingLayer.y + j;
-            let col = floatingLayer.data[j * floatingLayer.w + i];
-            if (tx >= 0 && tx < W && ty >= 0 && ty < H && col !== bgDefault) {
-                pixels[ty * W + tx] = col;
-            }
-        }
-    }
-    floatingLayer = null; refresh();
-}
-
-/** UTIL FUNCTIONS **/
-function floodFill(startX, startY, targetColor, fillCol) {
-    let stack = [[startX, startY]], diag = document.getElementById("fillDiag").checked;
-    while(stack.length) {
-        let [x, y] = stack.pop();
-        if(x<0||y<0||x>=W||y>=H||pixels[y*W+x]!==targetColor) continue;
-        pixels[y*W+x] = fillCol;
-        stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
-        if(diag) stack.push([x+1, y+1], [x-1, y-1], [x+1, y-1], [x-1, y+1]);
-    }
-}
-
-function getCoord(e) {
-    const rect = canvas.getBoundingClientRect();
-    let x = Math.floor((e.clientX - rect.left) / (rect.width / W));
-    let y = Math.floor((e.clientY - rect.top) / (rect.height / H));
-    return { x: Math.max(0, Math.min(W-1, x)), y: Math.max(0, Math.min(H-1, y)) };
-}
-
-function showPanel(id) {
-    const p = document.getElementById(id);
-    if (p.style.display === "block") { p.style.display = "none"; return; }
-    hidePanels(); p.style.display = "block";
-}
-
-function hidePanels() { document.querySelectorAll('.panel').forEach(p => p.style.display = 'none'); }
-
-function setTool(t) {
-    if(floatingLayer && t !== "select") confirmPaste();
-    tool = t;
-    
-    document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
-}
-
-function toggleRuler() {
-    isRulerActive = !isRulerActive;
-    rulerStart = null;
-    document.getElementById('ruleText').innerText = isRulerActive ? "Ruler: Ready" : "Ruler: -";
-}
-
-function updateBrushSize(v) { brushSize = parseInt(v); document.getElementById("sizeVal").innerText = v; }
-function showFillSettings() { showPanel('fillPanel'); }
-
-/** HISTORY **/
-function saveState() {
-    undoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
-    if(undoStack.length > 50) undoStack.shift();
-    redoStack = [];
-}
-function undo() {
-    if(!undoStack.length) return;
-    redoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
-    let s = JSON.parse(undoStack.pop());
-    pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H;
-    refresh(); rebuildPalette();
-}
-function redo() {
-    if(!redoStack.length) return;
-    undoStack.push(JSON.stringify({pixels, bgDefault, W, H}));
-    let s = JSON.parse(redoStack.pop());
-    pixels = s.pixels; bgDefault = s.bgDefault; W = s.W; H = s.H;
-    refresh(); rebuildPalette();
-}
-
-/** PALETTE & UI **/
-function rebuildPalette() {
-    const cont = document.getElementById("colorContainer");
-    cont.innerHTML = "";
-    paletteColors.forEach((c, idx) => {
-        const wrap = document.createElement("div"); wrap.className = "color-wrapper";
-        const d = document.createElement("div"); d.className = "color" + (c === currentColor ? " active" : "");
-        d.style.background = c;
-        d.onclick = (e) => { e.stopPropagation(); currentColor = c; rebuildPalette(); };
-        d.ondblclick = () => {
-            let i = document.createElement("input"); i.type="color"; i.value=c;
-            i.onchange = () => { paletteColors[idx] = i.value; currentColor = i.value; rebuildPalette(); };
-            i.click();
-        };
-        const del = document.createElement("div"); del.className = "del-color"; del.innerText = "✕";
-        del.onclick = (e) => { e.stopPropagation(); paletteColors.splice(idx, 1); rebuildPalette(); };
-        wrap.append(d, del); cont.appendChild(wrap);
-    });
-    document.getElementById("bgColorBtn").style.background = bgDefault;
-}
-
-function addNewColor() {
-    let i = document.createElement("input"); i.type="color";
-    i.onchange = () => { paletteColors.push(i.value); currentColor = i.value; rebuildPalette(); };
-    i.click();
-}
-
-function changeBG() {
-    let i = document.createElement("input"); i.type="color"; i.value = bgDefault;
-    i.onchange = () => {
-        let old = bgDefault; bgDefault = i.value;
-        pixels = pixels.map(p => p === old ? bgDefault : p);
-        rebuildPalette(); refresh();
-    }; i.click();
-}
-
-function updateUI() {
-    const lx = document.getElementById("mirrorLineX"), ly = document.getElementById("mirrorLineY");
-    lx.style.display = mirrorX ? "block" : "none";
-    lx.style.left = (mX * pixelSize + pixelSize/2) + "px";
-    ly.style.display = mirrorY ? "block" : "none";
-    ly.style.top = (mY * pixelSize + pixelSize/2) + "px";
-}
-
-function updateStats() { document.getElementById("pixelCount").innerText = pixels.filter(p => p !== bgDefault).length; }
-function toggleGrid() { gridMode = !gridMode; render(); }
-function toggleRender() { renderMode = (renderMode === "pixel" ? "cross" : "pixel"); refresh(); }
-function saveLocal() { localStorage.setItem("pix_pro_save_v3", JSON.stringify({W,H,pixels,bgDefault,paletteColors})); }
-
-/** SYMMETRY ACTIONS **/
-function toggleMX(v) { mirrorX = v; if(v) mirrorRadial = false; refresh(); }
-function toggleMY(v) { mirrorY = v; if(v) mirrorRadial = false; refresh(); }
-function toggleRadial(v) { mirrorRadial = v; if(v) { mirrorX = false; mirrorY = false; } refresh(); }
-function updateMX(v) { mX = parseFloat(v); refresh(); }
-function updateMY(v) { mY = parseFloat(v); refresh(); }
-
-/** EXPORT / RESIZE **/
-function applyResize() {
-    saveState();
-    let nW = parseInt(document.getElementById("rw").value), nH = parseInt(document.getElementById("rh").value);
-    let newP = new Array(nW * nH).fill(bgDefault);
-    for(let y=0; y<Math.min(H, nH); y++) for(let x=0; x<Math.min(W, nW); x++) newP[y*nW + x] = pixels[y*W + x];
-    W = nW; H = nH; pixels = newP; hidePanels(); init(W, H, pixels);
-}
-
-function exportPNG(trans) {
-    const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
-    const tCtx = tmp.getContext('2d');
-    for(let i=0; i<pixels.length; i++) {
-        if(trans && pixels[i] === bgDefault) continue;
-        tCtx.fillStyle = pixels[i]; tCtx.fillRect(i%W, Math.floor(i/W), 1, 1);
-    }
-    const a = document.createElement('a'); a.download = 'pixelart.png'; a.href = tmp.toDataURL(); a.click();
-}
-
-function exportSVG() {
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
-    
-    // 1. On crée une liste de toutes les couleurs uniques présentes sur le dessin
-    const uniqueColors = [...new Set(pixels)].filter(c => c && c !== 'transparent' && c !== 'rgba(0,0,0,0)');
-
-    // 2. On boucle par couleur pour créer des groupes <g>
-    uniqueColors.forEach(targetColor => {
-        svg += `<g id="color-${targetColor.replace('#', '')}" fill="${targetColor}">`;
+        <!-- Informations sur la sélection -->
+        <div class="selection-info">
+            <div class="info-row">
+                <span class="info-label">Dimensions:</span>
+                <span id="selectionDimensions">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Position:</span>
+                <span id="selectionPosition">-</span>
+            </div>
+        </div>
         
-        for (let y = 0; y < H; y++) {
-            let x = 0;
-            while (x < W) {
-                let color = pixels[y * W + x];
-                
-                // On ne dessine que si c'est la couleur du groupe actuel
-                if (color !== targetColor) {
-                    x++;
-                    continue;
-                }
-                
-                let run = 1;
-                while (x + run < W && pixels[y * W + (x + run)] === targetColor) {
-                    run++;
-                }
-                
-                // On ajoute le rectangle sans l'attribut 'fill' (car il est hérité du groupe <g>)
-                svg += `<rect x="${x}" y="${y}" width="${run}" height="1" />`;
-                x += run;
-            }
-        }
-        svg += `</g>`;
-    });
+        <!-- Actions -->
+        <div class="selection-actions">
+            <button onclick="copySelection()" class="action-btn primary">
+                <img src="icons/copy.png" class="menu-icon">Copier
+            </button>
+            <button onclick="pasteSelection()" class="action-btn">
+                <img src="icons/copy.png" class="menu-icon">Coller
+            </button>
+            <button onclick="deleteSelection()" class="action-btn danger">
+                <img src="icons/eraser.png" class="menu-icon">Supprimer
+            </button>
+            <button onclick="confirmPaste()" class="action-btn success" id="validateBtn" style="display:none;">
+                ✓ Valider le déplacement
+            </button>
+        </div>
+    </div>
     
-    svg += `</svg>`;
-    
-    const blob = new Blob([svg], {type: 'image/svg+xml'});
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'pixel_art_grouped.svg';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-function saveJSON() {
-    const data = JSON.stringify({W, H, pixels, bgDefault, paletteColors});
-    const blob = new Blob([data], {type: "application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "design.json"; a.click();
-}
-
-function loadJSON() {
-    let i = document.createElement('input'); i.type="file"; i.accept=".json";
-    i.onchange = e => {
-        let reader = new FileReader();
-        reader.onload = r => {
-            let d = JSON.parse(r.target.result); paletteColors = d.paletteColors || paletteColors;
-            bgDefault = d.bgDefault || "#111111"; init(d.W, d.H, d.pixels); rebuildPalette();
-        }; reader.readAsText(e.target.files[0]);
-    }; i.click();
-}
-
-/** ZOOM & PAN (MOUSE + TOUCH) **/
-container.onwheel = e => {
-    e.preventDefault();
-    let old = pixelSize;
-    pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
-    refresh();
-    const rect = canvas.getBoundingClientRect();
-    container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
-    container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
-};
-
-// Touch Controls
-/** ZOOM & PAN (MOUSE + TOUCH) **/
-container.onwheel = e => {
-    e.preventDefault();
-    let old = pixelSize;
-    pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
-    refresh();
-    const rect = canvas.getBoundingClientRect();
-    container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
-    container.scrollTop += (e.clientY - rect.top) * (pixelSize/old - 1);
-};
-
-// Variables pour le multi-touch optimisées
-let initialPinchDist = null;
-let lastTouchPos = null;
-let isMultiTouching = false; // Sécurité pour bloquer le dessin pendant/après un zoom
-
-container.addEventListener('touchstart', e => {
-    if (e.touches.length >= 2) {
-        // Activation du mode multi-doigts
-        isMultiTouching = true; 
-        isPanning = true;
-        isDrawing = false;
-        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    } else if (e.touches.length === 1) {
-        // Si on a encore le flag isMultiTouching (doigt restant après zoom), on reste en mode mouvement
-        if (isMultiTouching) {
-            isPanning = true;
-            isDrawing = false;
-        }
-    }
-    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-}, { passive: false });
-
-container.addEventListener('touchmove', e => {
-    if (!lastTouchPos) return;
-
-    if (e.touches.length >= 2) {
-        e.preventDefault(); // Empêche le défilement de la page
-        let dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    <!-- Contenu de l'onglet Géométrie -->
+    <div class="side-panel-content tab-content" id="tab-geometry">
+        <div class="geometry-header">
+            <h4>📐 Kit de Symboles</h4>
+            <p class="geometry-description">Créez votre bibliothèque de symboles réutilisables</p>
+        </div>
         
-        if (initialPinchDist) {
-            let diff = dist - initialPinchDist;
-            if (Math.abs(diff) > 2) {
-                pixelSize = Math.max(2, Math.min(100, pixelSize + (diff > 0 ? 1.5 : -1.5)));
-                initialPinchDist = dist;
-                refresh();
-            }
-        }
-    }
-    
-    // Déplacement du canevas (Pan)
-    if (isPanning || e.touches.length >= 2 || isMultiTouching) {
-        container.scrollLeft -= (e.touches[0].pageX - lastTouchPos.x);
-        container.scrollTop -= (e.touches[0].pageY - lastTouchPos.y);
-        isDrawing = false; // Verrouillage du dessin
-    }
-    
-    lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-}, { passive: false });
+        <!-- Sélecteur de couleur de fond -->
+        <div class="bg-color-selector">
+            <label for="symbolBgColor">
+                <span class="label-text">🎨 Couleur de fond (transparente):</span>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="symbolBgColor" value="#111111">
+                    <button onclick="setSymbolBgFromCanvas()" class="mini-btn" title="Utiliser la couleur de fond du canvas">
+                        📋 Canvas
+                    </button>
+                </div>
+            </label>
+            <p class="hint-text">Les pixels de cette couleur ne seront pas sauvegardés</p>
+        </div>
+        
+        <!-- Actions pour sauvegarder -->
+        <div class="geometry-save-section">
+            <button onclick="saveSelectionAsSymbol()" class="action-btn primary" id="saveSymbolBtn" disabled>
+                ➕ Sauvegarder dans Géométrie
+            </button>
+            <p class="hint-text">💡 Sélectionnez une zone pour la sauvegarder</p>
+        </div>
+        
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0">
+        
+        <!-- Liste des symboles sauvegardés -->
+        <div class="symbols-list-header">
+            <h5>Symboles sauvegardés (<span id="symbolCount">0</span>)</h5>
+        </div>
+        <div class="symbols-list" id="symbolsList">
+            <p class="empty-state">Aucun symbole dans votre kit</p>
+        </div>
+    </div>
+</div>
 
-container.addEventListener('touchend', e => {
-    // Si l'écran est totalement libéré (plus aucun doigt)
-    if (e.touches.length === 0) {
-        isPanning = false;
-        isMultiTouching = false; 
-        initialPinchDist = null;
-        lastTouchPos = null;
-    } else {
-        // S'il reste un doigt (fin de pincement), on maintient le mode Pan pour éviter de dessiner
-        isPanning = true;
-    }
-});
+<!-- Barre d'état en bas -->
+<div id="statusBar">
+    <span id="statusDimensions"></span>
+    <span id="statusMode"></span>
+    <span id="statusPixels"></span>
+</div>
 
-/** MOUSE PAN **/
-let sx, sy, sl, st;
-container.onmousedown = e => { 
-    if(e.button === 1) { 
-        isPanning = true; isDrawing = false;
-        sx = e.clientX; sy = e.clientY; 
-        sl = container.scrollLeft; st = container.scrollTop; 
-        e.preventDefault(); 
-    }
-};
-window.addEventListener('mousemove', e => { 
-    if(isPanning && !initialPinchDist) { 
-        container.scrollLeft = sl - (e.clientX - sx); 
-        container.scrollTop = st - (e.clientY - sy); 
-    }
-});
-window.addEventListener('mouseup', () => { isPanning = false; });
-
-/** DRAGGABLE PANELS **/
-document.querySelectorAll('.panel').forEach(p => {
-    const header = p.querySelector('.panel-header');
-    let isDraggingPanel = false, offset = [0,0];
-    header.onmousedown = (e) => {
-        isDraggingPanel = true; p.style.transform = 'none';
-        offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY];
-    };
-    window.addEventListener('mousemove', (e) => {
-        if (!isDraggingPanel) return;
-        p.style.left = (e.clientX + offset[0]) + 'px';
-        p.style.top = (e.clientY + offset[1]) + 'px';
-    });
-    window.addEventListener('mouseup', () => isDraggingPanel = false);
-});
-
-function newProject() { if(confirm("Discard current work and start new?")) init(32, 32); }
-
-/** STARTUP **/
-const saved = localStorage.getItem("pix_pro_save_v3");
-if(saved) {
-    const s = JSON.parse(saved); bgDefault = s.bgDefault || "#111111"; 
-    paletteColors = s.paletteColors || paletteColors;
-    init(s.W, s.H, s.pixels);
-} else { init(32, 32); }
-rebuildPalette();
-</script>
+<script src="script.js"></script>
 </body>
 </html>
