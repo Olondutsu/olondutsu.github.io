@@ -35,6 +35,8 @@ let hiResLayer = {
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
+// Désactiver l'antialiasing pour éviter les artefacts de rendu
+ctx.imageSmoothingEnabled = false;
 const container = document.getElementById("canvasContainer");
 
 // Panneau latéral de sélection
@@ -109,8 +111,13 @@ function init(w, h, data = null, styles = null, offsets = null) {
 }
 
 function refresh() {
-    canvas.width = W * pixelSize;
-    canvas.height = H * pixelSize;
+    // Utiliser des valeurs entières pour les dimensions du canvas
+    canvas.width = Math.floor(W * pixelSize);
+    canvas.height = Math.floor(H * pixelSize);
+    
+    // Nettoyer complètement le canvas avant le rendu
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
     render();
     
     // Dessiner la ligne de la règle APRÈS le rendu des pixels
@@ -119,8 +126,8 @@ function refresh() {
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        ctx.moveTo((rulerStart.x + 0.5) * pixelSize, (rulerStart.y + 0.5) * pixelSize);
-        ctx.lineTo((rulerCurrent.x + 0.5) * pixelSize, (rulerCurrent.y + 0.5) * pixelSize);
+        ctx.moveTo(Math.floor((rulerStart.x + 0.5) * pixelSize), Math.floor((rulerStart.y + 0.5) * pixelSize));
+        ctx.lineTo(Math.floor((rulerCurrent.x + 0.5) * pixelSize), Math.floor((rulerCurrent.y + 0.5) * pixelSize));
         ctx.stroke();
         ctx.setLineDash([]);
     }
@@ -129,8 +136,12 @@ function refresh() {
 }
 
 function render() {
+    // Remplir le fond avec une couleur solide
     ctx.fillStyle = bgDefault;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // S'assurer que l'antialiasing est désactivé
+    ctx.imageSmoothingEnabled = false;
     
     // En mode PIXEL (par défaut) : regrouper les pixels 3×3 pour afficher 1 seul pixel/croix (sauf Nyzynka)
     // En mode TRAME + Embroidery : afficher en haute résolution, mais regrouper en embroidery
@@ -165,29 +176,29 @@ function render() {
                                 let y = by * 3 + dy;
                                 let idx = y * W + x;
                                 if (pixels[idx] !== bgDefault && pixelStyles[idx] === 'nyzynka') {
-                                    let px = x * pixelSize;
-                                    let py = y * pixelSize;
+                                    let px = Math.floor(x * pixelSize);
+                                    let py = Math.floor(y * pixelSize);
                                     ctx.fillStyle = pixels[idx];
-                                    let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
-                                    let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                                    let lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
+                                    let centerX = Math.floor(px + (pixelSize / 2) - (lineWidth / 2));
                                     // Utiliser le multiplicateur sauvegardé et le multiplier par pixelSize
                                     let yOffsetMultiplier = pixelOffsets[idx] || 0;
-                                    let yOffset = yOffsetMultiplier * pixelSize;
+                                    let yOffset = Math.floor(yOffsetMultiplier * pixelSize);
                                     // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
-                                    ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                                    ctx.fillRect(centerX, Math.floor(py - pixelSize * 0.5 + yOffset), lineWidth, Math.floor(pixelSize * 1));
                                 }
                             }
                         }
                     } else {
                         // Point de croix : dessiner 1 croix au centre du bloc 3×3
-                        let centerX = (bx * 3 + 1.5) * pixelSize;
-                        let centerY = (by * 3 + 1.5) * pixelSize;
-                        let crossSize = pixelSize * 2.5;
+                        let centerX = Math.floor((bx * 3 + 1.5) * pixelSize);
+                        let centerY = Math.floor((by * 3 + 1.5) * pixelSize);
+                        let crossSize = Math.floor(pixelSize * 2.5);
                         
                         ctx.strokeStyle = blockColor;
-                        ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                        ctx.lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
                         ctx.beginPath();
-                        let p = crossSize * 0.2;
+                        let p = Math.floor(crossSize * 0.2);
                         ctx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
                         ctx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
                         ctx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
@@ -205,18 +216,18 @@ function render() {
         for (let i = 0; i < pixels.length; i++) {
             if (pixels[i] === bgDefault || rendered.has(i)) continue;
             let x = i % W, y = Math.floor(i / W);
-            let px = x * pixelSize, py = y * pixelSize;
+            let px = Math.floor(x * pixelSize), py = Math.floor(y * pixelSize);
             let style = pixelStyles[i] || 'cross';
             
             ctx.fillStyle = pixels[i];
             
             if (style === 'nyzynka') {
                 // Mode Nyzynka : lignes verticales avec décalage
-                let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
-                let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                let lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
+                let centerX = Math.floor(px + (pixelSize / 2) - (lineWidth / 2));
                 let yOffsetMultiplier = pixelOffsets[i] || 0;
-                let yOffset = yOffsetMultiplier * pixelSize;
-                ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                let yOffset = Math.floor(yOffsetMultiplier * pixelSize);
+                ctx.fillRect(centerX, Math.floor(py - pixelSize * 0.5 + yOffset), lineWidth, Math.floor(pixelSize * 1));
                 rendered.add(i);
                 
             } else if (style === 'cross') {
@@ -245,13 +256,13 @@ function render() {
                 if (hasBlock) {
                     if (renderMode === "cross") {
                         // Mode embroidery : dessiner une croix
-                        let centerX = (blockX + 1.5) * pixelSize;
-                        let centerY = (blockY + 1.5) * pixelSize;
-                        let crossSize = pixelSize * 2.5;
+                        let centerX = Math.floor((blockX + 1.5) * pixelSize);
+                        let centerY = Math.floor((blockY + 1.5) * pixelSize);
+                        let crossSize = Math.floor(pixelSize * 2.5);
                         ctx.strokeStyle = pixels[i];
-                        ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                        ctx.lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
                         ctx.beginPath();
-                        let p = crossSize * 0.2;
+                        let p = Math.floor(crossSize * 0.2);
                         ctx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
                         ctx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
                         ctx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
@@ -259,12 +270,13 @@ function render() {
                         ctx.stroke();
                     } else {
                         // Mode pixel : dessiner un bloc 3×3 plein
-                        ctx.fillRect(blockX * pixelSize, blockY * pixelSize, pixelSize * 3, pixelSize * 3);
+                        ctx.fillRect(Math.floor(blockX * pixelSize), Math.floor(blockY * pixelSize),
+                                   Math.floor(pixelSize * 3), Math.floor(pixelSize * 3));
                     }
                 }
             } else {
                 // Autres styles : pixel individuel
-                ctx.fillRect(px, py, pixelSize, pixelSize);
+                ctx.fillRect(px, py, Math.floor(pixelSize), Math.floor(pixelSize));
                 rendered.add(i);
             }
         }
@@ -310,29 +322,29 @@ function render() {
                                         floatingLayer.styles && floatingLayer.styles[idx] === 'nyzynka') {
                                         let x = floatingLayer.x + i;
                                         let y = floatingLayer.y + j;
-                                        let px = x * pixelSize;
-                                        let py = y * pixelSize;
+                                        let px = Math.floor(x * pixelSize);
+                                        let py = Math.floor(y * pixelSize);
                                         ctx.fillStyle = floatingLayer.data[idx];
-                                        let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
-                                        let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                                        let lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
+                                        let centerX = Math.floor(px + (pixelSize / 2) - (lineWidth / 2));
                                         // Utiliser le multiplicateur du floatingLayer et le multiplier par pixelSize
                                         let yOffsetMultiplier = (floatingLayer.offsets && floatingLayer.offsets[idx]) || 0;
-                                        let yOffset = yOffsetMultiplier * pixelSize;
+                                        let yOffset = Math.floor(yOffsetMultiplier * pixelSize);
                                         // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
-                                        ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                                        ctx.fillRect(centerX, Math.floor(py - pixelSize * 0.5 + yOffset), lineWidth, Math.floor(pixelSize * 1));
                                     }
                                 }
                             }
                         } else {
                             // Point de croix : dessiner 1 croix au centre du bloc 3×3
-                            let centerX = (floatingLayer.x + bx * 3 + 1.5) * pixelSize;
-                            let centerY = (floatingLayer.y + by * 3 + 1.5) * pixelSize;
-                            let crossSize = pixelSize * 2.5;
+                            let centerX = Math.floor((floatingLayer.x + bx * 3 + 1.5) * pixelSize);
+                            let centerY = Math.floor((floatingLayer.y + by * 3 + 1.5) * pixelSize);
+                            let crossSize = Math.floor(pixelSize * 2.5);
                             
                             ctx.strokeStyle = blockColor;
-                            ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                            ctx.lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
                             ctx.beginPath();
-                            let p = crossSize * 0.2;
+                            let p = Math.floor(crossSize * 0.2);
                             ctx.moveTo(centerX - crossSize/2 + p, centerY - crossSize/2 + p);
                             ctx.lineTo(centerX + crossSize/2 - p, centerY + crossSize/2 - p);
                             ctx.moveTo(centerX + crossSize/2 - p, centerY - crossSize/2 + p);
@@ -353,34 +365,34 @@ function render() {
                     if (col !== bgDefault) {
                         let x = floatingLayer.x + i;
                         let y = floatingLayer.y + j;
-                        let px = x * pixelSize;
-                        let py = y * pixelSize;
+                        let px = Math.floor(x * pixelSize);
+                        let py = Math.floor(y * pixelSize);
                         
                         ctx.fillStyle = col;
                         
                         if (style === 'nyzynka') {
                             // Mode Nyzynka : lignes verticales avec décalage
-                            let lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
-                            let centerX = px + (pixelSize / 2) - (lineWidth / 2);
+                            let lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
+                            let centerX = Math.floor(px + (pixelSize / 2) - (lineWidth / 2));
                             // Utiliser le multiplicateur du floatingLayer et le multiplier par pixelSize
                             let yOffsetMultiplier = (floatingLayer.offsets && floatingLayer.offsets[idx]) || 0;
-                            let yOffset = yOffsetMultiplier * pixelSize;
+                            let yOffset = Math.floor(yOffsetMultiplier * pixelSize);
                             // Le fil va du centre du trou du haut au centre du pixel actuel (1 pixel de hauteur)
-                            ctx.fillRect(centerX, py - pixelSize * 0.5 + yOffset, lineWidth, pixelSize * 1);
+                            ctx.fillRect(centerX, Math.floor(py - pixelSize * 0.5 + yOffset), lineWidth, Math.floor(pixelSize * 1));
                         } else if (renderMode === "cross") {
                             // Mode broderie (croix)
                             ctx.strokeStyle = col;
-                            ctx.lineWidth = Math.max(2, pixelSize * (lineWidthPercent / 100));
+                            ctx.lineWidth = Math.max(2, Math.floor(pixelSize * (lineWidthPercent / 100)));
                             ctx.beginPath();
-                            let p = pixelSize * 0.2;
+                            let p = Math.floor(pixelSize * 0.2);
                             ctx.moveTo(px+p, py+p);
-                            ctx.lineTo(px+pixelSize-p, py+pixelSize-p);
-                            ctx.moveTo(px+pixelSize-p, py+p);
-                            ctx.lineTo(px+p, py+pixelSize-p);
+                            ctx.lineTo(px+Math.floor(pixelSize)-p, py+Math.floor(pixelSize)-p);
+                            ctx.moveTo(px+Math.floor(pixelSize)-p, py+p);
+                            ctx.lineTo(px+p, py+Math.floor(pixelSize)-p);
                             ctx.stroke();
                         } else {
                             // Mode pixel normal
-                            ctx.fillRect(px, py, pixelSize, pixelSize);
+                            ctx.fillRect(px, py, Math.floor(pixelSize), Math.floor(pixelSize));
                         }
                     }
                 }
@@ -389,7 +401,8 @@ function render() {
         
         ctx.globalAlpha = 1.0;
         ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 2;
-        ctx.strokeRect(floatingLayer.x * pixelSize, floatingLayer.y * pixelSize, floatingLayer.w * pixelSize, floatingLayer.h * pixelSize);
+        ctx.strokeRect(Math.floor(floatingLayer.x * pixelSize), Math.floor(floatingLayer.y * pixelSize),
+                      Math.floor(floatingLayer.w * pixelSize), Math.floor(floatingLayer.h * pixelSize));
     }
 
     // Grid
@@ -400,8 +413,14 @@ function render() {
         
         if (trameMode) {
             // Mode TRAME : grille normale (chaque pixel)
-            for(let i=0; i<=W; i++) { ctx.beginPath(); ctx.moveTo(i*pixelSize, 0); ctx.lineTo(i*pixelSize, canvas.height); ctx.stroke(); }
-            for(let i=0; i<=H; i++) { ctx.beginPath(); ctx.moveTo(0, i*pixelSize); ctx.lineTo(canvas.width, i*pixelSize); ctx.stroke(); }
+            for(let i=0; i<=W; i++) {
+                let x = Math.floor(i*pixelSize);
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for(let i=0; i<=H; i++) {
+                let y = Math.floor(i*pixelSize);
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
         } else {
             // Mode PIXEL (par défaut) : grille adaptée (3× pour les blocs collapsés, fine pour Nyzynka)
             
@@ -434,8 +453,8 @@ function render() {
                             let y = by * 3 + dy;
                             if (y <= H) {
                                 ctx.beginPath();
-                                ctx.moveTo(bx * 3 * pixelSize, y * pixelSize);
-                                ctx.lineTo((bx * 3 + 3) * pixelSize, y * pixelSize);
+                                ctx.moveTo(Math.floor(bx * 3 * pixelSize), Math.floor(y * pixelSize));
+                                ctx.lineTo(Math.floor((bx * 3 + 3) * pixelSize), Math.floor(y * pixelSize));
                                 ctx.stroke();
                             }
                         }
@@ -443,8 +462,8 @@ function render() {
                             let x = bx * 3 + dx;
                             if (x <= W) {
                                 ctx.beginPath();
-                                ctx.moveTo(x * pixelSize, by * 3 * pixelSize);
-                                ctx.lineTo(x * pixelSize, (by * 3 + 3) * pixelSize);
+                                ctx.moveTo(Math.floor(x * pixelSize), Math.floor(by * 3 * pixelSize));
+                                ctx.lineTo(Math.floor(x * pixelSize), Math.floor((by * 3 + 3) * pixelSize));
                                 ctx.stroke();
                             }
                         }
@@ -454,15 +473,17 @@ function render() {
             
             // Dessiner la grille globale pour les blocs 3×3 (zones non-Nyzynka)
             for (let i = 0; i <= blocksW; i++) {
+                let x = Math.floor(i * 3 * pixelSize);
                 ctx.beginPath();
-                ctx.moveTo(i * 3 * pixelSize, 0);
-                ctx.lineTo(i * 3 * pixelSize, canvas.height);
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
                 ctx.stroke();
             }
             for (let j = 0; j <= blocksH; j++) {
+                let y = Math.floor(j * 3 * pixelSize);
                 ctx.beginPath();
-                ctx.moveTo(0, j * 3 * pixelSize);
-                ctx.lineTo(canvas.width, j * 3 * pixelSize);
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
                 ctx.stroke();
             }
         }
@@ -471,18 +492,20 @@ function render() {
     // Numbered Grid
     if (numberedGrid && pixelSize >= 15) {
         ctx.fillStyle = "#888";
-        ctx.font = `${Math.max(8, pixelSize * 0.4)}px monospace`;
+        ctx.font = `${Math.max(8, Math.floor(pixelSize * 0.4))}px monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         
         // Numbers every 5 pixels
         for(let i=0; i<W; i+=5) {
-            ctx.fillText(i, (i + 0.5) * pixelSize, -10);
-            ctx.fillText(i, (i + 0.5) * pixelSize, canvas.height + 10);
+            let x = Math.floor((i + 0.5) * pixelSize);
+            ctx.fillText(i, x, -10);
+            ctx.fillText(i, x, canvas.height + 10);
         }
         for(let j=0; j<H; j+=5) {
-            ctx.fillText(j, -15, (j + 0.5) * pixelSize);
-            ctx.fillText(j, canvas.width + 15, (j + 0.5) * pixelSize);
+            let y = Math.floor((j + 0.5) * pixelSize);
+            ctx.fillText(j, -15, y);
+            ctx.fillText(j, canvas.width + 15, y);
         }
     }
 
@@ -496,10 +519,15 @@ function render() {
             let y1 = Math.min(sel.y1, sel.y2) * 3;
             let w = (Math.abs(sel.x1 - sel.x2) + 1) * 3;
             let h = (Math.abs(sel.y1 - sel.y2) + 1) * 3;
-            ctx.strokeRect(x1 * pixelSize, y1 * pixelSize, w * pixelSize, h * pixelSize);
+            ctx.strokeRect(Math.floor(x1 * pixelSize), Math.floor(y1 * pixelSize),
+                          Math.floor(w * pixelSize), Math.floor(h * pixelSize));
         } else {
             // En mode TRAME, coordonnées normales
-            ctx.strokeRect(Math.min(sel.x1, sel.x2)*pixelSize, Math.min(sel.y1, sel.y2)*pixelSize, (Math.abs(sel.x1-sel.x2)+1)*pixelSize, (Math.abs(sel.y1-sel.y2)+1)*pixelSize);
+            let x = Math.floor(Math.min(sel.x1, sel.x2) * pixelSize);
+            let y = Math.floor(Math.min(sel.y1, sel.y2) * pixelSize);
+            let w = Math.floor((Math.abs(sel.x1 - sel.x2) + 1) * pixelSize);
+            let h = Math.floor((Math.abs(sel.y1 - sel.y2) + 1) * pixelSize);
+            ctx.strokeRect(x, y, w, h);
         }
         
         ctx.setLineDash([]);
