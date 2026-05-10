@@ -1540,15 +1540,23 @@ document.querySelectorAll('.panel').forEach(p => {
     
     // Support souris
     header.onmousedown = (e) => {
-        isDraggingPanel = true; p.style.transform = 'none';
+        isDraggingPanel = true;
+        p.style.transform = 'none';
         offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY];
     };
-    window.addEventListener('mousemove', (e) => {
+    
+    const onMouseMove = (e) => {
         if (!isDraggingPanel) return;
         p.style.left = (e.clientX + offset[0]) + 'px';
         p.style.top = (e.clientY + offset[1]) + 'px';
-    });
-    window.addEventListener('mouseup', () => isDraggingPanel = false);
+    };
+    
+    const onMouseUp = () => {
+        isDraggingPanel = false;
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
     
     // Support tactile (mobile)
     header.addEventListener('touchstart', (e) => {
@@ -1559,14 +1567,21 @@ document.querySelectorAll('.panel').forEach(p => {
         e.preventDefault(); // Empêche le scroll pendant le drag
     }, { passive: false });
     
-    window.addEventListener('touchmove', (e) => {
+    const onTouchMove = (e) => {
         if (!isDraggingPanel) return;
+        e.preventDefault(); // Important pour mobile
         const touch = e.touches[0];
         p.style.left = (touch.clientX + offset[0]) + 'px';
         p.style.top = (touch.clientY + offset[1]) + 'px';
-    });
+    };
     
-    window.addEventListener('touchend', () => isDraggingPanel = false);
+    const onTouchEnd = () => {
+        isDraggingPanel = false;
+    };
+    
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
 });
 
 function newProject() {
