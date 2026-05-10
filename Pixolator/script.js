@@ -1536,10 +1536,14 @@ window.addEventListener('mouseup', () => { isPanning = false; });
 /** DRAGGABLE PANELS **/
 document.querySelectorAll('.panel').forEach(p => {
     const header = p.querySelector('.panel-header');
+    if (!header) return;
+    
     let isDraggingPanel = false, offset = [0,0];
     
     // Support souris
     header.onmousedown = (e) => {
+        // Ne pas drag si on clique sur le bouton de fermeture
+        if (e.target.classList.contains('close-btn')) return;
         isDraggingPanel = true;
         p.style.transform = 'none';
         offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY];
@@ -1560,22 +1564,37 @@ document.querySelectorAll('.panel').forEach(p => {
     
     // Support tactile (mobile)
     header.addEventListener('touchstart', (e) => {
+        // Ne pas drag si on touche le bouton de fermeture
+        if (e.target.classList.contains('close-btn')) {
+            console.log('❌ Touch on close button, not dragging');
+            return;
+        }
+        
+        console.log('🟢 Touch start on panel:', p.id);
         isDraggingPanel = true;
         p.style.transform = 'none';
         const touch = e.touches[0];
         offset = [p.offsetLeft - touch.clientX, p.offsetTop - touch.clientY];
-        e.preventDefault(); // Empêche le scroll pendant le drag
+        console.log('📍 Initial offset:', offset);
+        // Ne pas empêcher le comportement par défaut ici pour permettre le clic sur le bouton
+        // e.preventDefault() sera appelé dans touchmove
     }, { passive: false });
     
     const onTouchMove = (e) => {
         if (!isDraggingPanel) return;
+        console.log('🔵 Touch move');
         e.preventDefault(); // Important pour mobile
+        e.stopPropagation();
         const touch = e.touches[0];
-        p.style.left = (touch.clientX + offset[0]) + 'px';
-        p.style.top = (touch.clientY + offset[1]) + 'px';
+        const newLeft = (touch.clientX + offset[0]);
+        const newTop = (touch.clientY + offset[1]);
+        p.style.left = newLeft + 'px';
+        p.style.top = newTop + 'px';
+        console.log('📍 New position:', newLeft, newTop);
     };
     
     const onTouchEnd = () => {
+        console.log('🔴 Touch end');
         isDraggingPanel = false;
     };
     
