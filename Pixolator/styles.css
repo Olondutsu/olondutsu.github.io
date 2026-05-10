@@ -601,16 +601,29 @@ canvas {
     pointer-events: none; 
 }
 
-.close-btn { 
-    color: #888; 
-    cursor: pointer; 
-    font-size: 18px; 
-    font-weight: bold; 
-    padding: 0 5px; 
+.close-btn {
+    color: #888;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 0 5px;
 }
 
-.close-btn:hover { 
-    color: #ff4d4d; 
+.close-btn:hover {
+    color: #ff4d4d;
+}
+
+/* Boutons de fermeture plus grands sur mobile pour faciliter le tactile */
+@media (max-width: 600px) {
+    .close-btn {
+        font-size: 32px;
+        padding: 5px 10px;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 .panel-content { 
