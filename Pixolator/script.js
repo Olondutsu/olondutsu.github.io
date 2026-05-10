@@ -928,63 +928,99 @@ function rebuildPalette() {
         d.style.background = c;
 
         // Variables pour détecter le double-clic/tap (une par couleur)
-        let clickCount = 0;
-        let clickTimer = null;
+        let tapCount = 0;
+        let tapTimer = null;
+        let lastTapTime = 0;
         
-        const handleColorClick = (e) => {
-            clickCount++;
+        const openColorPicker = () => {
+            console.log('Ouverture du sélecteur de couleur pour:', c);
             
-            if (clickCount === 1) {
-                // Premier clic : attendre un peu pour voir s'il y a un deuxième
-                clickTimer = setTimeout(() => {
-                    // Simple clic : Sélectionner la couleur
-                    currentColor = c;
-                    rebuildPalette();
-                    clickCount = 0;
-                }, 300);
-            } else if (clickCount === 2) {
-                // Double-clic : Ouvrir le sélecteur de couleur
-                clearTimeout(clickTimer);
-                clickCount = 0;
-                
-                console.log('Double-clic détecté sur la couleur:', c);
-                
-                // Créer et ouvrir le sélecteur de couleur
-                let input = document.createElement("input");
-                input.type = "color";
-                input.value = c;
-                input.style.position = "absolute";
-                input.style.opacity = "0";
-                input.style.pointerEvents = "none";
-                document.body.appendChild(input);
-                
-                input.onchange = () => {
-                    console.log('Nouvelle couleur sélectionnée:', input.value);
-                    paletteColors[idx] = input.value;
-                    currentColor = input.value;
-                    rebuildPalette();
-                    document.body.removeChild(input);
-                };
-                
-                input.onblur = () => {
-                    // Nettoyer si l'utilisateur annule
-                    setTimeout(() => {
-                        if (document.body.contains(input)) {
-                            document.body.removeChild(input);
-                        }
-                    }, 100);
-                };
-                
-                // Déclencher le clic pour ouvrir le sélecteur
-                input.click();
-            }
+            // Créer et ouvrir le sélecteur de couleur
+            let input = document.createElement("input");
+            input.type = "color";
+            input.value = c;
+            input.style.position = "absolute";
+            input.style.opacity = "0";
+            input.style.pointerEvents = "none";
+            document.body.appendChild(input);
+            
+            input.onchange = () => {
+                console.log('Nouvelle couleur sélectionnée:', input.value);
+                paletteColors[idx] = input.value;
+                currentColor = input.value;
+                rebuildPalette();
+                document.body.removeChild(input);
+            };
+            
+            input.onblur = () => {
+                // Nettoyer si l'utilisateur annule
+                setTimeout(() => {
+                    if (document.body.contains(input)) {
+                        document.body.removeChild(input);
+                    }
+                }, 100);
+            };
+            
+            // Déclencher le clic pour ouvrir le sélecteur
+            input.click();
         };
         
-        // Événements pour desktop et mobile
-        d.addEventListener('click', handleColorClick);
+        const selectColor = () => {
+            currentColor = c;
+            rebuildPalette();
+        };
+        
+        // Gestion tactile (mobile)
         d.addEventListener('touchend', (e) => {
             e.preventDefault();
-            handleColorClick(e);
+            e.stopPropagation();
+            
+            const now = Date.now();
+            const timeSinceLastTap = now - lastTapTime;
+            
+            console.log('Touch détecté, temps depuis dernier tap:', timeSinceLastTap);
+            
+            if (timeSinceLastTap < 400 && timeSinceLastTap > 0) {
+                // Double-tap détecté !
+                console.log('Double-tap détecté !');
+                clearTimeout(tapTimer);
+                tapCount = 0;
+                lastTapTime = 0;
+                openColorPicker();
+            } else {
+                // Premier tap
+                lastTapTime = now;
+                tapCount = 1;
+                
+                // Attendre pour voir s'il y a un deuxième tap
+                tapTimer = setTimeout(() => {
+                    if (tapCount === 1) {
+                        console.log('Simple tap - sélection de couleur');
+                        selectColor();
+                    }
+                    tapCount = 0;
+                }, 400);
+            }
+        }, { passive: false });
+        
+        // Gestion souris (desktop) - événement dblclick natif
+        d.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Double-clic desktop détecté !');
+            openColorPicker();
+        });
+        
+        // Simple clic desktop
+        d.addEventListener('click', (e) => {
+            // Ne rien faire si c'est un double-clic (géré par dblclick)
+            if (e.detail === 1) {
+                setTimeout(() => {
+                    if (e.detail === 1) {
+                        selectColor();
+                    }
+                }, 200);
+            }
         });
 
         const del = document.createElement("div");
@@ -2712,4 +2748,67 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initSymbolDragDrop);
 } else {
     initSymbolDragDrop();
+}
+
+
+// ============================================
+// GESTION DU SCROLL VERTICAL DU MENU #TOOLS
+// ============================================
+
+// Empêcher la propagation du scroll au canvas quand on scroll dans #tools
+const toolsPanel = document.getElementById('tools');
+
+if (toolsPanel) {
+    // Gestion du scroll avec la molette (desktop)
+    toolsPanel.addEventListener('wheel', (e) => {
+        // Vérifier si le contenu peut scroller
+        const canScrollDown = toolsPanel.scrollTop < (toolsPanel.scrollHeight - toolsPanel.clientHeight);
+        const canScrollUp = toolsPanel.scrollTop > 0;
+        
+        // Si on scroll vers le bas et qu'on peut scroller, ou vers le haut et qu'on peut scroller
+        if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
+            // Empêcher la propagation au canvas
+            e.stopPropagation();
+        }
+    }, { passive: false });
+
+    // Gestion du swipe vertical (mobile/tactile)
+    let touchStartY = 0;
+    let touchStartScrollTop = 0;
+    let isTouchingTools = false;
+
+    toolsPanel.addEventListener('touchstart', (e) => {
+        isTouchingTools = true;
+        touchStartY = e.touches[0].clientY;
+        touchStartScrollTop = toolsPanel.scrollTop;
+    }, { passive: true });
+
+    toolsPanel.addEventListener('touchmove', (e) => {
+        if (!isTouchingTools) return;
+
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchStartY - touchY;
+        const newScrollTop = touchStartScrollTop + deltaY;
+
+        // Vérifier si on peut scroller dans la direction demandée
+        const canScrollDown = toolsPanel.scrollTop < (toolsPanel.scrollHeight - toolsPanel.clientHeight);
+        const canScrollUp = toolsPanel.scrollTop > 0;
+
+        // Si on essaie de scroller et qu'on peut le faire, empêcher le scroll du canvas
+        if ((deltaY > 0 && canScrollDown) || (deltaY < 0 && canScrollUp)) {
+            e.preventDefault();
+            e.stopPropagation();
+            toolsPanel.scrollTop = newScrollTop;
+        }
+    }, { passive: false });
+
+    toolsPanel.addEventListener('touchend', () => {
+        isTouchingTools = false;
+    }, { passive: true });
+
+    toolsPanel.addEventListener('touchcancel', () => {
+        isTouchingTools = false;
+    }, { passive: true });
+
+    console.log('✅ Gestion du scroll vertical du menu #tools activée');
 }
