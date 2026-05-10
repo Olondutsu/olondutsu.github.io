@@ -1373,19 +1373,35 @@ container.addEventListener('touchstart', e => {
     } else if (e.touches.length === 1) {
         // 1 DOIGT
         const timeSinceLastTwoFinger = Date.now() - lastTwoFingerTime;
+        const touch = e.touches[0];
+        
+        // Vérifier si le toucher est sur le canvas
+        const rect = canvas.getBoundingClientRect();
+        const isOnCanvas = (
+            touch.clientX >= rect.left &&
+            touch.clientX <= rect.right &&
+            touch.clientY >= rect.top &&
+            touch.clientY <= rect.bottom
+        );
         
         // Si on vient juste de lever un doigt (< période de grâce), rester en mode pan
         if (wasTwoFinger && timeSinceLastTwoFinger < PAN_GRACE_PERIOD) {
             isPanning = true;
             isDrawing = false;
             console.log('🖐️ Mode Pan prolongé (1 doigt après 2 doigts)');
+        } else if (!isOnCanvas) {
+            // Si on touche en dehors du canvas, mode navigation
+            isPanning = true;
+            isDrawing = false;
+            wasTwoFinger = false;
+            console.log('🖐️ Mode Pan (toucher hors canvas)');
         } else {
-            // Sinon, mode dessin normal
+            // Si on touche le canvas, mode dessin normal
             isPanning = false;
             wasTwoFinger = false;
         }
         
-        lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+        lastTouchPos = { x: touch.pageX, y: touch.pageY };
     }
     
     lastTouchTime = Date.now();
@@ -1611,9 +1627,9 @@ document.querySelectorAll('.panel').forEach(p => {
         hasMoved = false;
     };
     
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd);
-    window.addEventListener('touchcancel', onTouchEnd);
+    header.addEventListener('touchmove', onTouchMove, { passive: false });
+    header.addEventListener('touchend', onTouchEnd);
+    header.addEventListener('touchcancel', onTouchEnd);
 
 /** DRAGGABLE MENU TOGGLE BUTTON **/
 (function() {
