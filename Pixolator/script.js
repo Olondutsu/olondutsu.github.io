@@ -1411,18 +1411,12 @@ container.addEventListener('touchmove', e => {
     // Vérifier si le toucher est sur le canvas
     const touch = e.touches[0];
     const touchTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    const isOnCanvas = touchTarget === canvas || canvas.contains(touchTarget);
     
     // Vérifier si le toucher est sur le bouton menuToggle
     const isOnMenuToggle = touchTarget && (touchTarget.id === 'menuToggle' || touchTarget.closest('#menuToggle'));
     
     // Si on est sur le menuToggle, laisser son propre gestionnaire gérer l'événement
     if (isOnMenuToggle) {
-        return;
-    }
-    
-    // Si le toucher n'est pas sur le canvas, ne rien faire (comportement natif du navigateur)
-    if (!isOnCanvas) {
         return;
     }
     
