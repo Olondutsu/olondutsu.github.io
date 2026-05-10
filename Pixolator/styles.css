@@ -1246,3 +1246,185 @@ canvas {
 .symbols-list::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
+
+
+/* ===== NAVIGATION PAD (MANETTE TACTILE) ===== */
+#navPad {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.navpad-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background: rgba(30, 30, 30, 0.85);
+    padding: 15px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+}
+
+.navpad-dpad {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.navpad-middle {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.navpad-center {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.navpad-btn {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.navpad-btn:hover {
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.navpad-btn:active {
+    background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+    border-color: var(--accent);
+    transform: translateY(1px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.navpad-zoom {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.navpad-zoom-in,
+.navpad-zoom-out {
+    width: 55px;
+    height: 55px;
+    font-size: 28px;
+}
+
+.navpad-zoom-in {
+    background: linear-gradient(145deg, #2a4a2a, #1a3a1a);
+    border-color: rgba(40, 167, 69, 0.3);
+}
+
+.navpad-zoom-in:hover {
+    background: linear-gradient(145deg, #3a5a3a, #2a4a2a);
+    border-color: rgba(40, 167, 69, 0.5);
+}
+
+.navpad-zoom-in:active {
+    background: linear-gradient(145deg, #1a3a1a, #0a2a0a);
+    border-color: #28a745;
+}
+
+.navpad-zoom-out {
+    background: linear-gradient(145deg, #4a2a2a, #3a1a1a);
+    border-color: rgba(220, 53, 69, 0.3);
+}
+
+.navpad-zoom-out:hover {
+    background: linear-gradient(145deg, #5a3a3a, #4a2a2a);
+    border-color: rgba(220, 53, 69, 0.5);
+}
+
+.navpad-zoom-out:active {
+    background: linear-gradient(145deg, #3a1a1a, #2a0a0a);
+    border-color: #dc3545;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+    #navPad {
+        bottom: 80px;
+        right: 10px;
+    }
+    
+    .navpad-controls {
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .navpad-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+    
+    .navpad-center {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .navpad-zoom-in,
+    .navpad-zoom-out {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    #navPad {
+        bottom: 70px;
+        right: 5px;
+    }
+    
+    .navpad-controls {
+        padding: 8px;
+        gap: 8px;
+    }
+    
+    .navpad-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    
+    .navpad-center {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .navpad-zoom-in,
+    .navpad-zoom-out {
+        width: 45px;
+        height: 45px;
+        font-size: 22px;
+    }
+}

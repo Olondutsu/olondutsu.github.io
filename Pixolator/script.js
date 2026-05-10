@@ -18,6 +18,7 @@ let isRulerActive = false;
 let rulerStart = null;
 let rulerCurrent = null;
 let lockedColumn = null; // Pour verrouiller la colonne en mode Nyzynka
+let navPadEnabled = false; // État de la manette de navigation
 
 // Variables pour stocker les dimensions et données originales (basse résolution)
 let originalW = 0, originalH = 0, originalPixelSize = 0;
@@ -94,6 +95,17 @@ function init(w, h, data = null, styles = null, offsets = null) {
     const marginTop = container.clientHeight / 2;  // 50vh
     container.scrollLeft = marginLeft + (W * pixelSize / 2) - (container.clientWidth / 2);
     container.scrollTop = marginTop + (H * pixelSize / 2) - (container.clientHeight / 2);
+    
+    // Charger l'état de la manette de navigation depuis localStorage
+    const savedNavPadState = localStorage.getItem("navPadEnabled");
+    if (savedNavPadState !== null) {
+        navPadEnabled = savedNavPadState === "true";
+        const navPad = document.getElementById("navPad");
+        if (navPad) {
+            navPad.style.display = navPadEnabled ? "block" : "none";
+        }
+    }
+    updateMenuIndicators();
 }
 
 function refresh() {
@@ -1092,6 +1104,13 @@ function updateMenuIndicators() {
         else menuTrame.classList.remove("active");
     }
     
+    // Navigation Pad
+    const menuNavPad = document.getElementById("menuNavPad");
+    if(menuNavPad) {
+        if(navPadEnabled) menuNavPad.classList.add("active");
+        else menuNavPad.classList.remove("active");
+    }
+    
     // Mettre à jour la barre d'état
     updateStatusBar();
 }
@@ -1141,6 +1160,16 @@ function toggleTrameMode() {
     // En mode TRAME (trameMode=true), affichage en haute résolution
     // Nyzynka reste toujours en détail
     refresh();
+}
+
+function toggleNavPad() {
+    navPadEnabled = !navPadEnabled;
+    const navPad = document.getElementById("navPad");
+    if (navPad) {
+        navPad.style.display = navPadEnabled ? "block" : "none";
+    }
+    localStorage.setItem("navPadEnabled", navPadEnabled);
+    updateMenuIndicators();
 }
 function saveLocal() {
     // Sauvegarder en HAUTE RÉSOLUTION pour préserver les positions exactes des pixels
@@ -1605,6 +1634,7 @@ document.querySelectorAll('.panel').forEach(p => {
         const touch = e.touches[0];
         offset = [p.offsetLeft - touch.clientX, p.offsetTop - touch.clientY];
         console.log('📍 Initial offset:', offset);
+        e.stopPropagation(); // Empêcher la propagation au container
     }, { passive: false });
     
     const onTouchMove = (e) => {
@@ -1612,7 +1642,7 @@ document.querySelectorAll('.panel').forEach(p => {
         hasMoved = true;
         console.log('🔵 Touch move');
         e.preventDefault(); // Important pour mobile
-        e.stopPropagation();
+        e.stopPropagation(); // Empêcher la propagation au container
         const touch = e.touches[0];
         const newLeft = (touch.clientX + offset[0]);
         const newTop = (touch.clientY + offset[1]);
@@ -1725,6 +1755,7 @@ document.querySelectorAll('.panel').forEach(p => {
         const touch = e.touches[0];
         startPos = [touch.clientX, touch.clientY];
         offset = [menuToggle.offsetLeft - touch.clientX, menuToggle.offsetTop - touch.clientY];
+        e.stopPropagation(); // Empêcher la propagation au container
     }, { passive: true });
     
     const onTouchMove = (e) => {
@@ -1738,6 +1769,7 @@ document.querySelectorAll('.panel').forEach(p => {
         if (dx > 5 || dy > 5) {
             hasMoved = true;
             e.preventDefault(); // Empêcher le scroll uniquement si on bouge
+            e.stopPropagation(); // Empêcher la propagation au container
             
             const topMenuHeight = document.getElementById('top').offsetHeight || 45;
             const buttonWidth = menuToggle.offsetWidth;
@@ -3142,3 +3174,171 @@ if (toolsPanel) {
         initPaletteResizer();
     }
 })();
+
+
+// ===== NAVIGATION PAD (MANETTE TACTILE) =====
+
+// Variables pour gérer le maintien appuyé
+let navPadInterval = null;
+let navPadAction = null;
+
+// Vitesse de déplacement et zoom
+const NAV_SCROLL_SPEED = 90; // pixels par action
+const NAV_ZOOM_STEP = 2; // incrément de pixelSize
+
+// Fonction pour déplacer le canvas
+function navigateCanvas(direction) {
+    const container = document.getElementById("canvasContainer");
+    
+    switch(direction) {
+        case "up":
+            container.scrollTop -= NAV_SCROLL_SPEED;
+            break;
+        case "down":
+            container.scrollTop += NAV_SCROLL_SPEED;
+            break;
+        case "left":
+            container.scrollLeft -= NAV_SCROLL_SPEED;
+            break;
+        case "right":
+            container.scrollLeft += NAV_SCROLL_SPEED;
+            break;
+    }
+}
+
+// Fonction pour zoomer
+function zoomCanvas(direction) {
+    const oldPixelSize = pixelSize;
+    
+    if (direction === "in") {
+        pixelSize = Math.min(pixelSize + NAV_ZOOM_STEP, 50); // Max 50px
+    } else if (direction === "out") {
+        pixelSize = Math.max(pixelSize - NAV_ZOOM_STEP, 2); // Min 2px
+    }
+    
+    // Si le zoom a changé, rafraîchir le canvas
+    if (pixelSize !== oldPixelSize) {
+        // Calculer le centre actuel du viewport
+        const container = document.getElementById("canvasContainer");
+        const centerX = (container.scrollLeft + container.clientWidth / 2) / oldPixelSize;
+        const centerY = (container.scrollTop + container.clientHeight / 2) / oldPixelSize;
+        
+        // Rafraîchir avec la nouvelle taille
+        refresh();
+        
+        // Recentrer sur le même point
+        container.scrollLeft = centerX * pixelSize - container.clientWidth / 2;
+        container.scrollTop = centerY * pixelSize - container.clientHeight / 2;
+    }
+}
+
+// Démarrer l'action continue
+function startNavPadAction(action, param) {
+    // Exécuter immédiatement
+    if (action === "navigate") {
+        navigateCanvas(param);
+    } else if (action === "zoom") {
+        zoomCanvas(param);
+    }
+    
+    // Sauvegarder l'action pour la répétition
+    navPadAction = { action, param };
+    
+    // Démarrer la répétition après un délai initial
+    setTimeout(() => {
+        if (navPadAction) {
+            navPadInterval = setInterval(() => {
+                if (navPadAction) {
+                    if (navPadAction.action === "navigate") {
+                        navigateCanvas(navPadAction.param);
+                    } else if (navPadAction.action === "zoom") {
+                        zoomCanvas(navPadAction.param);
+                    }
+                }
+            }, 100); // Répéter toutes les 100ms
+        }
+    }, 300); // Délai initial de 300ms
+}
+
+// Arrêter l'action continue
+function stopNavPadAction() {
+    if (navPadInterval) {
+        clearInterval(navPadInterval);
+        navPadInterval = null;
+    }
+    navPadAction = null;
+}
+
+// Initialiser les événements de la manette de navigation
+function initNavPad() {
+    const navPad = document.getElementById("navPad");
+    if (!navPad) return;
+    
+    // Sélectionner tous les boutons
+    const buttons = navPad.querySelectorAll(".navpad-btn");
+    
+    buttons.forEach(btn => {
+        // Événements pour les flèches directionnelles
+        if (btn.dataset.direction) {
+            const direction = btn.dataset.direction;
+            
+            // Souris
+            btn.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                startNavPadAction("navigate", direction);
+            });
+            
+            // Tactile
+            btn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                startNavPadAction("navigate", direction);
+            }, { passive: false });
+        }
+        
+        // Événements pour les boutons de zoom
+        if (btn.dataset.zoom) {
+            const zoomDir = btn.dataset.zoom;
+            
+            // Souris
+            btn.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                startNavPadAction("zoom", zoomDir);
+            });
+            
+            // Tactile
+            btn.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                startNavPadAction("zoom", zoomDir);
+            }, { passive: false });
+        }
+        
+        // Arrêter l'action au relâchement (souris)
+        btn.addEventListener("mouseup", (e) => {
+            e.preventDefault();
+            stopNavPadAction();
+        });
+        
+        btn.addEventListener("mouseleave", (e) => {
+            stopNavPadAction();
+        });
+        
+        // Arrêter l'action au relâchement (tactile)
+        btn.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            stopNavPadAction();
+        }, { passive: false });
+        
+        btn.addEventListener("touchcancel", (e) => {
+            e.preventDefault();
+            stopNavPadAction();
+        }, { passive: false });
+    });
+    
+    // Arrêter l'action si on quitte la fenêtre
+    window.addEventListener("blur", stopNavPadAction);
+}
+
+// Initialiser la manette au chargement de la page
+document.addEventListener("DOMContentLoaded", () => {
+    initNavPad();
+});
