@@ -1537,16 +1537,51 @@ window.addEventListener('mouseup', () => { isPanning = false; });
 document.querySelectorAll('.panel').forEach(p => {
     const header = p.querySelector('.panel-header');
     let isDraggingPanel = false, offset = [0,0];
+    
+    // Support souris
     header.onmousedown = (e) => {
-        isDraggingPanel = true; p.style.transform = 'none';
+        isDraggingPanel = true;
+        p.style.transform = 'none';
         offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY];
     };
-    window.addEventListener('mousemove', (e) => {
+    
+    const onMouseMove = (e) => {
         if (!isDraggingPanel) return;
         p.style.left = (e.clientX + offset[0]) + 'px';
         p.style.top = (e.clientY + offset[1]) + 'px';
-    });
-    window.addEventListener('mouseup', () => isDraggingPanel = false);
+    };
+    
+    const onMouseUp = () => {
+        isDraggingPanel = false;
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    
+    // Support tactile (mobile)
+    header.addEventListener('touchstart', (e) => {
+        isDraggingPanel = true;
+        p.style.transform = 'none';
+        const touch = e.touches[0];
+        offset = [p.offsetLeft - touch.clientX, p.offsetTop - touch.clientY];
+        e.preventDefault(); // Empêche le scroll pendant le drag
+    }, { passive: false });
+    
+    const onTouchMove = (e) => {
+        if (!isDraggingPanel) return;
+        e.preventDefault(); // Important pour mobile
+        const touch = e.touches[0];
+        p.style.left = (touch.clientX + offset[0]) + 'px';
+        p.style.top = (touch.clientY + offset[1]) + 'px';
+    };
+    
+    const onTouchEnd = () => {
+        isDraggingPanel = false;
+    };
+    
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
 });
 
 function newProject() {
@@ -2749,3 +2784,157 @@ if (document.readyState === 'loading') {
 } else {
     initSymbolDragDrop();
 }
+
+
+// ============================================
+// GESTION DU SCROLL VERTICAL DU MENU #TOOLS
+// ============================================
+
+// Empêcher la propagation du scroll au canvas quand on scroll dans #tools
+const toolsPanel = document.getElementById('tools');
+
+if (toolsPanel) {
+    // Gestion du scroll avec la molette (desktop)
+    toolsPanel.addEventListener('wheel', (e) => {
+        // Vérifier si le contenu peut scroller
+        const canScrollDown = toolsPanel.scrollTop < (toolsPanel.scrollHeight - toolsPanel.clientHeight);
+        const canScrollUp = toolsPanel.scrollTop > 0;
+        
+        // Si on scroll vers le bas et qu'on peut scroller, ou vers le haut et qu'on peut scroller
+        if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
+            // Empêcher la propagation au canvas
+            e.stopPropagation();
+        }
+    }, { passive: false });
+
+    // Gestion du swipe vertical (mobile/tactile)
+    let touchStartY = 0;
+    let touchStartScrollTop = 0;
+    let isTouchingTools = false;
+
+    toolsPanel.addEventListener('touchstart', (e) => {
+        isTouchingTools = true;
+        touchStartY = e.touches[0].clientY;
+        touchStartScrollTop = toolsPanel.scrollTop;
+    }, { passive: true });
+
+    toolsPanel.addEventListener('touchmove', (e) => {
+        if (!isTouchingTools) return;
+
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchStartY - touchY;
+        const newScrollTop = touchStartScrollTop + deltaY;
+
+        // Vérifier si on peut scroller dans la direction demandée
+        const canScrollDown = toolsPanel.scrollTop < (toolsPanel.scrollHeight - toolsPanel.clientHeight);
+        const canScrollUp = toolsPanel.scrollTop > 0;
+
+        // Si on essaie de scroller et qu'on peut le faire, empêcher le scroll du canvas
+        if ((deltaY > 0 && canScrollDown) || (deltaY < 0 && canScrollUp)) {
+            e.preventDefault();
+            e.stopPropagation();
+            toolsPanel.scrollTop = newScrollTop;
+        }
+    }, { passive: false });
+
+    toolsPanel.addEventListener('touchend', () => {
+        isTouchingTools = false;
+    }, { passive: true });
+
+    toolsPanel.addEventListener('touchcancel', () => {
+        isTouchingTools = false;
+    }, { passive: true });
+
+    console.log('✅ Gestion du scroll vertical du menu #tools activée');
+}
+
+
+// ========== PALETTE RESIZER ==========
+(function() {
+    function initPaletteResizer() {
+        const palette = document.getElementById('palette');
+        const resizer = document.getElementById('paletteResizer');
+        
+        if (!palette || !resizer) {
+            console.log('Palette or resizer not found, retrying...');
+            setTimeout(initPaletteResizer, 100);
+            return;
+        }
+        
+        let isResizing = false;
+        let startY = 0;
+        let startHeight = 90;
+        const minHeight = 60;
+        const maxHeight = 200;
+
+        resizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            startY = e.clientY;
+            startHeight = palette.offsetHeight;
+            document.body.style.cursor = 'ns-resize';
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            
+            const deltaY = startY - e.clientY; // Inversé car on tire vers le haut
+            let newHeight = startHeight + deltaY;
+            
+            // Limiter la hauteur
+            newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+            
+            // Utiliser setProperty avec important pour surcharger le CSS
+            palette.style.setProperty('height', newHeight + 'px', 'important');
+            palette.style.setProperty('min-height', newHeight + 'px', 'important');
+            
+            e.preventDefault();
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+            }
+        });
+
+        // Support tactile pour mobile
+        resizer.addEventListener('touchstart', function(e) {
+            isResizing = true;
+            startY = e.touches[0].clientY;
+            startHeight = palette.offsetHeight;
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.addEventListener('touchmove', function(e) {
+            if (!isResizing) return;
+            
+            const deltaY = startY - e.touches[0].clientY;
+            let newHeight = startHeight + deltaY;
+            
+            newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+            
+            palette.style.setProperty('height', newHeight + 'px', 'important');
+            palette.style.setProperty('min-height', newHeight + 'px', 'important');
+            
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchend', function() {
+            if (isResizing) {
+                isResizing = false;
+            }
+        });
+        
+        console.log('Palette resizer initialized');
+    }
+    
+    // Initialiser quand le DOM est prêt
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPaletteResizer);
+    } else {
+        initPaletteResizer();
+    }
+})();

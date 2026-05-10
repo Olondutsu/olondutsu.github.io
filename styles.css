@@ -18,15 +18,16 @@ body {
 }
 
 /* Top Bar */
-#top { 
-    height: 45px; 
-    background: #222; 
-    display: flex; 
-    align-items: center; 
-    padding: 0 15px; 
-    border-bottom: 1px solid var(--border); 
-    z-index: 300; 
-    justify-content: space-between; 
+#top {
+    position: relative; /* Crée un contexte de stacking pour les dropdowns */
+    height: 45px;
+    background: #222;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    border-bottom: 1px solid var(--border);
+    z-index: 10100; /* Plus élevé que menuToggle (10050) */
+    justify-content: space-between;
 }
 
 .menu-left, .menu-right { 
@@ -60,13 +61,13 @@ body {
     background: #333; 
 }
 
-.menu-icon { 
-    width: 16px; 
-    height: 16px; 
-    image-rendering: pixelated; 
-    margin-right: 8px; 
-    image-rendering: -moz-crisp-edges; 
-    image-rendering: pixelated; 
+.menu-icon {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+    margin-right: 8px;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: pixelated;
 }
 /* Tablette */
 @media (max-width: 1024px) {
@@ -87,6 +88,31 @@ body {
     }
 }
 
+
+/* Tablette et écrans moyens */
+@media (max-width: 1024px) and (min-width: 601px) {
+    #palette {
+        height: 75px !important;
+        min-height: 75px !important;
+        padding: 12px 10px;
+    }
+    
+    .color {
+        width: 45px !important;
+        height: 45px !important;
+    }
+    
+    #addColorBtn {
+        width: 45px !important;
+        height: 45px !important;
+        font-size: 24px;
+    }
+    
+    #bgColorBtn {
+        width: 45px !important;
+        height: 45px !important;
+    }
+}
 
 @media (max-width: 600px) {
     button.menu-item {
@@ -181,17 +207,17 @@ body {
     }
 }
 
-.dropdown { 
-    display: none; 
-    position: absolute; 
-    top: 100%; 
-    left: 0; 
-    background: #2a2a2a; 
-    border: 1px solid #555; 
-    min-width: 180px; 
-    box-shadow: 0 8px 16px rgba(0,0,0,0.5); 
-    border-radius: 0 0 4px 4px; 
-    z-index: 350; 
+.dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #2a2a2a;
+    border: 1px solid #555;
+    min-width: 180px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+    border-radius: 0 0 4px 4px;
+    z-index: 10500; /* Au-dessus de tout pour être cliquable */
 }
 
 .menu-item:hover .dropdown { 
@@ -225,40 +251,72 @@ body {
     font-weight: bold;
 }
 
-#menuToggle { 
-    position: absolute; 
-    right: -40px; 
-    top: 10px; 
-    width: 35px; 
-    height: 35px; 
-    background: var(--panel); 
-    border: 1px solid #555; 
-    border-radius: 0 8px 8px 0; 
-    color: var(--accent); 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer; 
-    font-weight: bold; 
+#menuToggle {
+    position: fixed;
+    left: 155px; /* 15px (left de #tools) + 140px (width de #tools) */
+    top: 70px; /* En haut, aligné avec la barre d'outils */
+    width: 35px;
+    height: 35px;
+    background: var(--panel);
+    border: 1px solid #555;
+    border-radius: 0 8px 8px 0;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: bold;
     box-shadow: 5px 0 10px rgba(0,0,0,0.3);
+    z-index: 10050; /* En dessous des dropdowns (10500) */
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 18px;
 }
 
 /* Sidebar Tools */
-#tools { 
-    position: fixed; 
-    left: 15px; 
-    top: 60px; 
-    background: var(--panel); 
-    border: 1px solid #555; 
-    border-radius: 12px; 
-    padding: 10px; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px; 
-    z-index: 150; /* Augmenté pour passer devant le reste */
-    width: 140px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+#tools {
+    position: fixed;
+    left: 15px;
+    top: 60px;
+    background: var(--panel);
+    border: 1px solid #555;
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 10000; /* Au-dessus de la palette, en dessous du menu */
+    width: 140px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* Scroll vertical */
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    overflow-x: visible; /* Permet au bouton toggle de dépasser */
+}
+
+/* Scrollbar personnalisée pour #tools */
+#tools::-webkit-scrollbar {
+    width: 8px;
+}
+
+#tools::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+#tools::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+#tools::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
+/* Scrollbar pour Firefox */
+#tools {
+    scrollbar-width: thin;
+    scrollbar-color: #555 rgba(0, 0, 0, 0.2);
 }
 
 .tool-group { 
@@ -275,6 +333,12 @@ body {
 
 #tools.collapsed {
     transform: translateX(-120%);
+}
+
+/* Quand la barre est cachée, le bouton va au bord gauche de l'écran */
+#tools.collapsed ~ #menuToggle {
+    left: 0;
+    border-radius: 0 8px 8px 0; /* Garde le border-radius à droite */
 }
 
 button.tool-btn { 
@@ -301,11 +365,11 @@ button.tool-btn.active {
     border-color: #00bfff; 
 }
 
-.tool-icon { 
-    width: 18px; 
-    height: 18px; 
-    image-rendering: pixelated; 
-    pointer-events: none; 
+.tool-icon {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+    pointer-events: none;
 }
 
 /* Workspace */
@@ -368,18 +432,18 @@ canvas {
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    height: 70px !important;
-    min-height: 70px !important;
+    height: 90px !important; /* Plus grande sur PC */
+    min-height: 90px !important;
     background: #222 !important;
     border-top: 1px solid var(--border);
     display: flex !important;
     align-items: center;
     justify-content: center;
     gap: 15px;
-    z-index: 9999 !important;
-    padding: 0 10px;
+    z-index: 100 !important; /* En dessous de la barre d'outils */
+    padding: 15px 10px;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible; /* Permet aux couleurs d'être entièrement visibles */
     visibility: visible !important;
     opacity: 1 !important;
     pointer-events: auto !important;
@@ -391,8 +455,8 @@ canvas {
 }
 
 .color {
-    width: 42px;
-    height: 42px;
+    width: 50px; /* Plus grande sur PC */
+    height: 50px;
     border: 2px solid #000;
     border-radius: 6px;
     cursor: pointer;
@@ -520,14 +584,38 @@ canvas {
     overflow: hidden; 
 }
 
-.panel-header { 
-    background: #333; 
-    padding: 10px 15px; 
-    cursor: move; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    border-bottom: 1px solid #444; 
+.panel-header {
+    background: #333;
+    padding: 10px 15px;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+/* Header plus grand et visible sur mobile */
+@media (max-width: 600px) {
+    .panel-header {
+        padding: 15px;
+        min-height: 50px;
+        background: linear-gradient(135deg, #333 0%, #3a3a3a 100%);
+        position: relative;
+    }
+    
+    .panel-header::before {
+        content: '⋮⋮';
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #666;
+        font-size: 20px;
+        letter-spacing: 2px;
+        pointer-events: none;
+    }
 }
 
 .panel-header h3 { 
@@ -537,16 +625,29 @@ canvas {
     pointer-events: none; 
 }
 
-.close-btn { 
-    color: #888; 
-    cursor: pointer; 
-    font-size: 18px; 
-    font-weight: bold; 
-    padding: 0 5px; 
+.close-btn {
+    color: #888;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 0 5px;
 }
 
-.close-btn:hover { 
-    color: #ff4d4d; 
+.close-btn:hover {
+    color: #ff4d4d;
+}
+
+/* Boutons de fermeture plus grands sur mobile pour faciliter le tactile */
+@media (max-width: 600px) {
+    .close-btn {
+        font-size: 32px;
+        padding: 5px 10px;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 .panel-content { 
@@ -817,8 +918,8 @@ canvas {
 }
 
 .action-btn .menu-icon {
-    width: 16px;
-    height: 16px;
+    width: 28px;
+    height: 28px;
 }
 
 /* Responsive pour le panneau latéral */
