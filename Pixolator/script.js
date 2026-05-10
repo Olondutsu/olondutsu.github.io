@@ -1537,6 +1537,8 @@ window.addEventListener('mouseup', () => { isPanning = false; });
 document.querySelectorAll('.panel').forEach(p => {
     const header = p.querySelector('.panel-header');
     let isDraggingPanel = false, offset = [0,0];
+    
+    // Support souris
     header.onmousedown = (e) => {
         isDraggingPanel = true; p.style.transform = 'none';
         offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY];
@@ -1547,6 +1549,24 @@ document.querySelectorAll('.panel').forEach(p => {
         p.style.top = (e.clientY + offset[1]) + 'px';
     });
     window.addEventListener('mouseup', () => isDraggingPanel = false);
+    
+    // Support tactile (mobile)
+    header.addEventListener('touchstart', (e) => {
+        isDraggingPanel = true;
+        p.style.transform = 'none';
+        const touch = e.touches[0];
+        offset = [p.offsetLeft - touch.clientX, p.offsetTop - touch.clientY];
+        e.preventDefault(); // Empêche le scroll pendant le drag
+    }, { passive: false });
+    
+    window.addEventListener('touchmove', (e) => {
+        if (!isDraggingPanel) return;
+        const touch = e.touches[0];
+        p.style.left = (touch.clientX + offset[0]) + 'px';
+        p.style.top = (touch.clientY + offset[1]) + 'px';
+    });
+    
+    window.addEventListener('touchend', () => isDraggingPanel = false);
 });
 
 function newProject() {

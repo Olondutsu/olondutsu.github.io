@@ -584,14 +584,38 @@ canvas {
     overflow: hidden; 
 }
 
-.panel-header { 
-    background: #333; 
-    padding: 10px 15px; 
-    cursor: move; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    border-bottom: 1px solid #444; 
+.panel-header {
+    background: #333;
+    padding: 10px 15px;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+/* Header plus grand et visible sur mobile */
+@media (max-width: 600px) {
+    .panel-header {
+        padding: 15px;
+        min-height: 50px;
+        background: linear-gradient(135deg, #333 0%, #3a3a3a 100%);
+        position: relative;
+    }
+    
+    .panel-header::before {
+        content: '⋮⋮';
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #666;
+        font-size: 20px;
+        letter-spacing: 2px;
+        pointer-events: none;
+    }
 }
 
 .panel-header h3 { 
