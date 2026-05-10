@@ -1348,16 +1348,6 @@ let wasTwoFinger = false; // Flag pour savoir si on vient de faire un geste 2 do
 const PAN_GRACE_PERIOD = 800; // 800ms de grâce après avoir levé un doigt
 
 container.addEventListener('touchstart', e => {
-    // Vérifier si le toucher est sur le canvas
-    const touch = e.touches[0];
-    const touchTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    const isOnCanvas = touchTarget === canvas || canvas.contains(touchTarget);
-    
-    // Si le toucher n'est pas sur le canvas, ne rien faire (laisser le scroll natif)
-    if (!isOnCanvas && e.touches.length === 1) {
-        return;
-    }
-    
     // Annuler l'inertie en cours
     if (momentumAnimation) {
         cancelAnimationFrame(momentumAnimation);
@@ -1383,19 +1373,35 @@ container.addEventListener('touchstart', e => {
     } else if (e.touches.length === 1) {
         // 1 DOIGT
         const timeSinceLastTwoFinger = Date.now() - lastTwoFingerTime;
+        const touch = e.touches[0];
+        
+        // Vérifier si le toucher est sur le canvas
+        const rect = canvas.getBoundingClientRect();
+        const isOnCanvas = (
+            touch.clientX >= rect.left &&
+            touch.clientX <= rect.right &&
+            touch.clientY >= rect.top &&
+            touch.clientY <= rect.bottom
+        );
         
         // Si on vient juste de lever un doigt (< période de grâce), rester en mode pan
         if (wasTwoFinger && timeSinceLastTwoFinger < PAN_GRACE_PERIOD) {
             isPanning = true;
             isDrawing = false;
             console.log('🖐️ Mode Pan prolongé (1 doigt après 2 doigts)');
+        } else if (!isOnCanvas) {
+            // Si on touche en dehors du canvas, mode navigation
+            isPanning = true;
+            isDrawing = false;
+            wasTwoFinger = false;
+            console.log('🖐️ Mode Pan (toucher hors canvas)');
         } else {
-            // Sinon, mode dessin normal
+            // Si on touche le canvas, mode dessin normal
             isPanning = false;
             wasTwoFinger = false;
         }
         
-        lastTouchPos = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+        lastTouchPos = { x: touch.pageX, y: touch.pageY };
     }
     
     lastTouchTime = Date.now();
@@ -1404,16 +1410,6 @@ container.addEventListener('touchstart', e => {
 
 container.addEventListener('touchmove', e => {
     if (!lastTouchPos) return;
-    
-    // Vérifier si le toucher est sur le canvas
-    const touch = e.touches[0];
-    const touchTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    const isOnCanvas = touchTarget === canvas || canvas.contains(touchTarget);
-    
-    // Si le toucher n'est pas sur le canvas et qu'on n'est pas en mode pan, ne rien faire
-    if (!isOnCanvas && !isPanning && e.touches.length === 1) {
-        return;
-    }
     
     const now = Date.now();
     const deltaTime = Math.max(1, now - lastTouchTime);
@@ -1609,6 +1605,7 @@ document.querySelectorAll('.panel').forEach(p => {
         const touch = e.touches[0];
         offset = [p.offsetLeft - touch.clientX, p.offsetTop - touch.clientY];
         console.log('📍 Initial offset:', offset);
+        e.stopPropagation(); // Empêcher la propagation au container
     }, { passive: false });
     
     const onTouchMove = (e) => {
@@ -1616,7 +1613,7 @@ document.querySelectorAll('.panel').forEach(p => {
         hasMoved = true;
         console.log('🔵 Touch move');
         e.preventDefault(); // Important pour mobile
-        e.stopPropagation();
+        e.stopPropagation(); // Empêcher la propagation au container
         const touch = e.touches[0];
         const newLeft = (touch.clientX + offset[0]);
         const newTop = (touch.clientY + offset[1]);
@@ -1631,9 +1628,9 @@ document.querySelectorAll('.panel').forEach(p => {
         hasMoved = false;
     };
     
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd);
-    window.addEventListener('touchcancel', onTouchEnd);
+    header.addEventListener('touchmove', onTouchMove, { passive: false });
+    header.addEventListener('touchend', onTouchEnd);
+    header.addEventListener('touchcancel', onTouchEnd);
 
 /** DRAGGABLE MENU TOGGLE BUTTON **/
 (function() {
@@ -1688,10 +1685,11 @@ document.querySelectorAll('.panel').forEach(p => {
         const dy = Math.abs(e.clientY - startPos[1]);
         if (dx > 5 || dy > 5) {
             hasMoved = true;
+            // Empêcher le comportement par défaut seulement quand on bouge
+            if (!hasMoved) e.preventDefault();
         }
         
         if (hasMoved) {
-            e.preventDefault(); // Empêcher le comportement par défaut seulement quand on bouge
             const topMenuHeight = document.getElementById('top').offsetHeight || 45;
             const buttonWidth = menuToggle.offsetWidth;
             const buttonHeight = menuToggle.offsetHeight;
@@ -1728,6 +1726,7 @@ document.querySelectorAll('.panel').forEach(p => {
         const touch = e.touches[0];
         startPos = [touch.clientX, touch.clientY];
         offset = [menuToggle.offsetLeft - touch.clientX, menuToggle.offsetTop - touch.clientY];
+        e.stopPropagation(); // Empêcher la propagation au container
     }, { passive: true });
     
     const onTouchMove = (e) => {
@@ -1741,6 +1740,7 @@ document.querySelectorAll('.panel').forEach(p => {
         if (dx > 5 || dy > 5) {
             hasMoved = true;
             e.preventDefault(); // Empêcher le scroll uniquement si on bouge
+            e.stopPropagation(); // Empêcher la propagation au container
             
             const topMenuHeight = document.getElementById('top').offsetHeight || 45;
             const buttonWidth = menuToggle.offsetWidth;
@@ -1769,9 +1769,9 @@ document.querySelectorAll('.panel').forEach(p => {
         }
     };
     
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd, { passive: false });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    menuToggle.addEventListener('touchmove', onTouchMove, { passive: false });
+    menuToggle.addEventListener('touchend', onTouchEnd, { passive: false });
+    menuToggle.addEventListener('touchcancel', onTouchEnd, { passive: false });
 })();
 });
 
