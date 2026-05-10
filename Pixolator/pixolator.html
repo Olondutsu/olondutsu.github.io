@@ -1,71 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Pix-o-lator Pro | GLOBAL EDITION</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="i18n.js"></script>
 </head>
 <body>
 
 <div id="top">
     <div class="menu-left">
         <div class="menu-item">
-            <img src="icons/file.png" class="menu-icon">File
+            <img src="icons/file.png" class="menu-icon"><span data-i18n="menu.file">Fichier</span>
             <div class="dropdown">
-                <div onclick="newProject()"><img src="icons/new.png" class="menu-icon"><span class="menu-text">New Project</span></div>
-                <div onclick="saveJSON()"><img src="icons/save.png" class="menu-icon">Save JSON</div>
-                <div onclick="loadJSON()"><img src="icons/open.png" class="menu-icon">Open JSON</div>
-                <div onclick="showPanel('exportPanel')" style="color:#28a745"><b><img src="icons/export.png" class="menu-icon">Export Image...</b></div>
-                <div onclick="resetUIPosition()"><img src="icons/undo.png" class="menu-icon">Reset Default UI</div>
+                <div onclick="newProject()"><img src="icons/file.png" class="menu-icon"><span class="menu-text" data-i18n="menu.new">Nouveau Projet</span></div>
+                <div onclick="saveJSON()"><img src="icons/file.png" class="menu-icon"><span data-i18n="menu.save">Sauvegarder JSON</span></div>
+                <div onclick="loadJSON()"><img src="icons/file.png" class="menu-icon"><span data-i18n="menu.open">Ouvrir JSON</span></div>
+                <div onclick="window.location.href='image_converter.html'" style="color:#007bff"><img src="icons/file.png" class="menu-icon"><span data-i18n="menu.imageConverter">Convertisseur d'Images...</span></div>
+                <div onclick="showPanel('exportPanel')" style="color:#28a745"><b><img src="icons/export.png" class="menu-icon"><span data-i18n="menu.export">Exporter Image...</span></b></div>
+                <div onclick="showPanel('settingsPanel')"><img src="icons/view.png" class="menu-icon"><span data-i18n="menu.settings">Paramètres...</span></div>
+                <div onclick="resetUIPosition()"><img src="icons/undo.png" class="menu-icon"><span data-i18n="menu.resetUI">Réinitialiser l'Interface</span></div>
             </div>
         </div>
         <div class="menu-item">
-            <img src="icons/view.png" class="menu-icon">View
+            <img src="icons/view.png" class="menu-icon"><span data-i18n="menu.view">Affichage</span>
             <div class="dropdown">
-                <div id="menuGrid" onclick="toggleGrid()"><img src="icons/grid.png" class="menu-icon"><span class="menu-text">Grid On/Off</span></div>
-                <div id="menuEmbroidery" onclick="toggleRender()"><img src="icons/cross.png" class="menu-icon">Embroidery Mode</div>
-                <div id="menuTrame" onclick="toggleTrameMode()"><img src="icons/view.png" class="menu-icon">TRAME Mode (3×3)</div>
-                <div id="menuNavPad" onclick="toggleNavPad()"><img src="icons/view.png" class="menu-icon">Navigation Pad</div>
+                <div id="menuGrid" onclick="toggleGrid()"><img src="icons/view.png" class="menu-icon"><span class="menu-text" data-i18n="menu.grid">Grille On/Off</span></div>
+                <div id="menuEmbroidery" onclick="toggleRender()"><img src="icons/crossstitch.png" class="menu-icon"><span data-i18n="menu.embroidery">Mode Broderie</span></div>
+                <div id="menuTrame" onclick="toggleTrameMode()"><img src="icons/view.png" class="menu-icon"><span data-i18n="menu.trame">Mode TRAME (3×3)</span></div>
+                <div id="menuNavPad" onclick="toggleNavPad()"><img src="icons/view.png" class="menu-icon"><span data-i18n="menu.navPad">Manette de Navigation</span></div>
+                <div id="menuRuler" onclick="toggleRulerPanel()"><img src="icons/view.png" class="menu-icon"><span data-i18n="menu.ruler">Panneau Règle</span></div>
             </div>
         </div>
     </div>
     <div class="menu-center">
-        <button class="menu-item" onclick="undo()"><img src="icons/undo.png" class="menu-icon"><span class="menu-text">Undo</span></button>
-        <button class="menu-item" onclick="redo()"><img src="icons/redo.png" class="menu-icon"><span class="menu-text">Redo</span></button>
+        <button class="menu-item" onclick="undo()"><img src="icons/undo.png" class="menu-icon"><span class="menu-text" data-i18n="menu.undo">Annuler</span></button>
+        <button class="menu-item" onclick="redo()"><img src="icons/redo.png" class="menu-icon"><span class="menu-text" data-i18n="menu.redo">Refaire</span></button>
     </div>
     <div class="menu-right" style="justify-content: flex-end;">
-        <button class="menu-item" onclick="showPanel('resizePanel')"><img src="icons/resize.png" class="menu-icon">Size</button>
-        <button class="menu-item" onclick="toggleSelectionPanel()"><img src="icons/copy.png" class="menu-icon">Edit</button>
+        <button class="menu-item" onclick="showPanel('resizePanel')"><img src="icons/resize.png" class="menu-icon"><span data-i18n="menu.size">Taille</span></button>
+        <button class="menu-item" onclick="toggleSelectionPanel()"><img src="icons/edit.png" class="menu-icon"><span data-i18n="menu.edit">Édition</span></button>
     </div>
 </div>
 
 <div id="menuToggle" onclick="toggleSidebar()">☰</div>
 <div id="tools">
     <div class="tool-group">
-        <button class="tool-btn active" data-tool="pencil" onclick="setTool('pencil')"><img src="icons/pencil.png" class="tool-icon">Pencil</button>
-        <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')"><img src="icons/eraser.png" class="tool-icon">Eraser</button>
-        <div style="font-size:10px; color:#888; text-align:center; margin-top:5px">Brush: <span id="sizeVal">1</span>px</div>
+        <button class="tool-btn active" data-tool="pencil" onclick="setTool('pencil')"><img src="icons/pencil.png" class="tool-icon"><span data-i18n="tool.pencil">Crayon</span></button>
+        <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')"><img src="icons/eraser.png" class="tool-icon"><span data-i18n="tool.eraser">Gomme</span></button>
+        <div style="font-size:10px; color:#888; text-align:center; margin-top:5px"><span data-i18n="tool.brush">Pinceau</span>: <span id="sizeVal">1</span>px</div>
         <input type="range" id="brushSlider" min="1" max="10" value="1" oninput="updateBrushSize(this.value)">
     </div>
     <div class="tool-group">
-        <button class="tool-btn" data-tool="fill" onclick="showFillSettings()"><img src="icons/fill.png" class="tool-icon">Bucket</button>
-        <button class="tool-btn" data-tool="convert" onclick="showConvertSettings()"><img src="icons/view.png" class="tool-icon">Convert</button>
-        <button class="tool-btn" data-tool="picker" onclick="setTool('picker')"><img src="icons/picker.png" class="tool-icon">Picker</button>
-        <button class="tool-btn" data-tool="select" onclick="setTool('select')"><img src="icons/select.png" class="tool-icon">Select Box</button>
+        <button class="tool-btn" data-tool="fill" onclick="showFillSettings()"><img src="icons/fill.png" class="tool-icon"><span data-i18n="tool.bucket">Pot de peinture</span></button>
+        <button class="tool-btn" data-tool="convert" onclick="showConvertSettings()"><img src="icons/convert.png" class="tool-icon"><span data-i18n="tool.convert">Convertir</span></button>
+        <button class="tool-btn" data-tool="picker" onclick="setTool('picker')"><img src="icons/picker.png" class="tool-icon"><span data-i18n="tool.picker">Pipette</span></button>
+        <button class="tool-btn" data-tool="select" onclick="setTool('select')"><img src="icons/select.png" class="tool-icon"><span data-i18n="tool.select">Sélection</span></button>
     </div>
     <div class="tool-group">
-        <div style="font-size:10px; color:#888; text-align:center; margin-bottom:5px">Stitch Style:</div>
-        <button class="tool-btn active" data-style="cross" onclick="setStitchStyle('cross')">✖️ Cross</button>
-        <button class="tool-btn" data-style="nyzynka" onclick="setStitchStyle('nyzynka')">🧵 Nyzynka</button>
+        <div style="font-size:10px; color:#888; text-align:center; margin-bottom:5px" data-i18n="stitch.style">Style de Point:</div>
+        <button class="tool-btn active" data-style="cross" onclick="setStitchStyle('cross')"><img src="icons/crossstitch.png" class="tool-icon"><span data-i18n="stitch.cross">Croix</span></button>
+        <button class="tool-btn" data-style="nyzynka" onclick="setStitchStyle('nyzynka')"><img src="icons/stitchnyz.png" class="tool-icon"> <span data-i18n="stitch.nyzynka">Nyzynka</span></button>
     </div>
     <div class="tool-group">
-        <div style="font-size:10px; color:#888; text-align:center; margin-top:5px">Line Width: <span id="lineWidthVal">15</span>%</div>
+        <div style="font-size:10px; color:#888; text-align:center; margin-top:5px"><span data-i18n="stitch.lineWidth">Épaisseur</span>: <span id="lineWidthVal">15</span>%</div>
         <input type="range" id="lineWidthSlider" min="5" max="50" value="15" oninput="updateLineWidth(this.value)">
     </div>
     <div class="tool-group">
-            <button class="tool-btn" data-tool="ruler" onclick="setTool('ruler')" title="Ruler">📏<span class="menu-text"> Ruler</span></button>
-        <button class="tool-btn" onclick="showPanel('mirrorPanel')">✨ Mirrors</button>
+        <button class="tool-btn" data-tool="ruler" onclick="setTool('ruler')" data-i18n-title="tool.ruler"><img src="icons/ruler.png" class="tool-icon"><span class="menu-text" data-i18n="tool.ruler">Règle</span></button>
+        <button class="tool-btn" onclick="showPanel('mirrorPanel')"><img src="icons/mirror.png" class="tool-icon"><span data-i18n="tool.mirrors">Miroirs</span></button>
     </div>
 </div>
 
@@ -77,126 +81,151 @@
     </div>
 </div>
 
-<div id="stats">Active Pixels: <span id="pixelCount">0</span> | <span id="ruleText">Ruler: -</span></div>
+<div id="stats">
+    <div class="stats-header">
+        <span class="stats-handle">⋮⋮</span>
+        <span class="close-btn" onclick="toggleRulerPanel()">×</span>
+    </div>
+    <div class="stats-content">
+        <span data-i18n="status.activePixels">Pixels Actifs:</span> <span id="pixelCount">0</span> | <span id="ruleText"><span data-i18n="status.ruler">Règle:</span> -</span>
+    </div>
+</div>
 
 <div id="palette">
     <div id="paletteResizer" style="position: absolute; top: 0; left: 0; right: 0; height: 8px; cursor: ns-resize; background: transparent; z-index: 10;">
         <div style="position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: #555; border-radius: 2px;"></div>
     </div>
-    <div id="bgColorBtn" style="width:34px; height:34px; background:#111; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:9px; display:flex; align-items:center; justify-content:center;" onclick="changeBG()">BG</div>
+    <div id="bgColorBtn" style="width:34px; height:34px; background:#111; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:9px; display:flex; align-items:center; justify-content:center;" onclick="changeBG()" data-i18n="palette.bg">FD</div>
     <div id="colorContainer" style="display:flex; gap:8px;"></div>
-    <div id="addColorBtn" onclick="addNewColor()">+</div>
+    <div id="addColorBtn" onclick="addNewColor()" data-i18n="palette.add">+</div>
 </div>
 
 <div id="fillPanel" class="panel">
-    <div class="panel-header"><h3>Fill Settings</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 data-i18n="panel.fill">Paramètres de Remplissage</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <div class="row"><input type="checkbox" id="fillDiag"> Include Diagonals</div>
-        <button onclick="setTool('fill'); hidePanels();" style="background:var(--accent)">Activate Bucket</button>
+        <div class="row"><input type="checkbox" id="fillDiag"> <span data-i18n="panel.fillDiag">Inclure les Diagonales</span></div>
+        <button onclick="setTool('fill'); hidePanels();" style="background:var(--accent)" data-i18n="panel.activateBucket">Activer le Pot de Peinture</button>
     </div>
 </div>
 
 <div id="convertPanel" class="panel">
-    <div class="panel-header"><h3>Convert Stitch Style</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 data-i18n="panel.convert">Convertir le Style de Point</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <div class="row"><input type="checkbox" id="convertDiag"> Include Diagonals</div>
+        <div class="row"><input type="checkbox" id="convertDiag"> <span data-i18n="panel.convertDiag">Inclure les Diagonales</span></div>
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
-        <div style="font-size:12px; color:#888; margin-bottom:10px;">Convert to:</div>
-        <div class="row"><input type="radio" name="convertTo" id="convertToCross" value="cross" checked> Cross Stitch (Point de croix)</div>
-        <div class="row"><input type="radio" name="convertTo" id="convertToNyzynka" value="nyzynka"> Nyzynka (Fils verticaux)</div>
+        <div style="font-size:12px; color:#888; margin-bottom:10px;" data-i18n="panel.convertTo">Convertir en:</div>
+        <div class="row"><input type="radio" name="convertTo" id="convertToCross" value="cross" checked> <span data-i18n="panel.convertCross">Point de Croix</span></div>
+        <div class="row"><input type="radio" name="convertTo" id="convertToNyzynka" value="nyzynka"> <span data-i18n="panel.convertNyzynka">Nyzynka (Fils verticaux)</span></div>
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
-        <div style="font-size:11px; color:#666; margin-bottom:10px;">
-            ℹ️ Click on a pixel to convert all connected pixels of the same color to the selected stitch style.
+        <div style="font-size:11px; color:#666; margin-bottom:10px;" data-i18n="panel.convertInfo">
+            ℹ️ Cliquez sur un pixel pour convertir tous les pixels connectés de la même couleur vers le style sélectionné.
         </div>
-        <button onclick="setTool('convert'); hidePanels();" style="background:var(--accent)">Activate Convert Tool</button>
+        <button onclick="setTool('convert'); hidePanels();" style="background:var(--accent)" data-i18n="panel.activateConvert">Activer l'Outil de Conversion</button>
     </div>
 </div>
 
 <div id="mirrorPanel" class="panel">
-    <div class="panel-header"><h3>Mirror Symmetry</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 data-i18n="panel.mirror">Symétrie Miroir</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <div class="row"><input type="checkbox" id="mXCheck" onchange="toggleMX(this.checked)"> Vertical Mirror (X)</div>
+        <div class="row"><input type="checkbox" id="mXCheck" onchange="toggleMX(this.checked)"> <span data-i18n="panel.mirrorX">Miroir Vertical (X)</span></div>
         <input type="range" id="mXSlider" min="0" step="0.5" style="width:100%" oninput="updateMX(this.value)">
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
-        <div class="row"><input type="checkbox" id="mYCheck" onchange="toggleMY(this.checked)"> Horizontal Mirror (Y)</div>
+        <div class="row"><input type="checkbox" id="mYCheck" onchange="toggleMY(this.checked)"> <span data-i18n="panel.mirrorY">Miroir Horizontal (Y)</span></div>
         <input type="range" id="mYSlider" min="0" step="0.5" style="width:100%" oninput="updateMY(this.value)">
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
-        <div class="row"><input type="checkbox" id="mRadialCheck" onchange="toggleRadial(this.checked)"> Radial (8-points)</div>
-        <button onclick="hidePanels()">Close</button>
+        <div class="row"><input type="checkbox" id="mRadialCheck" onchange="toggleRadial(this.checked)"> <span data-i18n="panel.mirrorRadial">Radial (8 points)</span></div>
+        <button onclick="hidePanels()" data-i18n="panel.close">Fermer</button>
     </div>
 </div>
 
 <div id="exportPanel" class="panel">
-    <div class="panel-header"><h3>Export Image</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 data-i18n="panel.export">Exporter l'Image</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <button onclick="exportPNG(false)">PNG with background</button>
-        <button onclick="exportPNG(true)">Transparent PNG</button>
-        <button onclick="exportSVG(true)">Export SVG (Optimized)</button>
-        <button onclick="exportSVG(false)">Export SVG (Raw Pixels)</button>
-        <button onclick="hidePanels()" style="background:#666">Cancel</button>
+        <button onclick="exportPNG(false)" data-i18n="panel.exportPNG">PNG avec fond</button>
+        <button onclick="exportPNG(true)" data-i18n="panel.exportTransparent">PNG Transparent</button>
+        <button onclick="exportSVG(true)" data-i18n="panel.exportSVGOptimized">Exporter SVG (Optimisé)</button>
+        <button onclick="exportSVG(false)" data-i18n="panel.exportSVGRaw">Exporter SVG (Pixels Bruts)</button>
+        <button onclick="hidePanels()" style="background:#666" data-i18n="panel.cancel">Annuler</button>
     </div>
 </div>
 
 <div id="resizePanel" class="panel">
-    <div class="panel-header"><h3>Canvas Dimensions</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 data-i18n="panel.resize">Dimensions du Canvas</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <div class="row">Width: <input type="number" id="rw" value="32" style="width:60px"></div>
-        <div class="row">Height: <input type="number" id="rh" value="32" style="width:60px"></div>
-        <button onclick="applyResize()" style="background:var(--accent)">Apply Resize</button>
-        <button onclick="hidePanels()">Cancel</button>
+        <div class="row"><span data-i18n="panel.width">Largeur:</span> <input type="number" id="rw" value="32" style="width:60px"></div>
+        <div class="row"><span data-i18n="panel.height">Hauteur:</span> <input type="number" id="rh" value="32" style="width:60px"></div>
+        <button onclick="applyResize()" style="background:var(--accent)" data-i18n="panel.applyResize">Appliquer le Redimensionnement</button>
+        <button onclick="hidePanels()" data-i18n="panel.cancel">Annuler</button>
     </div>
 </div>
 
 <div id="selectionPanel" class="panel">
-    <div class="panel-header"><h3>Selection & Edit</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 data-i18n="panel.selection">Sélection & Édition</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <button onclick="setTool('select'); hidePanels();" style="background:var(--accent)">1. Box Select Tool</button>
-        <button onclick="copySelection()">2. Copy Selection</button>
-        <button onclick="pasteSelection()">3. Paste & Move</button>
+        <button onclick="setTool('select'); hidePanels();" style="background:var(--accent)" data-i18n="panel.boxSelect">1. Outil de Sélection</button>
+        <button onclick="copySelection()" data-i18n="panel.copy">2. Copier la Sélection</button>
+        <button onclick="pasteSelection()" data-i18n="panel.paste">3. Coller & Déplacer</button>
         <hr style="border:0; border-top:1px solid #444; margin:10px 0">
-        <button onclick="confirmPaste()" style="background:#28a745">Validate Movement</button>
-        <button onclick="hidePanels()">Close</button>
+        <button onclick="confirmPaste()" style="background:#28a745" data-i18n="panel.validate">Valider le Déplacement</button>
+        <button onclick="hidePanels()" data-i18n="panel.close">Fermer</button>
     </div>
 </div>
 
 <div id="threadCountPanel" class="panel">
-    <div class="panel-header"><h3>Thread Counter</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 data-i18n="panel.threadCount">Compteur de Fils</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
         <div style="max-height: 400px; overflow-y: auto;">
             <div id="threadCountList"></div>
         </div>
         <hr style="border:0; border-top:1px solid #444; margin:10px 0">
         <div style="font-size: 12px; color: #888;">
-            Total stitches: <span id="totalStitches">0</span>
+            <span data-i18n="panel.totalStitches">Total de points:</span> <span id="totalStitches">0</span>
         </div>
-        <button onclick="hidePanels()">Close</button>
+        <button onclick="hidePanels()" data-i18n="panel.close">Fermer</button>
     </div>
 </div>
 
 <div id="colorPickerPanel" class="panel">
-    <div class="panel-header"><h3 id="colorPickerTitle">Sélecteur de couleur</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-header"><h3 id="colorPickerTitle" data-i18n="panel.colorPicker">Sélecteur de Couleur</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
     <div class="panel-content">
-        <div style="font-size:12px; color:#888; margin-bottom:10px;" id="colorPickerDescription">Choisissez une couleur</div>
+        <div style="font-size:12px; color:#888; margin-bottom:10px;" id="colorPickerDescription" data-i18n="panel.colorPickerDesc">Choisissez une couleur</div>
         <input type="color" id="colorPickerInput" style="width:100%; height:60px; cursor:pointer; border:2px solid #555; border-radius:4px;">
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
-        <button onclick="applyColorPicker()" style="background:var(--accent)">Appliquer</button>
-        <button onclick="hidePanels()">Annuler</button>
+        <button onclick="applyColorPicker()" style="background:var(--accent)" data-i18n="panel.apply">Appliquer</button>
+        <button onclick="hidePanels()" data-i18n="panel.cancel">Annuler</button>
+    </div>
+</div>
+
+<!-- Panneau Paramètres -->
+<div id="settingsPanel" class="panel">
+    <div class="panel-header"><h3 data-i18n="settings.title">⚙️ Paramètres</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-content">
+        <div style="font-size:12px; color:#888; margin-bottom:10px;" data-i18n="settings.language">Langue / Language:</div>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button onclick="setLanguage('en')" class="lang-btn-panel" data-lang="en" style="flex: 1;">
+                🇬🇧 English
+            </button>
+            <button onclick="setLanguage('fr')" class="lang-btn-panel active" data-lang="fr" style="flex: 1;">
+                🇫🇷 Français
+            </button>
+        </div>
+        <button onclick="hidePanels()" data-i18n="panel.close">Fermer</button>
     </div>
 </div>
 
 <!-- Panneau latéral avec onglets -->
 <div id="selectionSidePanel" class="side-panel">
     <div class="side-panel-header">
-        <h3 id="sidePanelTitle">📐 Édition</h3>
+        <h3 id="sidePanelTitle" data-i18n="sidePanel.title">📐 Édition</h3>
         <span class="close-btn" onclick="closeSelectionPanel()">×</span>
     </div>
     
     <!-- Onglets de navigation -->
     <div class="side-panel-tabs">
-        <button class="tab-btn active" data-tab="selection" onclick="switchTab('selection')">
+        <button class="tab-btn active" data-tab="selection" onclick="switchTab('selection')" data-i18n="sidePanel.selection">
             ✂️ Sélection
         </button>
-        <button class="tab-btn" data-tab="geometry" onclick="switchTab('geometry')">
+        <button class="tab-btn" data-tab="geometry" onclick="switchTab('geometry')" data-i18n="sidePanel.geometry">
             📐 Géométrie
         </button>
     </div>
@@ -211,11 +240,11 @@
         <!-- Informations sur la sélection -->
         <div class="selection-info">
             <div class="info-row">
-                <span class="info-label">Dimensions:</span>
+                <span class="info-label" data-i18n="sidePanel.dimensions">Dimensions:</span>
                 <span id="selectionDimensions">-</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Position:</span>
+                <span class="info-label" data-i18n="sidePanel.position">Position:</span>
                 <span id="selectionPosition">-</span>
             </div>
         </div>
@@ -223,15 +252,15 @@
         <!-- Actions -->
         <div class="selection-actions">
             <button onclick="copySelection()" class="action-btn primary">
-                <img src="icons/copy.png" class="menu-icon">Copier
+                <img src="icons/copy.png" class="menu-icon"><span data-i18n="sidePanel.copy">Copier</span>
             </button>
             <button onclick="pasteSelection()" class="action-btn">
-                <img src="icons/copy.png" class="menu-icon">Coller
+                <img src="icons/copy.png" class="menu-icon"><span data-i18n="sidePanel.paste">Coller</span>
             </button>
             <button onclick="deleteSelection()" class="action-btn danger">
-                <img src="icons/eraser.png" class="menu-icon">Supprimer
+                <img src="icons/eraser.png" class="menu-icon"><span data-i18n="sidePanel.delete">Supprimer</span>
             </button>
-            <button onclick="confirmPaste()" class="action-btn success" id="validateBtn" style="display:none;">
+            <button onclick="confirmPaste()" class="action-btn success" id="validateBtn" style="display:none;" data-i18n="sidePanel.validateMove">
                 ✓ Valider le déplacement
             </button>
         </div>
@@ -240,40 +269,40 @@
     <!-- Contenu de l'onglet Géométrie -->
     <div class="side-panel-content tab-content" id="tab-geometry">
         <div class="geometry-header">
-            <h4>📐 Kit de Symboles</h4>
-            <p class="geometry-description">Créez votre bibliothèque de symboles réutilisables</p>
+            <h4 data-i18n="geometry.title">📐 Kit de Symboles</h4>
+            <p class="geometry-description" data-i18n="geometry.description">Créez votre bibliothèque de symboles réutilisables</p>
         </div>
         
         <!-- Sélecteur de couleur de fond -->
         <div class="bg-color-selector">
             <label for="symbolBgColor">
-                <span class="label-text">🎨 Couleur de fond (transparente):</span>
+                <span class="label-text" data-i18n="geometry.bgColor">🎨 Couleur de fond (transparente):</span>
                 <div class="color-picker-wrapper">
                     <input type="color" id="symbolBgColor" value="#111111">
-                    <button onclick="setSymbolBgFromCanvas()" class="mini-btn" title="Utiliser la couleur de fond du canvas">
+                    <button onclick="setSymbolBgFromCanvas()" class="mini-btn" data-i18n-title="geometry.useCanvasBg" data-i18n="geometry.useCanvasBg">
                         📋 Canvas
                     </button>
                 </div>
             </label>
-            <p class="hint-text">Les pixels de cette couleur ne seront pas sauvegardés</p>
+            <p class="hint-text" data-i18n="geometry.hint">Les pixels de cette couleur ne seront pas sauvegardés</p>
         </div>
         
         <!-- Actions pour sauvegarder -->
         <div class="geometry-save-section">
-            <button onclick="saveSelectionAsSymbol()" class="action-btn primary" id="saveSymbolBtn" disabled>
+            <button onclick="saveSelectionAsSymbol()" class="action-btn primary" id="saveSymbolBtn" disabled data-i18n="geometry.save">
                 ➕ Sauvegarder dans Géométrie
             </button>
-            <p class="hint-text">💡 Sélectionnez une zone pour la sauvegarder</p>
+            <p class="hint-text" data-i18n="geometry.selectHint">💡 Sélectionnez une zone pour la sauvegarder</p>
         </div>
         
         <hr style="border:0; border-top:1px solid #444; margin:15px 0">
         
         <!-- Liste des symboles sauvegardés -->
         <div class="symbols-list-header">
-            <h5>Symboles sauvegardés (<span id="symbolCount">0</span>)</h5>
+            <h5><span data-i18n="geometry.saved">Symboles sauvegardés</span> (<span id="symbolCount">0</span>)</h5>
         </div>
         <div class="symbols-list" id="symbolsList">
-            <p class="empty-state">Aucun symbole dans votre kit</p>
+            <p class="empty-state" data-i18n="geometry.empty">Aucun symbole dans votre kit</p>
         </div>
     </div>
 </div>
@@ -287,6 +316,10 @@
 
 <!-- Manette de navigation tactile -->
 <div id="navPad" style="display: none;">
+    <div class="navpad-header">
+        <div class="navpad-handle" data-i18n-title="navPad.move">⋮⋮</div>
+        <button class="navpad-close" onclick="toggleNavPad()" data-i18n-title="navPad.close">×</button>
+    </div>
     <div class="navpad-controls">
         <div class="navpad-dpad">
             <button class="navpad-btn navpad-up" data-direction="up">▲</button>

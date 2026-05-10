@@ -1,5 +1,8 @@
 /** GLOBAL STATE **/
 let W = 32, H = 32, pixelSize = 10;
+const MAX_ZOOM = 40; // Limite de zoom pour éviter les crashs (40px max avec throttling)
+const MIN_ZOOM = 2;  // Zoom minimum
+let renderScheduled = false; // Pour throttling du rendu
 let pixels = []; // Canvas principal (résolution normale)
 let pixelStyles = []; // 'cross' uniquement pour le canvas principal
 let pixelOffsets = []; // Décalage Y pour les traits de Nyzynka (sauvegardé au moment du dessin)
@@ -133,6 +136,16 @@ function refresh() {
     }
     
     updateUI();
+}
+
+// Version throttled de refresh pour éviter les crashs lors du zoom
+function throttledRefresh() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+        refresh();
+        renderScheduled = false;
+    });
 }
 
 function render() {
@@ -675,10 +688,12 @@ canvas.addEventListener('pointerdown', e => {
         }
     }
     if (tool === "ruler") {
-        
+        // Effacer l'ancienne mesure avant de commencer une nouvelle
         rulerStart = p; // On stocke le point de départ {x, y}
-        isDrawing = true; 
-        return; 
+        rulerCurrent = null; // Réinitialiser le point courant
+        isDrawing = true;
+        refresh(); // Redessiner pour effacer l'ancien tracé
+        return;
     }
 
     saveState();
@@ -751,8 +766,9 @@ canvas.addEventListener('pointermove', e => {
 
 window.addEventListener('pointerup', () => {
     if (tool === "ruler") {
-        refresh(); // Efface le trait blanc une fois fini
-        rulerStart = null; // Prêt pour la prochaine mesure
+        // Ne pas effacer rulerStart/rulerCurrent pour conserver le tracé
+        // Ils seront effacés au prochain clic (nouvelle mesure)
+        refresh(); // Redessiner pour afficher le tracé final
     }
     
     // Ouvrir le panneau latéral si une sélection vient d'être créée
@@ -1221,6 +1237,18 @@ function toggleNavPad() {
     localStorage.setItem("navPadEnabled", navPadEnabled);
     updateMenuIndicators();
 }
+
+function toggleRulerPanel() {
+    const statsPanel = document.getElementById("stats");
+    if (!statsPanel) return;
+    
+    const isVisible = statsPanel.style.display !== "none";
+    statsPanel.style.display = isVisible ? "none" : "block";
+    
+    // Sauvegarder l'état de visibilité
+    localStorage.setItem("rulerPanelVisible", !isVisible);
+    updateMenuIndicators();
+}
 function saveLocal() {
     // Sauvegarder en HAUTE RÉSOLUTION pour préserver les positions exactes des pixels
     localStorage.setItem("pix_pro_save_v5", JSON.stringify({
@@ -1408,7 +1436,11 @@ function loadJSON() {
 container.onwheel = e => {
     e.preventDefault();
     let old = pixelSize;
-    pixelSize = Math.max(2, Math.min(100, pixelSize + (e.deltaY < 0 ? 2 : -2)));
+    // Limiter le zoom pour éviter les crashs (MAX_ZOOM au lieu de 100)
+    pixelSize = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pixelSize + (e.deltaY < 0 ? 2 : -2)));
+    // Utiliser refresh direct pour le zoom molette car on a besoin du canvas mis à jour immédiatement
+    // pour calculer correctement le scroll. Le throttling n'est pas nécessaire ici car l'événement
+    // wheel est déjà limité par le navigateur.
     refresh();
     const rect = canvas.getBoundingClientRect();
     container.scrollLeft += (e.clientX - rect.left) * (pixelSize/old - 1);
@@ -1513,9 +1545,10 @@ container.addEventListener('touchmove', e => {
         if (initialPinchDist) {
             let ratio = dist / initialPinchDist;
             if (Math.abs(ratio - 1) > 0.01) {
-                pixelSize = Math.max(2, Math.min(100, pixelSize * ratio));
+                // Limiter le zoom avec MAX_ZOOM
+                pixelSize = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pixelSize * ratio));
                 initialPinchDist = dist;
-                refresh();
+                throttledRefresh();
             }
         }
         
@@ -1852,10 +1885,168 @@ document.querySelectorAll('.panel').forEach(p => {
     menuToggle.addEventListener('touchend', onTouchEnd, { passive: false });
     menuToggle.addEventListener('touchcancel', onTouchEnd, { passive: false });
 })();
+
+/** DRAGGABLE RULER/STATS PANEL **/
+(function() {
+    const statsPanel = document.getElementById('stats');
+    const statsHeader = statsPanel ? statsPanel.querySelector('.stats-header') : null;
+    if (!statsPanel || !statsHeader) return;
+    
+    let isDraggingStats = false;
+    let offset = [0, 0];
+    let hasMoved = false;
+    let startPos = [0, 0];
+    
+    // Charger la position et l'état de visibilité sauvegardés
+    const savedPos = localStorage.getItem('rulerPanelPosition');
+    const savedVisible = localStorage.getItem('rulerPanelVisible');
+    
+    if (savedVisible === 'false') {
+        statsPanel.style.display = 'none';
+    }
+    
+    if (savedPos) {
+        const pos = JSON.parse(savedPos);
+        // Attendre que le DOM soit complètement chargé pour avoir les bonnes dimensions
+        requestAnimationFrame(() => {
+            const topMenuHeight = document.getElementById('top').offsetHeight || 45;
+            const panelWidth = statsPanel.offsetWidth || 200;
+            const panelHeight = statsPanel.offsetHeight || 50;
+            // Appliquer les contraintes de limites avec une marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - panelWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - panelHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(pos.left, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(pos.top, maxTop));
+            statsPanel.style.left = constrainedLeft + 'px';
+            statsPanel.style.top = constrainedTop + 'px';
+            statsPanel.style.right = 'auto';
+            statsPanel.style.bottom = 'auto';
+        });
+    }
+    
+    // Sauvegarder la position
+    function savePosition() {
+        const pos = {
+            left: statsPanel.offsetLeft,
+            top: statsPanel.offsetTop
+        };
+        localStorage.setItem('rulerPanelPosition', JSON.stringify(pos));
+    }
+    
+    // Support souris
+    statsHeader.onmousedown = (e) => {
+        // Ne pas démarrer le drag si on clique sur le bouton de fermeture
+        if (e.target.classList.contains('close-btn')) return;
+        
+        isDraggingStats = true;
+        hasMoved = false;
+        startPos = [e.clientX, e.clientY];
+        offset = [statsPanel.offsetLeft - e.clientX, statsPanel.offsetTop - e.clientY];
+    };
+    
+    const onMouseMove = (e) => {
+        if (!isDraggingStats) return;
+        const dx = Math.abs(e.clientX - startPos[0]);
+        const dy = Math.abs(e.clientY - startPos[1]);
+        if (dx > 5 || dy > 5) {
+            hasMoved = true;
+        }
+        
+        if (hasMoved) {
+            const topMenuHeight = document.getElementById('top').offsetHeight || 45;
+            const panelWidth = statsPanel.offsetWidth;
+            const panelHeight = statsPanel.offsetHeight;
+            const newLeft = e.clientX + offset[0];
+            const newTop = e.clientY + offset[1];
+            // Appliquer les contraintes de limites avec marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - panelWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - panelHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(newLeft, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(newTop, maxTop));
+            statsPanel.style.left = constrainedLeft + 'px';
+            statsPanel.style.top = constrainedTop + 'px';
+            statsPanel.style.right = 'auto';
+            statsPanel.style.bottom = 'auto';
+        }
+    };
+    
+    const onMouseUp = (e) => {
+        if (isDraggingStats) {
+            isDraggingStats = false;
+            if (hasMoved) {
+                savePosition();
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    
+    // Support tactile (mobile)
+    statsHeader.addEventListener('touchstart', (e) => {
+        // Ne pas démarrer le drag si on touche le bouton de fermeture
+        if (e.target.classList.contains('close-btn')) return;
+        
+        isDraggingStats = true;
+        hasMoved = false;
+        const touch = e.touches[0];
+        startPos = [touch.clientX, touch.clientY];
+        offset = [statsPanel.offsetLeft - touch.clientX, statsPanel.offsetTop - touch.clientY];
+        e.stopPropagation();
+    }, { passive: true });
+    
+    const onTouchMove = (e) => {
+        if (!isDraggingStats) return;
+        
+        const touch = e.touches[0];
+        const dx = Math.abs(touch.clientX - startPos[0]);
+        const dy = Math.abs(touch.clientY - startPos[1]);
+        
+        // Détecter un mouvement significatif
+        if (dx > 5 || dy > 5) {
+            hasMoved = true;
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const topMenuHeight = document.getElementById('top').offsetHeight || 45;
+            const panelWidth = statsPanel.offsetWidth;
+            const panelHeight = statsPanel.offsetHeight;
+            const newLeft = touch.clientX + offset[0];
+            const newTop = touch.clientY + offset[1];
+            // Appliquer les contraintes de limites avec marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - panelWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - panelHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(newLeft, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(newTop, maxTop));
+            statsPanel.style.left = constrainedLeft + 'px';
+            statsPanel.style.top = constrainedTop + 'px';
+            statsPanel.style.right = 'auto';
+            statsPanel.style.bottom = 'auto';
+        }
+    };
+    
+    const onTouchEnd = (e) => {
+        if (isDraggingStats) {
+            isDraggingStats = false;
+            if (hasMoved) {
+                savePosition();
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            hasMoved = false;
+        }
+    };
+    
+    statsHeader.addEventListener('touchmove', onTouchMove, { passive: false });
+    statsHeader.addEventListener('touchend', onTouchEnd, { passive: false });
+    statsHeader.addEventListener('touchcancel', onTouchEnd, { passive: false });
+})();
 });
 
 function newProject() {
-    if(confirm("Discard current work and start new?")) {
+    if(confirm(t('msg.newProject'))) {
         // Réinitialiser les variables du mode TRAME
         trameMode = false;
         originalPixels = null;
@@ -1867,15 +2058,36 @@ function newProject() {
 
 function resetUIPosition() {
     const menuToggle = document.getElementById('menuToggle');
-    if (!menuToggle) return;
+    const navPad = document.getElementById('navPad');
+    const statsPanel = document.getElementById('stats');
     
-    // Supprimer la position sauvegardée du localStorage
-    localStorage.removeItem('menuTogglePosition');
+    // Réinitialiser menuToggle
+    if (menuToggle) {
+        localStorage.removeItem('menuTogglePosition');
+        menuToggle.style.left = '';
+        menuToggle.style.top = '';
+        menuToggle.style.transform = '';
+    }
     
-    // Réinitialiser le style du bouton à sa position par défaut
-    menuToggle.style.left = '';
-    menuToggle.style.top = '';
-    menuToggle.style.transform = '';
+    // Réinitialiser Navigation Pad
+    if (navPad) {
+        localStorage.removeItem('navPadPosition');
+        navPad.style.left = '';
+        navPad.style.top = '';
+        navPad.style.right = '';
+        navPad.style.bottom = '';
+    }
+    
+    // Réinitialiser Ruler Panel
+    if (statsPanel) {
+        localStorage.removeItem('rulerPanelPosition');
+        localStorage.removeItem('rulerPanelVisible');
+        statsPanel.style.left = '';
+        statsPanel.style.top = '';
+        statsPanel.style.right = '';
+        statsPanel.style.bottom = '';
+        statsPanel.style.display = '';
+    }
     
     // Message de confirmation
     alert('Interface réinitialisée à la position par défaut ✓');
@@ -2695,7 +2907,7 @@ function updateSymbolsList() {
     }
     
     if (savedSymbols.length === 0) {
-        symbolsList.innerHTML = '<p class="empty-state">Aucun symbole dans votre kit</p>';
+        symbolsList.innerHTML = `<p class="empty-state" data-i18n="geometry.empty">${t('geometry.empty')}</p>`;
         return;
     }
     
@@ -2748,7 +2960,7 @@ function updateSymbolsList() {
         const useBtn = document.createElement('button');
         useBtn.className = 'symbol-btn use';
         useBtn.innerHTML = '📋';
-        useBtn.title = 'Utiliser ce symbole';
+        useBtn.title = t('geometry.use');
         useBtn.onclick = (e) => {
             e.stopPropagation();
             useSymbol(index);
@@ -2757,7 +2969,7 @@ function updateSymbolsList() {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'symbol-btn delete';
         deleteBtn.innerHTML = '🗑️';
-        deleteBtn.title = 'Supprimer ce symbole';
+        deleteBtn.title = t('geometry.delete');
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
             deleteSymbol(index);
@@ -3261,9 +3473,11 @@ function zoomCanvas(direction) {
     const oldPixelSize = pixelSize;
     
     if (direction === "in") {
-        pixelSize = Math.min(pixelSize + NAV_ZOOM_STEP, 50); // Max 50px
+        // Utiliser MAX_ZOOM au lieu de 50
+        pixelSize = Math.min(pixelSize + NAV_ZOOM_STEP, MAX_ZOOM);
     } else if (direction === "out") {
-        pixelSize = Math.max(pixelSize - NAV_ZOOM_STEP, 2); // Min 2px
+        // Utiliser MIN_ZOOM au lieu de 2
+        pixelSize = Math.max(pixelSize - NAV_ZOOM_STEP, MIN_ZOOM);
     }
     
     // Si le zoom a changé, rafraîchir le canvas
@@ -3273,8 +3487,8 @@ function zoomCanvas(direction) {
         const centerX = (container.scrollLeft + container.clientWidth / 2) / oldPixelSize;
         const centerY = (container.scrollTop + container.clientHeight / 2) / oldPixelSize;
         
-        // Rafraîchir avec la nouvelle taille
-        refresh();
+        // Utiliser throttledRefresh au lieu de refresh direct
+        throttledRefresh();
         
         // Recentrer sur le même point
         container.scrollLeft = centerX * pixelSize - container.clientWidth / 2;
@@ -3305,7 +3519,7 @@ function startNavPadAction(action, param) {
                         zoomCanvas(navPadAction.param);
                     }
                 }
-            }, 100); // Répéter toutes les 100ms
+            }, 200); // Augmenté de 100ms à 200ms pour réduire la charge
         }
     }, 300); // Délai initial de 300ms
 }
@@ -3387,8 +3601,162 @@ function initNavPad() {
     // Arrêter l'action si on quitte la fenêtre
     window.addEventListener("blur", stopNavPadAction);
 }
+// Rendre le Navigation Pad draggable
+function initNavPadDrag() {
+    const navPad = document.getElementById('navPad');
+    const navPadHeader = document.querySelector('.navpad-header');
+    if (!navPad || !navPadHeader) return;
+    
+    let isDraggingNavPad = false;
+    let offset = [0, 0];
+    let hasMoved = false;
+    let startPos = [0, 0];
+    
+    // Charger la position sauvegardée
+    const savedPos = localStorage.getItem('navPadPosition');
+    if (savedPos) {
+        const pos = JSON.parse(savedPos);
+        // Attendre que le DOM soit complètement chargé pour avoir les bonnes dimensions
+        requestAnimationFrame(() => {
+            const topMenuHeight = document.getElementById('top')?.offsetHeight || 45;
+            const padWidth = navPad.offsetWidth || 200;
+            const padHeight = navPad.offsetHeight || 200;
+            // Appliquer les contraintes de limites avec une marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - padWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - padHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(pos.left, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(pos.top, maxTop));
+            navPad.style.left = constrainedLeft + 'px';
+            navPad.style.top = constrainedTop + 'px';
+            navPad.style.right = 'auto';
+            navPad.style.bottom = 'auto';
+        });
+    }
+    
+    // Sauvegarder la position
+    function savePosition() {
+        const pos = {
+            left: navPad.offsetLeft,
+            top: navPad.offsetTop
+        };
+        localStorage.setItem('navPadPosition', JSON.stringify(pos));
+    }
+    
+    // Support souris - toute la barre header est draggable
+    navPadHeader.onmousedown = (e) => {
+        // Ne pas démarrer le drag si on clique sur le bouton de fermeture
+        if (e.target.classList.contains('navpad-close')) return;
+        
+        isDraggingNavPad = true;
+        hasMoved = false;
+        startPos = [e.clientX, e.clientY];
+        offset = [navPad.offsetLeft - e.clientX, navPad.offsetTop - e.clientY];
+        e.stopPropagation();
+    };
+    
+    const onMouseMove = (e) => {
+        if (!isDraggingNavPad) return;
+        const dx = Math.abs(e.clientX - startPos[0]);
+        const dy = Math.abs(e.clientY - startPos[1]);
+        if (dx > 5 || dy > 5) {
+            hasMoved = true;
+        }
+        
+        if (hasMoved) {
+            const topMenuHeight = document.getElementById('top')?.offsetHeight || 45;
+            const padWidth = navPad.offsetWidth;
+            const padHeight = navPad.offsetHeight;
+            const newLeft = e.clientX + offset[0];
+            const newTop = e.clientY + offset[1];
+            // Appliquer les contraintes de limites avec marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - padWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - padHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(newLeft, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(newTop, maxTop));
+            navPad.style.left = constrainedLeft + 'px';
+            navPad.style.top = constrainedTop + 'px';
+            navPad.style.right = 'auto';
+            navPad.style.bottom = 'auto';
+        }
+    };
+    
+    const onMouseUp = (e) => {
+        if (isDraggingNavPad) {
+            isDraggingNavPad = false;
+            if (hasMoved) {
+                savePosition();
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    
+    // Support tactile (mobile) - toute la barre header est draggable
+    navPadHeader.addEventListener('touchstart', (e) => {
+        // Ne pas démarrer le drag si on touche le bouton de fermeture
+        if (e.target.classList.contains('navpad-close')) return;
+        
+        isDraggingNavPad = true;
+        hasMoved = false;
+        const touch = e.touches[0];
+        startPos = [touch.clientX, touch.clientY];
+        offset = [navPad.offsetLeft - touch.clientX, navPad.offsetTop - touch.clientY];
+        e.stopPropagation();
+    }, { passive: true });
+    
+    const onTouchMove = (e) => {
+        if (!isDraggingNavPad) return;
+        
+        const touch = e.touches[0];
+        const dx = Math.abs(touch.clientX - startPos[0]);
+        const dy = Math.abs(touch.clientY - startPos[1]);
+        
+        // Détecter un mouvement significatif
+        if (dx > 5 || dy > 5) {
+            hasMoved = true;
+            e.preventDefault(); // Empêcher le scroll uniquement si on bouge
+            e.stopPropagation();
+            
+            const topMenuHeight = document.getElementById('top')?.offsetHeight || 45;
+            const padWidth = navPad.offsetWidth;
+            const padHeight = navPad.offsetHeight;
+            const newLeft = touch.clientX + offset[0];
+            const newTop = touch.clientY + offset[1];
+            // Appliquer les contraintes de limites avec marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - padWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - padHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(newLeft, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(newTop, maxTop));
+            navPad.style.left = constrainedLeft + 'px';
+            navPad.style.top = constrainedTop + 'px';
+            navPad.style.right = 'auto';
+            navPad.style.bottom = 'auto';
+        }
+    };
+    
+    const onTouchEnd = (e) => {
+        if (isDraggingNavPad) {
+            isDraggingNavPad = false;
+            if (hasMoved) {
+                savePosition();
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            hasMoved = false;
+        }
+    };
+    
+    navPadHeader.addEventListener('touchmove', onTouchMove, { passive: false });
+    navPadHeader.addEventListener('touchend', onTouchEnd, { passive: false });
+    navPadHeader.addEventListener('touchcancel', onTouchEnd, { passive: false });
+}
+
 
 // Initialiser la manette au chargement de la page
 document.addEventListener("DOMContentLoaded", () => {
     initNavPad();
+    initNavPadDrag();
 });
