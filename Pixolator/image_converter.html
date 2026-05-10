@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur d'Images → Pixolator JSON</title>
+    <link rel="stylesheet" href="image_converter.css">
+    <script src="i18n.js"></script>
+</head>
+<body>
+    <!-- Barre de navigation -->
+    <div id="top-bar">
+        <div class="nav-left">
+            <h1 data-i18n="converter.title">🎨 Convertisseur d'Images → Pixolator</h1>
+        </div>
+        <div class="nav-right">
+            <button onclick="toggleSettingsPanel()" class="nav-btn">
+                ⚙️ <span data-i18n="menu.settings">Paramètres</span>
+            </button>
+            <a href="pixolator.html" class="nav-link">
+                <img src="icons/view.png" class="nav-icon" alt="Pixolator">
+                <span data-i18n="converter.openPixolator">Ouvrir Pixolator</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Panneau Paramètres -->
+    <div id="settings-panel" class="settings-panel" style="display: none;">
+        <div class="settings-panel-header">
+            <h3 data-i18n="settings.title">⚙️ Paramètres</h3>
+            <button class="close-settings" onclick="toggleSettingsPanel()">×</button>
+        </div>
+        <div class="settings-panel-content">
+            <div style="font-size:12px; color:#888; margin-bottom:10px;" data-i18n="settings.language">Langue / Language:</div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="setLanguage('en')" class="lang-btn-panel" data-lang="en" style="flex: 1;">
+                    🇬🇧 English
+                </button>
+                <button onclick="setLanguage('fr')" class="lang-btn-panel active" data-lang="fr" style="flex: 1;">
+                    🇫🇷 Français
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Section Instructions -->
+        <div class="instructions-panel">
+            <h2 data-i18n="converter.instructions">📋 Instructions d'utilisation</h2>
+            <ol>
+                <li><strong data-i18n="converter.step1">Charger une image</strong> : <span data-i18n="converter.step1desc">Glissez-déposez ou cliquez pour sélectionner</span></li>
+                <li><strong data-i18n="converter.step2">Couleurs détectées</strong> : <span data-i18n="converter.step2desc">L'outil détecte automatiquement toutes les couleurs</span></li>
+                <li><strong data-i18n="converter.step3">Configurer les styles</strong> : <span data-i18n="converter.step3desc">Pour chaque couleur, choisissez :</span>
+                    <ul>
+                        <li data-i18n="converter.step3a">✓ Inclure/Exclure la couleur</li>
+                        <li data-i18n="converter.step3b">🎨 Style : <strong>Nyzynka</strong> (broderie ukrainienne) ou <strong>Point de Croix</strong></li>
+                    </ul>
+                </li>
+                <li><strong data-i18n="converter.step4">Ajuster les paramètres</strong> : <span data-i18n="converter.step4desc">Taille, tolérance de couleur, transparence</span></li>
+                <li><strong data-i18n="converter.step5">Prévisualiser</strong> : <span data-i18n="converter.step5desc">Voir le résultat avant export</span></li>
+                <li><strong data-i18n="converter.step6">Télécharger le JSON</strong> : <span data-i18n="converter.step6desc">Compatible avec Pixolator</span></li>
+                <li><strong data-i18n="converter.step7">Ouvrir dans Pixolator</strong> : <span data-i18n="converter.step7desc">Utilisez le bouton en haut à droite</span></li>
+                <li><strong data-i18n="converter.step8">Exporter en PNG</strong> : <span data-i18n="converter.step8desc">Depuis Pixolator (File → Export Image)</span></li>
+            </ol>
+        </div>
+
+        <!-- Section Upload -->
+        <div class="upload-section">
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-content">
+                    <div class="drop-icon">📁</div>
+                    <p class="drop-text" data-i18n="converter.dropZone">Glissez-déposez une image ici</p>
+                    <p class="drop-subtext" data-i18n="converter.or">ou</p>
+                    <button id="select-file-btn" class="btn-primary" data-i18n="converter.selectFile">Sélectionner un fichier</button>
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    <p class="drop-hint" data-i18n="converter.supportedFormats">Formats supportés : PNG, JPG, GIF, BMP, WebP</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Prévisualisation Image Source -->
+        <div id="source-preview-section" class="preview-section" style="display: none;">
+            <h2 data-i18n="converter.sourceImage">🖼️ Image Source</h2>
+            <div class="preview-container">
+                <canvas id="source-canvas"></canvas>
+                <div class="image-info">
+                    <p><strong data-i18n="converter.dimensions">Dimensions :</strong> <span id="source-dimensions">-</span></p>
+                    <p><strong data-i18n="converter.size">Taille :</strong> <span id="source-size">-</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Paramètres -->
+        <div id="settings-section" class="settings-section" style="display: none;">
+            <h2 data-i18n="converter.settings">⚙️ Paramètres de Conversion</h2>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="output-width" data-i18n="converter.outputWidth">Largeur de sortie (px) :</label>
+                    <input type="number" id="output-width" value="96" min="1" max="500">
+                </div>
+                <div class="setting-item">
+                    <label for="output-height" data-i18n="converter.outputHeight">Hauteur de sortie (px) :</label>
+                    <input type="number" id="output-height" value="96" min="1" max="500">
+                </div>
+                <div class="setting-item">
+                    <label for="color-tolerance" data-i18n="converter.colorTolerance">Tolérance de couleur :</label>
+                    <input type="range" id="color-tolerance" min="0" max="100" value="10">
+                    <span id="tolerance-value">10</span>
+                </div>
+                <div class="setting-item">
+                    <label for="alpha-threshold" data-i18n="converter.alphaThreshold">Seuil de transparence :</label>
+                    <input type="range" id="alpha-threshold" min="0" max="255" value="128">
+                    <span id="alpha-value">128</span>
+                </div>
+            </div>
+            <button id="detect-colors-btn" class="btn-primary" data-i18n="converter.detectColors">🔍 Détecter les couleurs</button>
+        </div>
+
+        <!-- Section Palette de Couleurs -->
+        <div id="color-palette-section" class="palette-section" style="display: none;">
+            <h2 data-i18n="converter.palette">🎨 Palette de Couleurs Détectées</h2>
+            <p class="palette-info" data-i18n="converter.paletteInfo">Configurez le style pour chaque couleur détectée dans votre image :</p>
+            <div id="color-palette" class="color-palette">
+                <!-- Les couleurs seront ajoutées dynamiquement ici -->
+            </div>
+        </div>
+
+        <!-- Section Prévisualisation Résultat -->
+        <div id="result-preview-section" class="preview-section" style="display: none;">
+            <h2 data-i18n="converter.preview">👁️ Prévisualisation du Résultat</h2>
+            <div class="preview-container">
+                <canvas id="result-canvas"></canvas>
+                <div class="result-info">
+                    <p><strong data-i18n="converter.resultDimensions">Dimensions :</strong> <span id="result-dimensions">-</span></p>
+                    <p><strong data-i18n="converter.resultPixels">Pixels :</strong> <span id="result-pixels">-</span></p>
+                    <p><strong data-i18n="converter.resultColors">Couleurs utilisées :</strong> <span id="result-colors">-</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Actions -->
+        <div id="actions-section" class="actions-section" style="display: none;">
+            <button id="convert-btn" class="btn-success" data-i18n="converter.convert">✨ Convertir et Prévisualiser</button>
+            <button id="download-btn" class="btn-primary" style="display: none;" data-i18n="converter.download">💾 Télécharger le JSON</button>
+            <button id="reset-btn" class="btn-secondary" data-i18n="converter.reset">🔄 Recommencer</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p data-i18n="converter.footer">Convertisseur d'Images pour Pixolator | Format JSON compatible avec broderie ukrainienne (Nyzynka) et Point de Croix</p>
+    </div>
+
+    <script src="image_converter.js"></script>
+</body>
+</html>
