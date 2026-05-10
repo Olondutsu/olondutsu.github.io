@@ -2812,3 +2812,94 @@ if (toolsPanel) {
 
     console.log('✅ Gestion du scroll vertical du menu #tools activée');
 }
+
+
+// ========== PALETTE RESIZER ==========
+(function() {
+    function initPaletteResizer() {
+        const palette = document.getElementById('palette');
+        const resizer = document.getElementById('paletteResizer');
+        
+        if (!palette || !resizer) {
+            console.log('Palette or resizer not found, retrying...');
+            setTimeout(initPaletteResizer, 100);
+            return;
+        }
+        
+        let isResizing = false;
+        let startY = 0;
+        let startHeight = 90;
+        const minHeight = 60;
+        const maxHeight = 200;
+
+        resizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            startY = e.clientY;
+            startHeight = palette.offsetHeight;
+            document.body.style.cursor = 'ns-resize';
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            
+            const deltaY = startY - e.clientY; // Inversé car on tire vers le haut
+            let newHeight = startHeight + deltaY;
+            
+            // Limiter la hauteur
+            newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+            
+            // Utiliser setProperty avec important pour surcharger le CSS
+            palette.style.setProperty('height', newHeight + 'px', 'important');
+            palette.style.setProperty('min-height', newHeight + 'px', 'important');
+            
+            e.preventDefault();
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+            }
+        });
+
+        // Support tactile pour mobile
+        resizer.addEventListener('touchstart', function(e) {
+            isResizing = true;
+            startY = e.touches[0].clientY;
+            startHeight = palette.offsetHeight;
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.addEventListener('touchmove', function(e) {
+            if (!isResizing) return;
+            
+            const deltaY = startY - e.touches[0].clientY;
+            let newHeight = startHeight + deltaY;
+            
+            newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+            
+            palette.style.setProperty('height', newHeight + 'px', 'important');
+            palette.style.setProperty('min-height', newHeight + 'px', 'important');
+            
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchend', function() {
+            if (isResizing) {
+                isResizing = false;
+            }
+        });
+        
+        console.log('Palette resizer initialized');
+    }
+    
+    // Initialiser quand le DOM est prêt
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPaletteResizer);
+    } else {
+        initPaletteResizer();
+    }
+})();
