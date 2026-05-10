@@ -1536,9 +1536,21 @@ window.addEventListener('mouseup', () => { isPanning = false; });
 /** DRAGGABLE PANELS **/
 document.querySelectorAll('.panel').forEach(p => {
     const header = p.querySelector('.panel-header');
+    const closeBtn = header ? header.querySelector('.close-btn') : null;
     if (!header) return;
     
     let isDraggingPanel = false, offset = [0,0];
+    let hasMoved = false; // Pour détecter si c'est un drag ou un tap
+    
+    // Gestionnaire spécifique pour le bouton de fermeture sur mobile
+    if (closeBtn) {
+        closeBtn.addEventListener('touchend', (e) => {
+            console.log('🔴 Close button touched');
+            e.preventDefault();
+            e.stopPropagation();
+            hidePanels();
+        }, { passive: false });
+    }
     
     // Support souris
     header.onmousedown = (e) => {
@@ -1572,16 +1584,16 @@ document.querySelectorAll('.panel').forEach(p => {
         
         console.log('🟢 Touch start on panel:', p.id);
         isDraggingPanel = true;
+        hasMoved = false;
         p.style.transform = 'none';
         const touch = e.touches[0];
         offset = [p.offsetLeft - touch.clientX, p.offsetTop - touch.clientY];
         console.log('📍 Initial offset:', offset);
-        // Ne pas empêcher le comportement par défaut ici pour permettre le clic sur le bouton
-        // e.preventDefault() sera appelé dans touchmove
     }, { passive: false });
     
     const onTouchMove = (e) => {
         if (!isDraggingPanel) return;
+        hasMoved = true;
         console.log('🔵 Touch move');
         e.preventDefault(); // Important pour mobile
         e.stopPropagation();
@@ -1594,8 +1606,9 @@ document.querySelectorAll('.panel').forEach(p => {
     };
     
     const onTouchEnd = () => {
-        console.log('🔴 Touch end');
+        console.log('🔴 Touch end, hasMoved:', hasMoved);
         isDraggingPanel = false;
+        hasMoved = false;
     };
     
     window.addEventListener('touchmove', onTouchMove, { passive: false });
