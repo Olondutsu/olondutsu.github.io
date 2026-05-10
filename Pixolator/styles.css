@@ -60,13 +60,13 @@ body {
     background: #333; 
 }
 
-.menu-icon { 
-    width: 16px; 
-    height: 16px; 
-    image-rendering: pixelated; 
-    margin-right: 8px; 
-    image-rendering: -moz-crisp-edges; 
-    image-rendering: pixelated; 
+.menu-icon {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+    margin-right: 8px;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: pixelated;
 }
 /* Tablette */
 @media (max-width: 1024px) {
@@ -330,11 +330,11 @@ button.tool-btn.active {
     border-color: #00bfff; 
 }
 
-.tool-icon { 
-    width: 18px; 
-    height: 18px; 
-    image-rendering: pixelated; 
-    pointer-events: none; 
+.tool-icon {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+    pointer-events: none;
 }
 
 /* Workspace */
@@ -846,8 +846,8 @@ canvas {
 }
 
 .action-btn .menu-icon {
-    width: 16px;
-    height: 16px;
+    width: 28px;
+    height: 28px;
 }
 
 /* Responsive pour le panneau latéral */
