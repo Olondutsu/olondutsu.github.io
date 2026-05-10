@@ -1056,19 +1056,41 @@ function rebuildPalette() {
     document.getElementById("bgColorBtn").style.background = bgDefault;
 }
 
+// Variable globale pour stocker le mode du sélecteur de couleur
+let colorPickerMode = 'addColor'; // 'addColor' ou 'changeBG'
+
 function addNewColor() {
-    let i = document.createElement("input"); i.type="color";
-    i.onchange = () => { paletteColors.push(i.value); currentColor = i.value; rebuildPalette(); };
-    i.click();
+    colorPickerMode = 'addColor';
+    document.getElementById('colorPickerTitle').textContent = 'Ajouter une couleur';
+    document.getElementById('colorPickerDescription').textContent = 'Choisissez une nouvelle couleur pour la palette';
+    document.getElementById('colorPickerInput').value = currentColor;
+    showPanel('colorPickerPanel');
 }
 
 function changeBG() {
-    let i = document.createElement("input"); i.type="color"; i.value = bgDefault;
-    i.onchange = () => {
-        let old = bgDefault; bgDefault = i.value;
+    colorPickerMode = 'changeBG';
+    document.getElementById('colorPickerTitle').textContent = 'Couleur de fond';
+    document.getElementById('colorPickerDescription').textContent = 'Choisissez la nouvelle couleur de fond';
+    document.getElementById('colorPickerInput').value = bgDefault;
+    showPanel('colorPickerPanel');
+}
+
+function applyColorPicker() {
+    const selectedColor = document.getElementById('colorPickerInput').value;
+    
+    if (colorPickerMode === 'addColor') {
+        paletteColors.push(selectedColor);
+        currentColor = selectedColor;
+        rebuildPalette();
+    } else if (colorPickerMode === 'changeBG') {
+        let old = bgDefault;
+        bgDefault = selectedColor;
         pixels = pixels.map(p => p === old ? bgDefault : p);
-        rebuildPalette(); refresh();
-    }; i.click();
+        rebuildPalette();
+        refresh();
+    }
+    
+    hidePanels();
 }
 
 function updateUI() {

@@ -1276,12 +1276,14 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    align-items: center;
 }
 
 .navpad-middle {
     display: flex;
     gap: 4px;
     align-items: center;
+    justify-content: center;
 }
 
 .navpad-center {

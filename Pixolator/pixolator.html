@@ -173,6 +173,17 @@
     </div>
 </div>
 
+<div id="colorPickerPanel" class="panel">
+    <div class="panel-header"><h3 id="colorPickerTitle">Sélecteur de couleur</h3><span class="close-btn" onclick="event.stopPropagation(); hidePanels();">×</span></div>
+    <div class="panel-content">
+        <div style="font-size:12px; color:#888; margin-bottom:10px;" id="colorPickerDescription">Choisissez une couleur</div>
+        <input type="color" id="colorPickerInput" style="width:100%; height:60px; cursor:pointer; border:2px solid #555; border-radius:4px;">
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0">
+        <button onclick="applyColorPicker()" style="background:var(--accent)">Appliquer</button>
+        <button onclick="hidePanels()">Annuler</button>
+    </div>
+</div>
+
 <!-- Panneau latéral avec onglets -->
 <div id="selectionSidePanel" class="side-panel">
     <div class="side-panel-header">
