@@ -1348,6 +1348,16 @@ let wasTwoFinger = false; // Flag pour savoir si on vient de faire un geste 2 do
 const PAN_GRACE_PERIOD = 800; // 800ms de grâce après avoir levé un doigt
 
 container.addEventListener('touchstart', e => {
+    // Vérifier si le toucher est sur le canvas
+    const touch = e.touches[0];
+    const touchTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+    const isOnCanvas = touchTarget === canvas || canvas.contains(touchTarget);
+    
+    // Si le toucher n'est pas sur le canvas, ne rien faire (laisser le scroll natif)
+    if (!isOnCanvas && e.touches.length === 1) {
+        return;
+    }
+    
     // Annuler l'inertie en cours
     if (momentumAnimation) {
         cancelAnimationFrame(momentumAnimation);
@@ -1394,6 +1404,16 @@ container.addEventListener('touchstart', e => {
 
 container.addEventListener('touchmove', e => {
     if (!lastTouchPos) return;
+    
+    // Vérifier si le toucher est sur le canvas
+    const touch = e.touches[0];
+    const touchTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+    const isOnCanvas = touchTarget === canvas || canvas.contains(touchTarget);
+    
+    // Si le toucher n'est pas sur le canvas et qu'on n'est pas en mode pan, ne rien faire
+    if (!isOnCanvas && !isPanning && e.touches.length === 1) {
+        return;
+    }
     
     const now = Date.now();
     const deltaTime = Math.max(1, now - lastTouchTime);
@@ -1629,8 +1649,19 @@ document.querySelectorAll('.panel').forEach(p => {
     const savedPos = localStorage.getItem('menuTogglePosition');
     if (savedPos) {
         const pos = JSON.parse(savedPos);
-        menuToggle.style.left = pos.left + 'px';
-        menuToggle.style.top = pos.top + 'px';
+        // Attendre que le DOM soit complètement chargé pour avoir les bonnes dimensions
+        requestAnimationFrame(() => {
+            const topMenuHeight = document.getElementById('top').offsetHeight || 45;
+            const buttonWidth = menuToggle.offsetWidth || 50; // Fallback si pas encore rendu
+            const buttonHeight = menuToggle.offsetHeight || 50;
+            // Appliquer les contraintes de limites avec une marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - buttonWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - buttonHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(pos.left, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(pos.top, maxTop));
+            menuToggle.style.left = constrainedLeft + 'px';
+            menuToggle.style.top = constrainedTop + 'px';
+        });
     }
     
     // Sauvegarder la position
@@ -1662,8 +1693,18 @@ document.querySelectorAll('.panel').forEach(p => {
         }
         
         if (hasMoved) {
-            menuToggle.style.left = (e.clientX + offset[0]) + 'px';
-            menuToggle.style.top = (e.clientY + offset[1]) + 'px';
+            const topMenuHeight = document.getElementById('top').offsetHeight || 45;
+            const buttonWidth = menuToggle.offsetWidth;
+            const buttonHeight = menuToggle.offsetHeight;
+            const newLeft = e.clientX + offset[0];
+            const newTop = e.clientY + offset[1];
+            // Appliquer les contraintes de limites avec marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - buttonWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - buttonHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(newLeft, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(newTop, maxTop));
+            menuToggle.style.left = constrainedLeft + 'px';
+            menuToggle.style.top = constrainedTop + 'px';
         }
     };
     
@@ -1702,10 +1743,18 @@ document.querySelectorAll('.panel').forEach(p => {
             hasMoved = true;
             e.preventDefault(); // Empêcher le scroll uniquement si on bouge
             
+            const topMenuHeight = document.getElementById('top').offsetHeight || 45;
+            const buttonWidth = menuToggle.offsetWidth;
+            const buttonHeight = menuToggle.offsetHeight;
             const newLeft = touch.clientX + offset[0];
             const newTop = touch.clientY + offset[1];
-            menuToggle.style.left = newLeft + 'px';
-            menuToggle.style.top = newTop + 'px';
+            // Appliquer les contraintes de limites avec marge de sécurité
+            const maxLeft = Math.max(0, window.innerWidth - buttonWidth - 10);
+            const maxTop = Math.max(0, window.innerHeight - buttonHeight - 10);
+            const constrainedLeft = Math.max(10, Math.min(newLeft, maxLeft));
+            const constrainedTop = Math.max(topMenuHeight + 10, Math.min(newTop, maxTop));
+            menuToggle.style.left = constrainedLeft + 'px';
+            menuToggle.style.top = constrainedTop + 'px';
         }
     };
     
@@ -1737,6 +1786,22 @@ function newProject() {
         originalH = 0;
         init(32, 32);
     }
+
+function resetUIPosition() {
+    const menuToggle = document.getElementById('menuToggle');
+    if (!menuToggle) return;
+    
+    // Supprimer la position sauvegardée du localStorage
+    localStorage.removeItem('menuTogglePosition');
+    
+    // Réinitialiser le style du bouton à sa position par défaut
+    menuToggle.style.left = '';
+    menuToggle.style.top = '';
+    menuToggle.style.transform = '';
+    
+    // Message de confirmation
+    alert('Interface réinitialisée à la position par défaut ✓');
+}
 }
 
 /** STARTUP **/
