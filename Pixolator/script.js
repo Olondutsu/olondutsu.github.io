@@ -1348,19 +1348,6 @@ let wasTwoFinger = false; // Flag pour savoir si on vient de faire un geste 2 do
 const PAN_GRACE_PERIOD = 800; // 800ms de grâce après avoir levé un doigt
 
 container.addEventListener('touchstart', e => {
-    // Vérifier si le toucher est sur le canvas
-    const touch = e.touches[0];
-    const touchTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    const isOnCanvas = touchTarget === canvas || canvas.contains(touchTarget);
-    
-    // Vérifier si le toucher est sur le bouton menuToggle
-    const isOnMenuToggle = touchTarget && (touchTarget.id === 'menuToggle' || touchTarget.closest('#menuToggle'));
-    
-    // Si le toucher n'est pas sur le canvas ET pas sur menuToggle, ne rien faire (laisser le scroll natif)
-    if (!isOnCanvas && !isOnMenuToggle && e.touches.length === 1) {
-        return;
-    }
-    
     // Annuler l'inertie en cours
     if (momentumAnimation) {
         cancelAnimationFrame(momentumAnimation);
@@ -1407,18 +1394,6 @@ container.addEventListener('touchstart', e => {
 
 container.addEventListener('touchmove', e => {
     if (!lastTouchPos) return;
-    
-    // Vérifier si le toucher est sur le canvas
-    const touch = e.touches[0];
-    const touchTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    
-    // Vérifier si le toucher est sur le bouton menuToggle
-    const isOnMenuToggle = touchTarget && (touchTarget.id === 'menuToggle' || touchTarget.closest('#menuToggle'));
-    
-    // Si on est sur le menuToggle, laisser son propre gestionnaire gérer l'événement
-    if (isOnMenuToggle) {
-        return;
-    }
     
     const now = Date.now();
     const deltaTime = Math.max(1, now - lastTouchTime);
@@ -1693,10 +1668,11 @@ document.querySelectorAll('.panel').forEach(p => {
         const dy = Math.abs(e.clientY - startPos[1]);
         if (dx > 5 || dy > 5) {
             hasMoved = true;
+            // Empêcher le comportement par défaut seulement quand on bouge
+            if (!hasMoved) e.preventDefault();
         }
         
         if (hasMoved) {
-            e.preventDefault(); // Empêcher le comportement par défaut seulement quand on bouge
             const topMenuHeight = document.getElementById('top').offsetHeight || 45;
             const buttonWidth = menuToggle.offsetWidth;
             const buttonHeight = menuToggle.offsetHeight;
@@ -1774,9 +1750,9 @@ document.querySelectorAll('.panel').forEach(p => {
         }
     };
     
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd, { passive: false });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    menuToggle.addEventListener('touchmove', onTouchMove, { passive: false });
+    menuToggle.addEventListener('touchend', onTouchEnd, { passive: false });
+    menuToggle.addEventListener('touchcancel', onTouchEnd, { passive: false });
 })();
 });
 
