@@ -264,12 +264,15 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
+    cursor: move; /* Indique que l'élément est déplaçable */
     font-weight: bold;
     box-shadow: 5px 0 10px rgba(0,0,0,0.3);
     z-index: 10050; /* En dessous des dropdowns (10500) */
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: none; /* Pas de transition pour permettre un drag fluide */
     font-size: 18px;
+    user-select: none; /* Empêche la sélection de texte pendant le drag */
+    -webkit-user-select: none;
+    touch-action: none; /* Améliore le comportement tactile */
 }
 
 /* Sidebar Tools */

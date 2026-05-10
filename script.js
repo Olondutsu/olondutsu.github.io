@@ -1536,10 +1536,26 @@ window.addEventListener('mouseup', () => { isPanning = false; });
 /** DRAGGABLE PANELS **/
 document.querySelectorAll('.panel').forEach(p => {
     const header = p.querySelector('.panel-header');
+    const closeBtn = header ? header.querySelector('.close-btn') : null;
+    if (!header) return;
+    
     let isDraggingPanel = false, offset = [0,0];
+    let hasMoved = false; // Pour détecter si c'est un drag ou un tap
+    
+    // Gestionnaire spécifique pour le bouton de fermeture sur mobile
+    if (closeBtn) {
+        closeBtn.addEventListener('touchend', (e) => {
+            console.log('🔴 Close button touched');
+            e.preventDefault();
+            e.stopPropagation();
+            hidePanels();
+        }, { passive: false });
+    }
     
     // Support souris
     header.onmousedown = (e) => {
+        // Ne pas drag si on clique sur le bouton de fermeture
+        if (e.target.classList.contains('close-btn')) return;
         isDraggingPanel = true;
         p.style.transform = 'none';
         offset = [p.offsetLeft - e.clientX, p.offsetTop - e.clientY];
@@ -1560,28 +1576,155 @@ document.querySelectorAll('.panel').forEach(p => {
     
     // Support tactile (mobile)
     header.addEventListener('touchstart', (e) => {
+        // Ne pas drag si on touche le bouton de fermeture
+        if (e.target.classList.contains('close-btn')) {
+            console.log('❌ Touch on close button, not dragging');
+            return;
+        }
+        
+        console.log('🟢 Touch start on panel:', p.id);
         isDraggingPanel = true;
+        hasMoved = false;
         p.style.transform = 'none';
         const touch = e.touches[0];
         offset = [p.offsetLeft - touch.clientX, p.offsetTop - touch.clientY];
-        e.preventDefault(); // Empêche le scroll pendant le drag
+        console.log('📍 Initial offset:', offset);
     }, { passive: false });
     
     const onTouchMove = (e) => {
         if (!isDraggingPanel) return;
+        hasMoved = true;
+        console.log('🔵 Touch move');
         e.preventDefault(); // Important pour mobile
+        e.stopPropagation();
         const touch = e.touches[0];
-        p.style.left = (touch.clientX + offset[0]) + 'px';
-        p.style.top = (touch.clientY + offset[1]) + 'px';
+        const newLeft = (touch.clientX + offset[0]);
+        const newTop = (touch.clientY + offset[1]);
+        p.style.left = newLeft + 'px';
+        p.style.top = newTop + 'px';
+        console.log('📍 New position:', newLeft, newTop);
     };
     
     const onTouchEnd = () => {
+        console.log('🔴 Touch end, hasMoved:', hasMoved);
         isDraggingPanel = false;
+        hasMoved = false;
     };
     
     window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd);
     window.addEventListener('touchcancel', onTouchEnd);
+
+/** DRAGGABLE MENU TOGGLE BUTTON **/
+(function() {
+    const menuToggle = document.getElementById('menuToggle');
+    if (!menuToggle) return;
+    
+    let isDraggingMenu = false;
+    let offset = [0, 0];
+    let hasMoved = false;
+    let startPos = [0, 0];
+    
+    // Charger la position sauvegardée
+    const savedPos = localStorage.getItem('menuTogglePosition');
+    if (savedPos) {
+        const pos = JSON.parse(savedPos);
+        menuToggle.style.left = pos.left + 'px';
+        menuToggle.style.top = pos.top + 'px';
+    }
+    
+    // Sauvegarder la position
+    function savePosition() {
+        const pos = {
+            left: menuToggle.offsetLeft,
+            top: menuToggle.offsetTop
+        };
+        localStorage.setItem('menuTogglePosition', JSON.stringify(pos));
+    }
+    
+    // Support souris
+    menuToggle.onmousedown = (e) => {
+        isDraggingMenu = true;
+        hasMoved = false;
+        startPos = [e.clientX, e.clientY];
+        offset = [menuToggle.offsetLeft - e.clientX, menuToggle.offsetTop - e.clientY];
+        // Ne pas preventDefault ici pour permettre le clic normal
+    };
+    
+    const onMouseMove = (e) => {
+        if (!isDraggingMenu) return;
+        const dx = Math.abs(e.clientX - startPos[0]);
+        const dy = Math.abs(e.clientY - startPos[1]);
+        if (dx > 5 || dy > 5) {
+            hasMoved = true;
+            // Empêcher le comportement par défaut seulement quand on bouge
+            if (!hasMoved) e.preventDefault();
+        }
+        
+        if (hasMoved) {
+            menuToggle.style.left = (e.clientX + offset[0]) + 'px';
+            menuToggle.style.top = (e.clientY + offset[1]) + 'px';
+        }
+    };
+    
+    const onMouseUp = (e) => {
+        if (isDraggingMenu) {
+            isDraggingMenu = false;
+            if (hasMoved) {
+                savePosition();
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    
+    // Support tactile (mobile)
+    menuToggle.addEventListener('touchstart', (e) => {
+        isDraggingMenu = true;
+        hasMoved = false;
+        const touch = e.touches[0];
+        startPos = [touch.clientX, touch.clientY];
+        offset = [menuToggle.offsetLeft - touch.clientX, menuToggle.offsetTop - touch.clientY];
+    }, { passive: true });
+    
+    const onTouchMove = (e) => {
+        if (!isDraggingMenu) return;
+        
+        const touch = e.touches[0];
+        const dx = Math.abs(touch.clientX - startPos[0]);
+        const dy = Math.abs(touch.clientY - startPos[1]);
+        
+        // Détecter un mouvement significatif
+        if (dx > 5 || dy > 5) {
+            hasMoved = true;
+            e.preventDefault(); // Empêcher le scroll uniquement si on bouge
+            
+            const newLeft = touch.clientX + offset[0];
+            const newTop = touch.clientY + offset[1];
+            menuToggle.style.left = newLeft + 'px';
+            menuToggle.style.top = newTop + 'px';
+        }
+    };
+    
+    const onTouchEnd = (e) => {
+        if (isDraggingMenu) {
+            isDraggingMenu = false;
+            if (hasMoved) {
+                savePosition();
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            hasMoved = false;
+        }
+    };
+    
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd, { passive: false });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: false });
+})();
 });
 
 function newProject() {
